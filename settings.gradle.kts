@@ -20,6 +20,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "AppAmbit Testing App"
-include(":app")
-include(":AppAmbit")
+include(":appambittestapp")
+include(":appambitsdk")
 

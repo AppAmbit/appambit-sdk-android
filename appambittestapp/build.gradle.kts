@@ -36,8 +36,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":AppAmbit"))
 
+    implementation(project(":appambitsdk"))
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)

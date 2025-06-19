@@ -6,7 +6,7 @@ import android.content.Context;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
-
+import android.util.Log;
 
 public final class AppAmbit {
 
@@ -29,32 +29,32 @@ public final class AppAmbit {
 
             @Override
             public void onCreate(LifecycleOwner owner) {
-                System.out.println("onCreate");
+                Log.d("AppAmbit","onCreate");
             }
 
             @Override
             public void onStart(LifecycleOwner owner) {
-                System.out.println("onStart");
+                Log.d("AppAmbit","onStart");
             }
 
             @Override
             public void onResume(LifecycleOwner owner) {
-                System.out.println("onResume");
+                Log.d("AppAmbit","onResume");
             }
 
             @Override
             public void onPause(LifecycleOwner owner) {
-                System.out.println("onPause");
+                Log.d("AppAmbit","onPause");
             }
 
             @Override
             public void onStop(LifecycleOwner owner) {
-                System.out.println("onStop");
+                Log.d("AppAmbit","onStop");
             }
 
             @Override
             public void onDestroy(LifecycleOwner owner) {
-                System.out.println("onDestroy");
+                Log.d("AppAmbit","onDestroy");
             }
         });
     }
