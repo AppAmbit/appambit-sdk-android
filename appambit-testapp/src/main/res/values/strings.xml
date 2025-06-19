@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">AppAmbit Testing App</string>
+    <string name="load">Load</string>
+    <string name="analytics">Analytics</string>
+    <string name="crashes">Crashes</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
