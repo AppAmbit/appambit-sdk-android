@@ -8,27 +8,28 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import android.util.Log;
 
+import com.appambit.sdk.analytics.Analytics;
+
 public final class AppAmbit {
-
-    private static String appKey;
     private static boolean isInitialized = false;
-
-
     public static void init(Context context, String appKey) {
         if (!isInitialized) {
-            AppAmbit.appKey = appKey;
-            registerLifecycleObserver(context);
+            registerLifecycleObserver(context, appKey);
             isInitialized = true;
         }
     }
 
 
-    private static void registerLifecycleObserver(Context context) {
+    private static void registerLifecycleObserver(Context context, String appKey) {
         Application app = (Application) context.getApplicationContext();
         ProcessLifecycleOwner.get().getLifecycle().addObserver(new DefaultLifecycleObserver() {
 
             @Override
             public void onCreate(LifecycleOwner owner) {
+                InitializeServices(context);
+
+                Analytics.sendBatchesLogs();
+                Analytics.sendBatchesEvents();
                 Log.d("AppAmbit","onCreate");
             }
 
@@ -60,5 +61,10 @@ public final class AppAmbit {
     }
 
 
+
+    private static void InitializeServices(Context context) {
+        ServiceLocator.initialize(context);
+        Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService());
+    }
 
 }
