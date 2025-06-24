@@ -9,8 +9,8 @@ import com.appambit.sdk.core.storage.contract.AppSecretContract;
 import com.appambit.sdk.core.storage.contract.EventEntityContract;
 import com.appambit.sdk.core.storage.contract.LogEntityContract;
 
-class StorageProvider extends SQLiteOpenHelper {
-    StorageProvider(Context context) {
+class DataStore extends SQLiteOpenHelper {
+    DataStore(Context context) {
         super(context, AppConstants.DATABASE_NAME, null, AppConstants.DB_VERSION);
     }
 

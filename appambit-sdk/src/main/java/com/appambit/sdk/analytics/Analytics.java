@@ -6,7 +6,7 @@ import com.appambit.sdk.core.AppAmbit;
 import com.appambit.sdk.core.enums.LogType;
 import com.appambit.sdk.core.models.analytics.EventEntity;
 import com.appambit.sdk.core.models.logs.LogEntity;
-import com.appambit.sdk.core.storage.StorageService;
+import com.appambit.sdk.core.storage.Storable;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -19,11 +19,11 @@ import java.util.concurrent.ExecutorService;
 
 public final class Analytics {
 
-    private static StorageService mStorageService;
+    private static Storable mStorable;
     private static ExecutorService mExecutorService;
 
-    public static void Initialize(StorageService storageService, ExecutorService executorService) {
-        mStorageService = storageService;
+    public static void Initialize(Storable storable, ExecutorService executorService) {
+        mStorable = storable;
         mExecutorService = executorService;
     }
 
@@ -39,20 +39,20 @@ public final class Analytics {
 
     private static void loadAppSecrets() {
 
-        mStorageService.putAppId("API_KEY-" + UUID.randomUUID().toString());
-        Log.d(Analytics.class.getSimpleName(), "APPSECRETS --> " + mStorageService.getAppId());
+        mStorable.putAppId("API_KEY-" + UUID.randomUUID().toString());
+        Log.d(Analytics.class.getSimpleName(), "APPSECRETS --> " + mStorable.getAppId());
 
-        mStorageService.putDeviceId("DEVICE_ID-" + UUID.randomUUID().toString());
-        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorageService.getDeviceId());
+        mStorable.putDeviceId("DEVICE_ID-" + UUID.randomUUID().toString());
+        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorable.getDeviceId());
 
-        mStorageService.putUserId("USER_ID-" + UUID.randomUUID().toString());
-        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorageService.getUserId());
+        mStorable.putUserId("USER_ID-" + UUID.randomUUID().toString());
+        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorable.getUserId());
 
-        mStorageService.putUserEmail("example@mail.com");
-        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorageService.getUserEmail());
+        mStorable.putUserEmail("example@mail.com");
+        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorable.getUserEmail());
 
-        mStorageService.putSessionId("1234");
-        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorageService.getSessionId());
+        mStorable.putSessionId("1234");
+        Log.d(Analytics.class.getSimpleName(),  "APPSECRETS --> " + mStorable.getSessionId());
     }
 
     private static void loadEvents() {
@@ -85,7 +85,7 @@ public final class Analytics {
             eventEntity.setName("NAME FOR EVENT: " + x);
             eventEntity.setCreatedAt(date.getTime());
 
-            mStorageService.putLogAnalyticsEvent(eventEntity);
+            mStorable.putLogAnalyticsEvent(eventEntity);
         }
     }
 
@@ -124,7 +124,7 @@ public final class Analytics {
 
             logEntity.setCreatedAt(date.getTime());
 
-            mStorageService.putLogEvent(logEntity);
+            mStorable.putLogEvent(logEntity);
         }
     }
 
@@ -133,9 +133,9 @@ public final class Analytics {
     public static void sendBatchesEvents() {
         mExecutorService.execute(() -> {
             try {
-                List<EventEntity> events = mStorageService.getOldest100Events();
+                List<EventEntity> events = mStorable.getOldest100Events();
                 if (!events.isEmpty()) {
-                    mStorageService.deleteEventList(events);
+                    mStorable.deleteEventList(events);
                 }
             } catch (Exception ex) {
                 Log.e(Analytics.class.getSimpleName(), "Error to process Events", ex);
@@ -147,9 +147,9 @@ public final class Analytics {
         mExecutorService.execute(() -> {
             try {
 
-                List<LogEntity> logs = mStorageService.getOldest100Logs();
+                List<LogEntity> logs = mStorable.getOldest100Logs();
                 if (!logs.isEmpty()) {
-                    mStorageService.deleteLogList(logs);
+                    mStorable.deleteLogList(logs);
                 }
             } catch (Exception ex) {
                 Log.e(Analytics.class.getSimpleName(), "Error to process Logs", ex);

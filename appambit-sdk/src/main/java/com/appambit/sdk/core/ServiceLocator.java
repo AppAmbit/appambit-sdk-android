@@ -2,18 +2,21 @@ package com.appambit.sdk.core;
 
 import android.content.Context;
 
-import com.appambit.sdk.core.storage.StorageImplement;
+import com.appambit.sdk.core.services.ApiService;
+import com.appambit.sdk.core.services.HttpApiService;
 import com.appambit.sdk.core.storage.StorageService;
+import com.appambit.sdk.core.storage.Storable;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ServiceLocator {
     private static volatile ServiceLocator INSTANCE;
-    private static StorageService storageService;
+    private static Storable storable;
+
+    private static ApiService apiService;
     private static ExecutorService executorService;
     private final Context applicationContext;
-
 
     private ServiceLocator(Context context) {
         this.applicationContext = context;
@@ -32,15 +35,17 @@ public class ServiceLocator {
 
     private void initializeServices() {
         executorService = Executors.newSingleThreadExecutor();
-        storageService = new StorageImplement(applicationContext);
+        storable = new StorageService(applicationContext);
+        apiService = new HttpApiService(applicationContext, executorService);
     }
 
-    public static StorageService getStorageService() {
-        return storageService;
+    public static Storable getStorageService() {
+        return storable;
     }
 
     public static ExecutorService getExecutorService() {
         return executorService;
     }
 
+    public static ApiService getApiService() { return apiService; }
 }

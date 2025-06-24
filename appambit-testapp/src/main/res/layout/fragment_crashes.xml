@@ -6,9 +6,39 @@
     tools:context=".CrashesFragment">
 
     <Button
+        android:id="@+id/btnSendDefaultLogError"
+        android:text="@string/send_default_logerror"
+        android:layout_gravity="center"
+        android:layout_marginHorizontal="50dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnSendDefaultLogCrash"
+        android:text="@string/send_default_log_crash"
+        android:layout_gravity="center"
+        android:layout_marginTop="50dp"
+        android:layout_marginHorizontal="50dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnSendLogBatches"
+        android:text="@string/send_logbatches"
+        android:layout_gravity="center"
+        android:layout_marginTop="100dp"
+        android:layout_marginHorizontal="50dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
         android:id="@+id/btnGenerateLogs"
-        android:layout_width="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="150dp"
+        android:layout_marginHorizontal="50dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Load Data"
-        android:layout_gravity="center" />
+        />
+
 </FrameLayout>
