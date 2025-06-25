@@ -2,8 +2,10 @@ package com.appambit.sdk.core.models.logs;
 
 import com.appambit.sdk.core.AppConstants;
 import com.appambit.sdk.core.enums.LogType;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;

@@ -8,11 +8,16 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.Toast;
+
+import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.AppAmbit;
+import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.LogType;
 import com.appambit.sdk.core.models.logs.LogBatch;
 import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.services.ApiService;
+import com.appambit.sdk.core.services.HttpApiService;
 import com.appambit.sdk.core.services.endpoints.LogBatchEndpoint;
 import com.appambit.sdk.core.services.endpoints.LogEndpoint;
 
@@ -39,7 +44,7 @@ public class CrashesFragment extends Fragment {
 
         final ExecutorService executor = Executors.newSingleThreadExecutor();
         Context context = requireContext();
-        ApiService apiService = new ApiService(context);
+        ApiService apiService = ServiceLocator.getApiService();
 
         btnSendDefaultLogError = view.findViewById(R.id.btnSendDefaultLogError);
         btnSendDefaultLogError.setOnClickListener(v -> executor.execute(() -> {
@@ -121,6 +126,16 @@ public class CrashesFragment extends Fragment {
             Log.d("AppAmbit", "Log batch sent successfully with " + logBatch.Logs.size() + " logs.");
         }));
 
+        Button btnGenerateLogs = view.findViewById(R.id.btnGenerateLogs);
+        btnGenerateLogs.setOnClickListener(v -> {
+            Analytics.generateSampleLogsEvents();
+            Log.d(AppAmbit.class.getSimpleName(), "LOG CREADO UI");
+            Toast.makeText(requireContext(), "Generate logs...", Toast.LENGTH_SHORT).show();
+        });
+
         return view;
     }
+
+
+
 }
