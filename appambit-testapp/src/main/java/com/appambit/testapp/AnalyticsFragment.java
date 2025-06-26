@@ -138,10 +138,4 @@ public class AnalyticsFragment extends Fragment {
 
 
     }
-
-    private static String isoFormat(Date date) {
-        SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-        isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return isoFormat.format(date);
-    }
 }
