@@ -5,6 +5,7 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.AppAmbit;
 import com.appambit.testapp.databinding.ActivityMainBinding;
 public class MainActivity extends AppCompatActivity {
@@ -15,7 +16,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        AppAmbit.init(getApplicationContext(), "17595189-fd4a-40dd-999f-e189d78f30fd");
+
+        //Uncomment the line for automatic session management
+        //Analytics.enableManualSession();
+        AppAmbit.init(getApplicationContext(), "80add826-80ab-4273-8327-14f403e4d2c1");
 
         if (savedInstanceState == null) {
             replaceFragment(new CrashesFragment(), "CrashesFragment");

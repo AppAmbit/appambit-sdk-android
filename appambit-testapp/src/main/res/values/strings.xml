@@ -8,4 +8,7 @@
     <string name="send_default_logerror">Send Default LogError</string>
     <string name="send_default_log_crash">Send Default LogCrash</string>
     <string name="send_logbatches">Send LogBatches</string>
+    <string name="start_session">Start Session</string>
+    <string name="end_session">End Session</string>
+    <string name="generate_the_last_30_daily_sessions">Generate the last 30 daily sessions</string>
 </resources>
