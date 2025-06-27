@@ -4,6 +4,17 @@ import com.appambit.sdk.core.utils.JsonKey;
 
 public class Consumer {
 
+    public Consumer(String appKey, String deviceId, String deviceModel, String userId, String userEmail, String os, String country, String language) {
+        this.appKey = appKey;
+        this.deviceId = deviceId;
+        this.deviceModel = deviceModel;
+        this.userId = userId;
+        this.userEmail = userEmail;
+        this.os = os;
+        this.country = country;
+        this.language = language;
+    }
+
     @JsonKey("app_key")
     private String appKey;
     @JsonKey("device_id")

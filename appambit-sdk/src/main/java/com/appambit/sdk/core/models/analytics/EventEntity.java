@@ -70,4 +70,3 @@ public class EventEntity extends Event {
         this.createdAt = createdAt;
     }
 }
-

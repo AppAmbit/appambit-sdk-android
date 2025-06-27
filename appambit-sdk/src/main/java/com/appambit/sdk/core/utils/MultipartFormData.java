@@ -1,7 +1,6 @@
 package com.appambit.sdk.core.utils;
 
 import androidx.annotation.NonNull;
-
 import com.appambit.sdk.core.models.logs.Log;
 import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.models.logs.LogBatch;
@@ -18,7 +17,7 @@ import java.util.TimeZone;
 
 public class MultipartFormData {
 
-    private static final String DATE_TIME_FILE_FORMAT = "yyyy-MM-dd'T'HH_mm_ss_SSS'Z'";
+    private static final String TAG = MultipartFormData.class.getSimpleName();
 
     public static void getOutputString(Object payload, DataOutputStream output, String boundary, int indent, boolean includeFinalBoundary) throws IOException {
         if (payload instanceof LogBatch) {
@@ -51,7 +50,7 @@ public class MultipartFormData {
 
             Date createdAt = log.getCreatedAt();
             if (createdAt != null) {
-                writeFieldWithPrefix(output, boundary, indexPrefix + "[created_at]", formatDateTimeForBatch(createdAt));
+                writeFieldWithPrefix(output, boundary, indexPrefix + "[created_at]", toIsoUtc(createdAt));
             }
 
             Map<String, String> context = log.getContext();
@@ -64,7 +63,7 @@ public class MultipartFormData {
             String fileContent = log.getFile();
             if (fileContent != null && !fileContent.isEmpty()) {
                 String fileName = "log-" + formatFileNameDate(new Date()) + ".txt";
-                writeMemoryFileWithPrefix(output, boundary, indexPrefix + "[file]", fileName, fileContent.getBytes(StandardCharsets.US_ASCII));
+                writeMemoryFileWithPrefix(output, boundary, indexPrefix + "[file]", fileName, fileContent.getBytes(StandardCharsets.UTF_8));
             } else {
                 writeFieldWithPrefix(output, boundary, indexPrefix + "[file]", "");
             }
@@ -83,7 +82,7 @@ public class MultipartFormData {
         if (log instanceof LogEntity) {
             Date createdAt = ((LogEntity) log).getCreatedAt();
             if (createdAt != null) {
-                writeField(output, boundary, "created_at", formatDateTime(createdAt));
+                writeField(output, boundary, "created_at", toIsoUtc(createdAt));
             }
         }
 
@@ -134,13 +133,14 @@ public class MultipartFormData {
             int bytesRead;
             while ((bytesRead = bais.read(buffer)) != -1) {
                 output.write(buffer, 0, bytesRead);
+                android.util.Log.d(TAG, "Writing " + bytesRead + " bytes to output for file: " + filename);
             }
         }
 
         output.writeBytes("\r\n");
     }
 
-    private static void writeMemoryFileWithPrefix(DataOutputStream output, String boundary, String fieldName, String filename, byte[] data) throws IOException {
+    private static void writeMemoryFileWithPrefix(@NonNull DataOutputStream output, String boundary, String fieldName, String filename, byte[] data) throws IOException {
         output.writeBytes("--" + boundary + "\r\n");
         output.writeBytes("Content-Disposition: form-data; name=\"" + fieldName + "\"; filename=\"" + filename + "\"\r\n");
         output.writeBytes("Content-Type: text/plain\r\n");
@@ -158,23 +158,16 @@ public class MultipartFormData {
     }
 
     @NonNull
-    private static String formatDateTime(Date date) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
-        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return sdf.format(date);
-    }
-
-    @NonNull
-    private static String formatDateTimeForBatch(Date date) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return sdf.format(date);
-    }
-
-    @NonNull
     private static String formatFileNameDate(Date date) {
-        SimpleDateFormat sdf = new SimpleDateFormat(DATE_TIME_FILE_FORMAT, Locale.US);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
         return sdf.format(date);
     }
+    @NonNull
+    private static String toIsoUtc(Date date) {
+        SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:s", Locale.US);
+        isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return isoFormat.format(date);
+    }
+
 }

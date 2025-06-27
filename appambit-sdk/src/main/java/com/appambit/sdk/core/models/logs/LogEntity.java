@@ -27,6 +27,7 @@ public class LogEntity extends Log {
     }
 
     public void setCreatedAt(Date createdAt) {
+
         this.createdAt = createdAt;
     }
 }

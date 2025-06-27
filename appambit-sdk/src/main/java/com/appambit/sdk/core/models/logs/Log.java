@@ -11,23 +11,14 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class Log {
-
     private String appVersion;
-
     private String classFQN;
-
     private String fileName;
-
     private long lineNumber;
-
     private String message = "";
-
     private String stackTrace = AppConstants.NO_STACK_TRACE_AVAILABLE;
-
     private String contextJson = "{}";
-
     private LogType type;
-
     private String file;
 
     public String getAppVersion() {

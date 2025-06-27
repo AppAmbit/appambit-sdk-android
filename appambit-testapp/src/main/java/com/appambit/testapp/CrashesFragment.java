@@ -1,141 +1,130 @@
 package com.appambit.testapp;
 
+import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
+import static com.appambit.sdk.core.utils.JsonConvertUtils.objectToJson;
+
 import android.content.Context;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
+
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.Toast;
-
+import android.widget.EditText;
 import com.appambit.sdk.analytics.Analytics;
-import com.appambit.sdk.core.AppAmbit;
 import com.appambit.sdk.core.ServiceLocator;
-import com.appambit.sdk.core.enums.LogType;
-import com.appambit.sdk.core.models.logs.LogBatch;
-import com.appambit.sdk.core.models.logs.LogEntity;
-import com.appambit.sdk.core.services.ApiService;
-import com.appambit.sdk.core.services.HttpApiService;
-import com.appambit.sdk.core.services.endpoints.LogBatchEndpoint;
-import com.appambit.sdk.core.services.endpoints.LogEndpoint;
+import com.appambit.sdk.core.models.logs.ExceptionInfo;
+import com.appambit.sdk.core.utils.DateUtils;
+import com.appambit.sdk.crashes.Crashes;
+import com.appambit.testapp.utils.AlertsUtils;
 
-import java.util.ArrayList;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class CrashesFragment extends Fragment {
 
-    Button btnSendDefaultLogError;
-    Button btnSendDefaultLogCrash;
-    Button btnSendLogBatches;
+    private final ExecutorService mExecutor = ServiceLocator.getExecutorService();
+
+    Button btnDidCrash;
+    Button btnSetUserId;
+    Button btnSetUserEmail;
+    Button btnGenerateLast30DailyCrashes;
+    Button btnThrowNewCrash;
+    Button btnGenerateTestCrash;
+
+    EditText etUserId;
+    EditText etUserEmail;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
         View view = inflater.inflate(R.layout.fragment_crashes, container, false);
-
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final String TAG = CrashesFragment.class.getSimpleName();
         Context context = requireContext();
-        ApiService apiService = ServiceLocator.getApiService();
 
-        btnSendDefaultLogError = view.findViewById(R.id.btnSendDefaultLogError);
-        btnSendDefaultLogError.setOnClickListener(v -> executor.execute(() -> {
-            try {
-                Map<String, String> contextMap = new HashMap<>();
-                LogEntity logEntity = new LogEntity();
-                logEntity.setId(UUID.randomUUID());
-                logEntity.setAppVersion("1.0 (1)");
-                logEntity.setClassFQN(AppAmbit.class.getSimpleName());
-                logEntity.setFileName("PATH FILE NAME ");
-                logEntity.setLineNumber(200);
-                logEntity.setMessage("Test Log Error");
-                logEntity.setStackTrace("NoStackTraceAvailable");
-                logEntity.setContext(contextMap);
-                logEntity.setType(LogType.ERROR);
-                logEntity.setCreatedAt(new Date());
-
-                LogEndpoint logEndpoint = new LogEndpoint(logEntity);
-                apiService.executeRequest(logEndpoint, LogEntity.class);
-                Log.d("AppAmbit", "Crash log sent successfully");
-            }catch (Exception e) {
-                Log.e("AppAmbit", "Error during log creation: " + e.getMessage());
-            }
+        btnDidCrash = view.findViewById(R.id.btnDidCrash);
+        btnDidCrash.setOnClickListener(v -> mExecutor.execute(() -> {
+           if(Crashes.didCrashInLastSession(context)) {
+               AlertsUtils.showAlert(context, "Crash", "Application crashed in the last session");
+           }else {
+                AlertsUtils.showAlert(context, "Crash", "Application did not crash in the last session");
+           }
         }));
 
-        btnSendDefaultLogCrash = view.findViewById(R.id.btnSendDefaultLogCrash);
-        btnSendDefaultLogCrash.setOnClickListener(v -> executor.execute(() -> {
-            try {
-                Map<String, String> contextMap = new HashMap<>();
-                LogEntity logEntity = new LogEntity();
-                logEntity.setId(UUID.randomUUID());
-                logEntity.setAppVersion("1.0 (1)");
-                logEntity.setClassFQN(AppAmbit.class.getSimpleName());
-                logEntity.setFileName("PATH FILE NAME ");
-                logEntity.setLineNumber(200);
-                logEntity.setMessage("Test Log Error");
-                logEntity.setStackTrace("NoStackTraceAvailable");
-                logEntity.setContext(contextMap);
-                logEntity.setType(LogType.CRASH);
-                logEntity.setFile("LOG FILE CONTENT");
-                logEntity.setCreatedAt(new Date());
-                LogEndpoint logEndpoint = new LogEndpoint(logEntity);
+        btnSetUserId = view.findViewById(R.id.btnSetUserId);
+        etUserId = view.findViewById(R.id.etUserId);
+        etUserId.setText(UUID.randomUUID().toString());
+        btnSetUserId.setOnClickListener(v -> Analytics.setUserId(etUserId.getText().toString()));
 
-                apiService.executeRequest(logEndpoint, LogEntity.class);
-                Log.d("AppAmbit", "Crash log sent successfully");
-            }catch (Exception e) {
-                Log.e("AppAmbit", "Error during log creation: " + e.getMessage());
+        btnSetUserEmail = view.findViewById(R.id.btnSetUserEmail);
+        etUserEmail = view.findViewById(R.id.etUserEmail);
+        etUserEmail.setText("test@gmail.com");
+        btnSetUserEmail.setOnClickListener(v -> Analytics.setUserEmail(etUserEmail.getText().toString()));
+
+        btnThrowNewCrash = view.findViewById(R.id.btnThrowNewCrash);
+        btnThrowNewCrash.setOnClickListener(v -> {
+            throw new NullPointerException();
+        });
+
+        btnGenerateTestCrash = view.findViewById(R.id.btnGenerateTestCrash);
+        btnGenerateTestCrash.setOnClickListener(v -> Crashes.generateTestCrash());
+
+        btnGenerateLast30DailyCrashes = view.findViewById(R.id.btnGenerateLast30DailyCrashes);
+        btnGenerateLast30DailyCrashes.setOnClickListener(v -> {
+            if (hasInternetConnection(context)) {
+                AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
+                return;
             }
-        }));
+            Exception exception = new NullPointerException();
+            for (int index = 1; index <= 30; index++) {
+                Date crashDate = DateUtils.getDateDaysAgo(30 - index);
+                ExceptionInfo info = ExceptionInfo.fromException(context, exception, "Google pixel 7");
+                info.setCreatedAt(crashDate);
 
-        btnSendLogBatches = view.findViewById(R.id.btnSendLogBatches);
-        btnSendLogBatches.setOnClickListener(v -> executor.execute(() -> {
+                JSONObject crashJson;
+                try {
+                    crashJson = objectToJson(info);
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
 
-            LogEntity log1 = new LogEntity();
-            log1.setId(UUID.randomUUID());
-            log1.setAppVersion("1.0 (1)");
-            log1.setClassFQN("Test LogBatches");
-            log1.setFileName("TestLogBatches FILE");
-            log1.setLineNumber(124);
-            log1.setMessage("Test Log Batch");
-            log1.setStackTrace("NoStackTraceAvailable");
-            log1.setContext(new HashMap<>());
-            log1.setType(LogType.CRASH);
-            log1.setFile("File content for log batch");
-            log1.setCreatedAt(new Date());
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                String formattedDate = sdf.format(crashDate);
 
-            List<LogEntity> logs = new ArrayList<>();
+                String fileName = "crash_" + formattedDate + "_" + index + ".json";
 
-            for(int i = 0; i < 10; i++) {
-                logs.add(log1);
+                File crashFile = new File(context.getFilesDir(), fileName);
+                Log.d(TAG, "Crash file saved to: " + crashFile.getAbsolutePath());
+
+                try (FileWriter writer = new FileWriter(crashFile)) {
+                    writer.write(crashJson.toString(2));
+                } catch (IOException | JSONException e) {
+                    e.printStackTrace();
+                }
+
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-
-            LogBatch logBatch = new LogBatch();
-            logBatch.setLogs(logs);
-
-            LogBatchEndpoint logBatchEndpoint = new LogBatchEndpoint(logBatch);
-
-            apiService.executeRequest(logBatchEndpoint, LogBatch.class);
-            Log.d("AppAmbit", "Log batch sent successfully with " + logBatch.Logs.size() + " logs.");
-        }));
-
-        Button btnGenerateLogs = view.findViewById(R.id.btnGenerateLogs);
-        btnGenerateLogs.setOnClickListener(v -> {
-            Analytics.generateSampleLogsEvents();
-            Log.d(AppAmbit.class.getSimpleName(), "LOG CREADO UI");
-            Toast.makeText(requireContext(), "Generate logs...", Toast.LENGTH_SHORT).show();
+            AlertsUtils.showAlert(context, "Info", "30 daily crashes generated successfully");
         });
 
         return view;
     }
-
-
 
 }

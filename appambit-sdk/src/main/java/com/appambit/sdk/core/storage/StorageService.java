@@ -330,7 +330,7 @@ public class StorageService implements Storable {
                     log.setContextJson(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.CONTEXT_JSON)));
                     log.setType(LogType.fromValue(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.TYPE))));
                     log.setFile(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.FILE)));
-                    log.setCreatedAt(new Date(c.getInt(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
+                    log.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
                     logs.add(log);
                 } while (c.moveToNext());
             }
@@ -356,7 +356,7 @@ public class StorageService implements Storable {
                 do {
                     EventEntity event = new EventEntity();
                     event.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.ID))));
-                    event.setCreatedAt(new Date(c.getInt(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
+                    event.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
                     event.setDataJson(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.DATA_JSON)));
                     event.setName(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.NAME)));
                     events.add(event);
