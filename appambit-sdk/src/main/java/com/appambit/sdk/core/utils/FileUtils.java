@@ -145,13 +145,16 @@ public class FileUtils {
 
             JSONArray array = new JSONArray();
             for (T item : updatedList) {
-                array.put(JsonConvertUtils.toJson(item));
+                array.put(JsonConvertUtils.toJsonObject(item));  // <-- corrección aquí
             }
             writeFile(path, array.toString());
         } catch (Exception e) {
             Log.e(TAG, "updateJsonArray Exception: " + e.getMessage());
         }
     }
+
+
+
 
 
     private static String readFile(String path) throws IOException {

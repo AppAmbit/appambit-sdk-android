@@ -51,7 +51,6 @@ public class SessionManager {
 
         AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(utcNow);
 
-
         response.then(result -> {
             if (result.errorType != ApiErrorType.None) {
                 saveLocallyStartSession(utcNow);
@@ -196,7 +195,7 @@ public class SessionManager {
     }
 
     private static void updateOfflineSessionsFile(List<SessionData> sessions) {
-        List<SessionData> remaining = skipAndTake(sessions, 200, 200);
+        List<SessionData> remaining = skipAndTake(sessions, 200, sessions.size());
 
         FileUtils.updateJsonArray(offlineSessionsFile, remaining);
     }
@@ -209,7 +208,6 @@ public class SessionManager {
 
         return sessionData.subList(fromIndex, toIndex);
     }
-
 
     private static void saveLocallyStartSession(Date dateUtc) {
         SessionData sessionData = new SessionData();

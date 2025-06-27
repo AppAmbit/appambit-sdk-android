@@ -38,6 +38,10 @@ public class JsonConvertUtils {
         return objectToJson(object).toString();
     }
 
+    public static JSONObject toJsonObject(Object object) throws JSONException {
+        return JsonConvertUtils.objectToJson(object);
+    }
+
     private static JSONObject objectToJson(Object object) throws JSONException {
         JSONObject jsonObject = new JSONObject();
         Class<?> clazz = object.getClass();

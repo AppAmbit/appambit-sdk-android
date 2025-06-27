@@ -40,8 +40,6 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
 
-
-
 public class AnalyticsFragment extends Fragment {
     private static final String TAG = AnalyticsFragment.class.getSimpleName();
     Button btnStartSession;
@@ -120,7 +118,6 @@ public class AnalyticsFragment extends Fragment {
             sessionData.setTimestamp(dateEndSession);
             sessionData.setSessionType(SessionType.END);
 
-
             offlineSessions.add(sessionData);
         }
 
@@ -135,7 +132,5 @@ public class AnalyticsFragment extends Fragment {
         }catch (Exception e) {
             Log.e(TAG, e.toString());
         }
-
-
     }
 }
