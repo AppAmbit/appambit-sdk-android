@@ -3,78 +3,139 @@ package com.appambit.sdk.core;
 import android.app.Application;
 import android.content.Context;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import android.util.Log;
 
 import com.appambit.sdk.analytics.Analytics;
+import com.appambit.sdk.analytics.SessionManager;
 import com.appambit.sdk.core.enums.ApiErrorType;
-import com.appambit.sdk.core.services.HttpApiService;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
+import com.appambit.sdk.core.utils.FileUtils;
+import com.appambit.sdk.core.utils.StringUtils;
 
 public final class AppAmbit {
-
-    private static String appKey;
+    private static final String TAG = AppAmbit.class.getSimpleName();
+    private static String mAppKey;
     private static boolean isInitialized = false;
-
+    private static boolean hasStartedSession = false;
 
     public static void init(Context context, String appKey) {
+        mAppKey = appKey;
         if (!isInitialized) {
-            registerLifecycleObserver(context, appKey);
+            registerLifecycleObserver(context);
             isInitialized = true;
         }
     }
 
-
-    private static void registerLifecycleObserver(Context context, String appKey) {
+    private static void registerLifecycleObserver(Context context) {
         Application app = (Application) context.getApplicationContext();
         ProcessLifecycleOwner.get().getLifecycle().addObserver(new DefaultLifecycleObserver() {
 
             @Override
-            public void onCreate(LifecycleOwner owner) {
-                InitializeServices(context);
-                InitializeConsumer(context, appKey);
-                Analytics.sendBatchesLogs();
-                Analytics.sendBatchesEvents();
+            public void onCreate(@NonNull LifecycleOwner owner) {
+                onCreateApp(context);
                 Log.d("AppAmbit","onCreate");
             }
 
             @Override
-            public void onStart(LifecycleOwner owner) {
+            public void onStart(@NonNull LifecycleOwner owner) {
+                onResumeApp();
                 Log.d("AppAmbit","onStart");
             }
 
             @Override
-            public void onResume(LifecycleOwner owner) {
+            public void onResume(@NonNull LifecycleOwner owner) {
+                onResumeApp();
                 Log.d("AppAmbit","onResume");
             }
 
             @Override
-            public void onPause(LifecycleOwner owner) {
-                Log.d("AppAmbit","onPause");
+            public void onPause(@NonNull LifecycleOwner owner) {
+                onSleep();
             }
 
             @Override
-            public void onStop(LifecycleOwner owner) {
-                Log.d("AppAmbit","onStop");
+            public void onStop(@NonNull LifecycleOwner owner) {
+                onSleep();
             }
 
             @Override
-            public void onDestroy(LifecycleOwner owner) {
-                Log.d("AppAmbit","onDestroy");
+            public void onDestroy(@NonNull LifecycleOwner owner) {
+                onEnd();
             }
         });
     }
 
     private static void InitializeServices(Context context) {
         ServiceLocator.initialize(context);
+        FileUtils.initialize(context);
         Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService());
+        SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
     }
 
-    private static void InitializeConsumer(Context context, String appKey) {
-        AppAmbitTaskFuture<ApiErrorType> currentTokenRenewalTask = ServiceLocator.getApiService().GetNewToken(appKey);
-        currentTokenRenewalTask.then(result -> Log.d("[APIService]", "Token renewal successful: " + result));
-        currentTokenRenewalTask.onError(error -> Log.d("[APIService]", "Error during token renewal: " + error));
+    private static void onCreateApp(Context context) {
+        InitializeServices(context);
+        InitializeConsumer(context);
+        hasStartedSession = true;
+        Analytics.sendBatchesLogs();
+        Analytics.sendBatchesEvents();
+        SessionManager.sendBatchSessions();
+    }
+
+    private static void InitializeConsumer(Context context) {
+        getNewToken(mAppKey);
+
+        if (Analytics.isManualSessionEnabled()) {
+            return;
+        }
+
+        SessionManager.sendEndSessionIfExists();
+        SessionManager.startSession();
+    }
+
+
+
+    private static void onSleep()
+    {
+        if (!Analytics.isManualSessionEnabled()) {
+            SessionManager.saveEndSession();
+        }
+    }
+
+    private static void onEnd()
+    {
+        if (!Analytics.isManualSessionEnabled()) {
+            SessionManager.saveEndSession();
+        }
+    }
+
+    private static void onResumeApp() {
+        if (!tokenIsValid()) {
+            getNewToken(mAppKey);
+        }
+
+        if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
+            SessionManager.removeSavedEndSession();
+        }
+
+        Analytics.sendBatchesLogs();
+        Analytics.sendBatchesEvents();
+    }
+
+    private static void getNewToken(String appKey)  {
+        try {
+            AppAmbitTaskFuture<ApiErrorType> currentTokenRenewalTask = ServiceLocator.getApiService().GetNewToken(appKey);
+            currentTokenRenewalTask.getBlocking();
+        } catch (Exception e) {
+            Log.d(TAG, "Error -> " + e);
+        }
+    }
+
+    private static boolean tokenIsValid() {
+        String token = ServiceLocator.getApiService().getToken();
+        return !StringUtils.isNullOrBlank(token);
     }
 }

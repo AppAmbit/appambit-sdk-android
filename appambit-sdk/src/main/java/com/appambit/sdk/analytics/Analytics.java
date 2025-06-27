@@ -21,6 +21,7 @@ public final class Analytics {
 
     private static Storable mStorable;
     private static ExecutorService mExecutorService;
+    private static boolean isManualSessionEnabled = false;
 
     public static void Initialize(Storable storable, ExecutorService executorService) {
         mStorable = storable;
@@ -155,5 +156,22 @@ public final class Analytics {
                 Log.e(Analytics.class.getSimpleName(), "Error to process Logs", ex);
             }
         });
+    }
+
+    public static  void startSession() {
+        SessionManager.startSession();
+    }
+
+    public static void endSession() {
+        SessionManager.endSession();
+    }
+
+
+    public static void enableManualSession() {
+        isManualSessionEnabled = true;
+    }
+
+    public static boolean isManualSessionEnabled() {
+        return isManualSessionEnabled;
     }
 }
