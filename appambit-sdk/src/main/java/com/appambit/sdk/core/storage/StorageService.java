@@ -349,21 +349,18 @@ public class StorageService implements Storable {
         String sql = "SELECT * FROM " + EventEntityContract.TABLE_NAME + " " +
                 "ORDER BY " + EventEntityContract.Columns.CREATED_AT + " ASC " +
                 "LIMIT 100";
-        Cursor c = db.rawQuery(sql, null);
 
-        try {
+        try (Cursor c = db.rawQuery(sql, null)) {
             if (c.moveToFirst()) {
                 do {
                     EventEntity event = new EventEntity();
                     event.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.ID))));
-                    event.setCreatedAt(new Date(c.getInt(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
+                    event.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
                     event.setDataJson(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.DATA_JSON)));
                     event.setName(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.NAME)));
                     events.add(event);
                 } while (c.moveToNext());
             }
-        } finally {
-            c.close();
         }
 
         return events;

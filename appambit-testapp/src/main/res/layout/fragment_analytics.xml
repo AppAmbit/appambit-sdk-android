@@ -1,13 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".AnalyticsFragment">
+    android:orientation="vertical"
+    android:gravity="center"
+    android:paddingHorizontal="50dp">
 
-    <TextView
+    <Button
+        android:id="@+id/btnEventWProperty"
+        android:text="@string/send_quot_button_clicked_quot_event_w_property"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="Analytics" />
+        android:layout_height="wrap_content" />
 
-</FrameLayout>
+    <Button
+        android:id="@+id/btnDefaultClickedEventWProperty"
+        android:text="@string/send_default_event_w_property"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnMax300LengthEvent"
+        android:text="@string/send_max_300_length_event"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnMax20PropertiesEvent"
+        android:text="@string/send_max_20_properties_event"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btn3DailyEvents"
+        android:text="@string/send_30_daily_events"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btn220BatchEvents"
+        android:text="@string/send_batch_of_220_events"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>

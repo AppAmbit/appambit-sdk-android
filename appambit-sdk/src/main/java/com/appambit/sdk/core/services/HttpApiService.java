@@ -17,6 +17,7 @@ import com.appambit.sdk.core.services.ExceptionsCustom.UnauthorizedException;
 import com.appambit.sdk.core.services.endpoints.RegisterEndpoint;
 import com.appambit.sdk.core.services.interfaces.IEndpoint;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
+import com.appambit.sdk.core.utils.JsonConvertUtils;
 import com.appambit.sdk.core.utils.JsonKey;
 import com.appambit.sdk.core.utils.MultipartFormData;
 import org.json.JSONObject;
@@ -60,23 +61,13 @@ public class HttpApiService implements ApiService {
 
         try {
             HttpURLConnection httpResponse = requestHttp(endpoint);
-            checkStatusCodeFrom(httpResponse.getResponseCode());
+            //checkStatusCodeFrom(httpResponse.getResponseCode());
             Log.d("[APIService]", "Request successful: " + httpResponse.getResponseCode());
             Log.d("[HTTP-Response]", "Message: " + httpResponse.getResponseMessage());
 
             Map<String, List<String>> responseHeaders = httpResponse.getHeaderFields();
             for (Map.Entry<String, List<String>> entry : responseHeaders.entrySet()) {
                 Log.d("[HTTP-Response-Header]", entry.getKey() + ": " + entry.getValue());
-            }
-
-            Object payload = endpoint.getPayload();
-            if (payload instanceof JSONObject) {
-                Log.d("[HTTP-Request-Body]", payload.toString());
-            } else if (payload != null) {
-                JSONObject json = serializeToJSONStringContent(payload);
-                Log.d("[HTTP-Request-Body]", json.toString());
-            } else {
-                Log.d("[HTTP-Request-Body]", "No payload");
             }
 
             InputStream is = (httpResponse.getResponseCode() >= 400)
@@ -274,8 +265,8 @@ public class HttpApiService implements ApiService {
                     }
 
                 } else {
-                    JSONObject json = serializeToJSONStringContent(payload);
-                    byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
+                    String json = JsonConvertUtils.toJson(payload);
+                    byte[] input = json.getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                     os.flush();
                     os.close();
