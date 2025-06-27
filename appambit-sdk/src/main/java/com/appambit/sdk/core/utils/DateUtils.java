@@ -1,8 +1,6 @@
 package com.appambit.sdk.core.utils;
 
 import androidx.annotation.NonNull;
-
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;

@@ -16,7 +16,7 @@ import com.appambit.sdk.core.services.endpoints.RegisterEndpoint;
 import com.appambit.sdk.core.services.interfaces.ApiService;
 import com.appambit.sdk.core.services.interfaces.IEndpoint;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
-import com.appambit.sdk.core.utils.JsonKey;
+import com.appambit.sdk.core.utils.JsonConvertUtils;
 import com.appambit.sdk.core.utils.MultipartFormData;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -33,7 +33,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -59,7 +58,6 @@ public class HttpApiService implements ApiService {
 
         try {
             HttpURLConnection httpResponse = requestHttp(endpoint);
-            checkStatusCodeFrom(httpResponse.getResponseCode());
             Log.d(TAG, "Request successful: " + httpResponse.getResponseCode());
             Log.d("[HTTP-Response]", "Message: " + httpResponse.getResponseMessage());
 
@@ -90,14 +88,17 @@ public class HttpApiService implements ApiService {
 
             String json = responseBuilder.toString();
             T response = deserializeFromJSONStringContent(new JSONObject(json), clazz);
-            return ApiResult.success(response);
-        }catch (UnauthorizedException unauthorizedException) {
+            Log.d("[HTTP-Response-Body]", json);
+            checkStatusCodeFrom(httpResponse.getResponseCode());
 
+            return ApiResult.success(response);
+        } catch (UnauthorizedException unauthorizedException) {
             if (endpoint instanceof RegisterEndpoint) {
                 Log.d(TAG, "Token renew endpoint also failed. Session and Token must be cleared");
                 ClearToken();
-                return null;
+                return ApiResult.fail(ApiErrorType.Unauthorized, "Register endpoint failed");
             }
+
             if (!IsRenewingToken()) {
                 try {
                     Log.d(TAG, "Token invalid - triggering renewal");
@@ -108,6 +109,7 @@ public class HttpApiService implements ApiService {
                             HandleFailedRenewalResult(result);
                         }
                     });
+
                     currentTokenRenewalTask.onError(error ->
                             Log.d(TAG, "Error during token renewal: " + error));
                 } catch (Exception e) {
@@ -116,9 +118,11 @@ public class HttpApiService implements ApiService {
                     currentTokenRenewalTask = null;
                 }
             }
-            Log.d(TAG, "Retrying request after token renewal");
-            return executeRequest(endpoint, clazz);
-        } catch (Exception e) {
+
+            Log.d(TAG, "Token invalid - no retry will be made");
+            return ApiResult.fail(ApiErrorType.Unauthorized, "Token was invalid and retry was skipped");
+        }
+        catch (Exception e) {
             Log.d(TAG, "Exception during request: "+e);
             return ApiResult.fail(ApiErrorType.Unknown, "Unexpected error during request");
         }
@@ -250,14 +254,16 @@ public class HttpApiService implements ApiService {
                         MultipartFormData.getOutputString(payload, multipartStream, boundary, 0, true);
                         multipartStream.flush();
                         multipartStream.close();
+
                     }catch (Exception e) {
                         Log.e(TAG, "Error during multipart serialization: " + e.getMessage());
                         throw new IOException("Error during multipart serialization", e);
                     }
 
                 } else {
-                    JSONObject json = serializeToJSONStringContent(payload);
-                    byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
+                    String json = JsonConvertUtils.toJson(payload);
+                    Log.d(TAG, "HTTP - REQUEST: " + json);
+                    byte[] input = json.getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                     os.flush();
                     os.close();
@@ -272,41 +278,6 @@ public class HttpApiService implements ApiService {
         if (token != null && !token.isEmpty()) {
             connection.setRequestProperty("Authorization", "Bearer " + token);
         }
-    }
-
-    private static JSONObject serializeToJSONStringContent(Object payload) {
-        if (payload == null) {
-            return new JSONObject();
-        }
-
-        JSONObject json = new JSONObject();
-        Class<?> cls = payload.getClass();
-
-        for (Field field : cls.getDeclaredFields()) {
-            field.setAccessible(true);
-            try {
-                String key = field.isAnnotationPresent(JsonKey.class)
-                        ? Objects.requireNonNull(field.getAnnotation(JsonKey.class)).value()
-                        : field.getName();
-
-                Object value = field.get(payload);
-                if (value != null) {
-                    if (value instanceof Map) {
-                        Map<?, ?> map = (Map<?, ?>) value;
-                        JSONObject mapJson = new JSONObject();
-                        for (Map.Entry<?, ?> entry : map.entrySet()) {
-                            mapJson.put(entry.getKey().toString(), entry.getValue().toString());
-                        }
-                        json.put(key, mapJson);
-                    } else {
-                        json.put(key, value);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return json;
     }
 
     private static String serializeStringPayload(Object payload) throws UnsupportedEncodingException, IllegalAccessException {
@@ -340,6 +311,4 @@ public class HttpApiService implements ApiService {
 
         return url + "?" + serializedParameters;
     }
-
-
 }

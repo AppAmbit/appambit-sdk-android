@@ -1,13 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".AnalyticsFragment">
+    android:orientation="vertical"
+    android:gravity="center"
+    android:paddingHorizontal="50dp">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="Analytics" />
+    <Button
+    android:id="@+id/btnStartSession"
+    android:text="@string/start_session"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
 
-</FrameLayout>
+    <Button
+    android:id="@+id/btnEndSession"
+    android:text="@string/end_session"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
+
+    <Button
+    android:id="@+id/btnGenerate30DaysTestSessions"
+    android:text="@string/generate_the_last_30_daily_sessions"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
+</LinearLayout>
