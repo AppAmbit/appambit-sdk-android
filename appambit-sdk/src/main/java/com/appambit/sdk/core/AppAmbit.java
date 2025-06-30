@@ -115,7 +115,7 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
-        if (tokenIsValid()) {
+        if (!tokenIsValid()) {
             getNewToken(mAppKey);
         }
 
