@@ -8,7 +8,6 @@ import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.enums.LogType;
 import com.appambit.sdk.core.models.logs.ExceptionInfo;
-import com.appambit.sdk.core.models.logs.Log;
 import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.models.logs.LogResponse;
 import com.appambit.sdk.core.models.responses.ApiResult;
@@ -67,7 +66,7 @@ class Logging {
         sendOrSaveLogEventAsync(log);
     }
 
-    private static AppAmbitTaskFuture<Void> sendOrSaveLogEventAsync(Log log) {
+    private static void sendOrSaveLogEventAsync(LogEntity log) {
         mExecutor.execute(() -> {
             AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
             var logEndpoint = new LogEndpoint(log);
@@ -84,24 +83,11 @@ class Logging {
                 appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Error sending log event: " + ex.getMessage()));
             }
         });
-        return null;
     }
 
-    private static void storeLogInDb(@NonNull Log log) {
+    private static void storeLogInDb(@NonNull LogEntity log) {
         mExecutor.execute(() -> {
-            LogEntity logEntity = new LogEntity();
-            logEntity.setId(UUID.randomUUID());
-            logEntity.setCreatedAt(DateUtils.getUtcNow());
-            logEntity.setAppVersion(log.getAppVersion());
-            logEntity.setClassFQN(log.getClassFQN());
-            logEntity.setFileName(log.getFileName());
-            logEntity.setLineNumber(log.getLineNumber());
-            logEntity.setMessage(log.getMessage());
-            logEntity.setStackTrace(log.getStackTrace());
-            logEntity.setContext(log.getContext());
-            logEntity.setType(log.getType());
-            logEntity.setFile(log.getFile());
-            mStorable.putLogEvent(logEntity);
+            mStorable.putLogEvent(log);
             android.util.Log.d(TAG, "Log event stored in database");
         });
     }

@@ -41,19 +41,19 @@ public final class AppAmbit {
             @Override
             public void onCreate(@NonNull LifecycleOwner owner) {
                 onCreateApp(context);
-                Log.d("AppAmbit","onCreate");
+                Log.d(TAG,"onCreate");
             }
 
             @Override
             public void onStart(@NonNull LifecycleOwner owner) {
                 onResumeApp();
-                Log.d("AppAmbit","onStart");
+                Log.d(TAG,"onStart");
             }
 
             @Override
             public void onResume(@NonNull LifecycleOwner owner) {
                 onResumeApp();
-                Log.d("AppAmbit","onResume");
+                Log.d(TAG,"onResume");
             }
 
             @Override
@@ -99,8 +99,6 @@ public final class AppAmbit {
         SessionManager.sendEndSessionIfExists();
         SessionManager.startSession();
     }
-
-
 
     private static void onSleep()
     {

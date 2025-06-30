@@ -13,8 +13,8 @@ import com.appambit.sdk.core.enums.LogType;
 import com.appambit.sdk.core.models.logs.ExceptionInfo;
 import com.appambit.sdk.core.models.logs.LogBatch;
 import com.appambit.sdk.core.models.logs.LogEntity;
-import com.appambit.sdk.core.models.logs.LogResponse;
 import com.appambit.sdk.core.models.responses.ApiResult;
+import com.appambit.sdk.core.models.responses.LogsBatchResponse;
 import com.appambit.sdk.core.services.endpoints.LogBatchEndpoint;
 import com.appambit.sdk.core.services.interfaces.ApiService;
 import com.appambit.sdk.core.storage.Storable;
@@ -45,31 +45,70 @@ public class Crashes {
     private static final String TAG = Crashes.class.getSimpleName();
 
     public static void sendBatchesLogs() {
+        AppAmbitTaskFuture<List<LogEntity>> logsFuture = getLogBatches();
+        logsFuture.then(logs -> {
+            if (logs.isEmpty()) {
+                Log.d(TAG, "No logs to send");
+                return;
+            }
+            LogBatch logBatch = new LogBatch();
+            logBatch.setLogs(logs);
+            AppAmbitTaskFuture<ApiResult<LogsBatchResponse>> response = sendBatchEndpoint(logBatch);
+            response.then(resultApi -> {
+                Log.d(TAG, "Event batch sent");
+                if (resultApi.errorType != ApiErrorType.None) {
+                    return;
+                }
+                AppAmbitTaskFuture<Void> deleteLogs = deleteLogs(logs);
+                deleteLogs.then(v -> deleteLogs.complete(null));
+                deleteLogs.onError(errorDelete -> Log.e(TAG, "Error deleting logs: " + errorDelete.getMessage()));
+            });
+        });
+    }
+
+    @NonNull
+    private static AppAmbitTaskFuture<List<LogEntity>> getLogBatches() {
+        AppAmbitTaskFuture<List<LogEntity>> response = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
                 List<LogEntity> logs = mStorable.getOldest100Logs();
-                if (logs.isEmpty()) {
-                    Log.d(TAG, "No logs to send");
-                    return;
-                }
-                LogBatch logBatch = new LogBatch();
-                logBatch.setLogs(logs);
-                LogBatchEndpoint logBatchEndpoint = new LogBatchEndpoint(logBatch);
-                ApiResult<LogResponse> logResponse = apiService.executeRequest(logBatchEndpoint, LogResponse.class);
-
-                if(logResponse.errorType != ApiErrorType.None) {
-                    Log.d(TAG, "Error sending logs: " + logResponse.errorType);
-                }else {
-                    Log.d(TAG, "Logs sent successfully: " + logResponse.data.getMessage());
-                    if (!logs.isEmpty()) {
-                        mStorable.deleteLogList(logs);
-                    }
-                }
-
-            } catch (Exception ex) {
-                Log.e(TAG, "Error to process Logs", ex);
+                response.complete(logs);
+            } catch (Exception e) {
+                Log.e(TAG, "Error fetching log batches: " + e.getMessage());
+                response.fail(e);
             }
         });
+        return response;
+    }
+
+    @NonNull
+    private static AppAmbitTaskFuture<ApiResult<LogsBatchResponse>> sendBatchEndpoint(LogBatch logBatch) {
+        AppAmbitTaskFuture<ApiResult<LogsBatchResponse>> response = new AppAmbitTaskFuture<>();
+
+        mExecutorService.execute(() -> {
+            try {
+                ApiResult<LogsBatchResponse> responseApi = ServiceLocator.getApiService()
+                        .executeRequest(new LogBatchEndpoint(logBatch), LogsBatchResponse.class);
+                response.complete(responseApi);
+            } catch (Exception e) {
+                response.fail(e);
+            }
+        });
+        return response;
+    }
+
+    @NonNull
+    private static AppAmbitTaskFuture<Void> deleteLogs(List<LogEntity> logs) {
+        AppAmbitTaskFuture<Void> future = new AppAmbitTaskFuture<>();
+        mExecutorService.execute(() -> {
+            try {
+                ServiceLocator.getStorageService().deleteLogList(logs);
+                future.complete(null);
+            } catch (Throwable t) {
+                future.fail(t);
+            }
+        });
+        return future;
     }
 
     public static void loadCrashFileIfExists(Context context) {
@@ -114,7 +153,7 @@ public class Crashes {
         });
     }
 
-    public static AppAmbitTaskFuture<Void> storeBatchCrashesLog(Context context, @NonNull List<ExceptionInfo> crashList) {
+    public static void storeBatchCrashesLog(Context context, @NonNull List<ExceptionInfo> crashList) {
         Log.d(TAG, "Debug Storing in DB Crashes Batches");
         AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
         for(ExceptionInfo crash : crashList) {
@@ -129,21 +168,30 @@ public class Crashes {
                     logEntity.setCreatedAt(crash.getCreatedAt());
                 }
                 if (mStorable == null) {
-                    return null;
+                    return;
                 }
                 mStorable.putLogEvent(logEntity);
-                appAmbitTaskFuture.then(result -> Log.d(TAG, "Stored crash log"));
+                Log.d(TAG, "Stored crash log");
             } catch (Exception e) {
                 Log.d(TAG, "Debug exception: " + e);
-                return null;
+                appAmbitTaskFuture.fail(e);
             }
         }
-        deleteCrashes(context);
-        return null;
+        appAmbitTaskFuture.complete(null);
+        appAmbitTaskFuture.then(result -> {
+            Log.d(TAG, "All crash logs stored successfully");
+            deleteCrashes(context);
+        });
+
+        appAmbitTaskFuture.onError(error -> Log.e(TAG, "Error while storing crash logs", error));
     }
 
     public static void LogError(Context context, Exception exception, Map<String, String> properties, String classFqn, String fileName,int lineNumber, Date createdAt) {
         Logging.LogEvent(context, "", LogType.ERROR, exception, properties, classFqn, fileName, lineNumber, createdAt);
+    }
+
+    public static void LogError(Context context, String message, Map<String, String> properties, String classFqn, Exception exception, String fileName, int lineNumber, Date createdAt) {
+        Logging.LogEvent(context, message, LogType.ERROR, exception, properties, classFqn, fileName, lineNumber, createdAt);
     }
 
     @NonNull

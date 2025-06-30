@@ -61,12 +61,18 @@ public class CrashesFragment extends Fragment {
         btnSetUserId = view.findViewById(R.id.btnSetUserId);
         etUserId = view.findViewById(R.id.etUserId);
         etUserId.setText(UUID.randomUUID().toString());
-        btnSetUserId.setOnClickListener(v -> Analytics.setUserId(etUserId.getText().toString()));
+        btnSetUserId.setOnClickListener(v -> {
+                Analytics.setUserId(etUserId.getText().toString());
+                AlertsUtils.showAlert(context, "Info", "User ID changed");
+        });
 
         btnSetUserEmail = view.findViewById(R.id.btnSetUserEmail);
         etUserEmail = view.findViewById(R.id.etUserEmail);
         etUserEmail.setText("test@gmail.com");
-        btnSetUserEmail.setOnClickListener(v -> Analytics.setUserEmail(etUserEmail.getText().toString()));
+        btnSetUserEmail.setOnClickListener(v -> {
+            Analytics.setUserEmail(etUserEmail.getText().toString());
+            AlertsUtils.showAlert(context, "Info", "User email changed");
+        });
 
         btnThrowNewCrash = view.findViewById(R.id.btnThrowNewCrash);
         btnThrowNewCrash.setOnClickListener(v -> {
