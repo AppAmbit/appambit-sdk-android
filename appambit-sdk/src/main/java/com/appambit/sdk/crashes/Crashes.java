@@ -6,7 +6,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.appambit.sdk.core.AppConstants;
-import com.appambit.sdk.core.CrashHandler;
 import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.enums.LogType;

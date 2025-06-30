@@ -16,6 +16,7 @@ import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.StringUtils;
+import com.appambit.sdk.crashes.CrashHandler;
 import com.appambit.sdk.crashes.Crashes;
 import com.appambit.sdk.core.utils.FileUtils;
 

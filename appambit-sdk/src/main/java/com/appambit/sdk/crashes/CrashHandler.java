@@ -1,4 +1,4 @@
-package com.appambit.sdk.core;
+package com.appambit.sdk.crashes;
 
 import static com.appambit.sdk.core.AppConstants.DID_APP_CRASH;
 import static com.appambit.sdk.core.utils.JsonConvertUtils.toJson;
