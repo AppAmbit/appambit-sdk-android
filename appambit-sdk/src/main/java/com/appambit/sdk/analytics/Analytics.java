@@ -52,36 +52,32 @@ public final class Analytics {
     }
 
     public static void sendBatchesEvents() {
-        AppAmbitTaskFuture<List<EventEntity>> eventsFuture = getEvents();
+        mExecutorService.execute(() -> {
+            List<EventEntity> events = mStorable.getOldest100Events();
 
-        eventsFuture.then(events -> {
             if (events.isEmpty()) {
                 Log.d(TAG, "No events to send");
                 return;
             }
 
-            AppAmbitTaskFuture<ApiResult<EventsBatchResponse>> response = sendBatchEndpoint(events);
+            ApiResult<EventsBatchResponse> responseApi = ServiceLocator.getApiService()
+                    .executeRequest(new EventBatchEndpoint(events), EventsBatchResponse.class);
 
-            response.then(resultApi -> {
-                Log.d(TAG, "Event batch sent");
-                if (resultApi.errorType != ApiErrorType.None) {
-                    return;
-                }
+            if (responseApi.errorType != ApiErrorType.None) {
+                return;
+            }
 
-                AppAmbitTaskFuture<Void> deleteEvents = deleteEvents(events);
-                deleteEvents.then(v -> {
-                    deleteEvents.complete(null);
-                });
-
-                deleteEvents.onError(erroDelete -> {
-                    Log.d(TAG, "Error to delete event batch");
-                });
+            Log.d(TAG, "Event batch sent");
+            AppAmbitTaskFuture<Void> deleteEvents = deleteEvents(events);
+            deleteEvents.then(v -> {
+                deleteEvents.complete(null);
             });
 
-            response.onError(errorApi -> Log.d(TAG, "Error sending the batch to the API"));
+            deleteEvents.onError(erroDelete -> {
+                Log.d(TAG, "Error to delete event batch");
+            });
         });
 
-        eventsFuture.onError(error -> Log.d(TAG, "error getting data"));
     }
 
     public static void generateTestEvent() {
@@ -96,38 +92,6 @@ public final class Analytics {
 
     public static boolean isManualSessionEnabled() {
         return isManualSessionEnabled;
-    }
-
-    private static AppAmbitTaskFuture<ApiResult<EventsBatchResponse>> sendBatchEndpoint(List<EventEntity> eventEntities) {
-        AppAmbitTaskFuture<ApiResult<EventsBatchResponse>> response = new AppAmbitTaskFuture<>();
-
-        mExecutorService.execute(() -> {
-            try {
-                ApiResult<EventsBatchResponse> responseApi = ServiceLocator.getApiService()
-                        .executeRequest(new EventBatchEndpoint(eventEntities), EventsBatchResponse.class);
-
-                response.complete(responseApi);
-            } catch (Exception e) {
-                response.fail(e);
-            }
-        });
-
-        return response;
-    }
-
-    private static AppAmbitTaskFuture<List<EventEntity>> getEvents() {
-        AppAmbitTaskFuture<List<EventEntity>> response = new AppAmbitTaskFuture<>();
-        mExecutorService.execute(() -> {
-            try {
-                List<EventEntity> events = mStorable.getOldest100Events();
-                response.complete(events);
-            } catch (Exception ex) {
-                Log.e(Analytics.class.getSimpleName(), "Error to process Events", ex);
-                response.fail(ex);
-            }
-        });
-
-        return response;
     }
 
     private static void SendOrSaveEvent(String eventTitle, Map<String, String> data, Date createdAt) {
@@ -163,7 +127,7 @@ public final class Analytics {
 
     private static Map<String, String> processData(Map<String, String> data) {
         Map<String, String> input = (data != null ? data : new HashMap<>());
-        Map<String, String> result = new LinkedHashMap<>();  // preserva orden
+        Map<String, String> result = new LinkedHashMap<>();
 
         for (Map.Entry<String, String> entry : input.entrySet()) {
             if (result.size() >= AppConstants.TRACK_EVENT_MAX_PROPERTY_LIMIT) {
@@ -171,7 +135,6 @@ public final class Analytics {
             }
 
             String truncatedKey = truncate(entry.getKey(), AppConstants.TRACK_EVENT_PROPERTY_MAX_CHARACTERS);
-            // si ya existe esa clave truncada, ignórala (GroupBy + First)
             if (result.containsKey(truncatedKey)) {
                 continue;
             }
@@ -216,7 +179,6 @@ public final class Analytics {
 
     private static AppAmbitTaskFuture<Void> deleteEvents(List<EventEntity> events) {
         AppAmbitTaskFuture<Void> future = new AppAmbitTaskFuture<>();
-        mExecutorService.execute(() -> {
             try {
                 ServiceLocator.getStorageService()
                         .deleteEventList(events);
@@ -224,7 +186,6 @@ public final class Analytics {
             } catch (Throwable t) {
                 future.fail(t);
             }
-        });
         return future;
     }
 
