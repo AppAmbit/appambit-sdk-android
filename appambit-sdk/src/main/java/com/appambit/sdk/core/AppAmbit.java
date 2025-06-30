@@ -153,7 +153,7 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
-                        if (tokenIsValid()) {
+                        if (!tokenIsValid()) {
                             getNewToken(mAppKey);
                         }
 
