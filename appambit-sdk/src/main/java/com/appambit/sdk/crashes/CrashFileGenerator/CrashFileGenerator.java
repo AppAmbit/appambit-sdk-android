@@ -2,6 +2,9 @@ package com.appambit.sdk.crashes.CrashFileGenerator;
 
 import android.content.pm.PackageInfo;
 import androidx.annotation.NonNull;
+
+import com.appambit.sdk.core.ServiceLocator;
+import com.appambit.sdk.core.storage.Storable;
 import com.appambit.sdk.core.utils.PackageInfoHelper;
 import java.lang.Exception;
 import java.lang.Thread;
@@ -17,10 +20,12 @@ import android.os.Build;
 
 public class CrashFileGenerator {
 
-    @NonNull
-    public static String generateCrashLog(Context context, @NonNull Exception ex, String deviceId) {
-        StringBuilder log = new StringBuilder();
+    static Storable mStorable = ServiceLocator.getStorageService();
 
+    @NonNull
+    public static String generateCrashLog(Context context, @NonNull Exception ex) {
+        StringBuilder log = new StringBuilder();
+        String deviceId = mStorable.getDeviceId();
         // Header
         addHeader(context, log, deviceId);
 
@@ -42,9 +47,7 @@ public class CrashFileGenerator {
         PackageInfo pInfo = PackageInfoHelper.getPackageInfo(context);
         assert pInfo != null;
         String versionName = pInfo.versionName;
-        long versionCode = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                ? pInfo.getLongVersionCode()
-                : pInfo.versionCode;
+        long versionCode = pInfo.versionCode;
 
         log.append("Package: ").append(context.getPackageName()).append("\n");
         log.append("Version Code: ").append(versionCode).append("\n");

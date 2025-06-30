@@ -1,15 +1,13 @@
 package com.appambit.sdk.core.models.logs;
 
+import static com.appambit.sdk.core.utils.DateUtils.fromIsoUtc;
 import com.appambit.sdk.core.AppConstants;
 import com.appambit.sdk.core.utils.DateUtils;
 import com.appambit.sdk.core.utils.JsonKey;
 import com.appambit.sdk.crashes.CrashFileGenerator.CrashFileGenerator;
 import android.content.Context;
-import android.os.Build;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import org.json.JSONObject;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -116,7 +114,7 @@ public class ExceptionInfo {
     }
 
     @NonNull
-    public static ExceptionInfo fromException(Context context, Exception exception, String deviceId) {
+    public static ExceptionInfo fromException(Context context, Exception exception) {
         ExceptionInfo exceptionInfo = new ExceptionInfo();
         exceptionInfo.setType(exception != null ? exception.getClass().getName() : null);
         exceptionInfo.setMessage(exception != null ? exception.getStackTrace()[0].getClassName() : null);
@@ -127,11 +125,11 @@ public class ExceptionInfo {
         exceptionInfo.setFileNameFromStackTrace(exception != null ? exception.getStackTrace().getClass().getName() : AppConstants.UNKNOWN_FILENAME);
         exceptionInfo.setLineNumberFromStackTrace(exception != null ? exception.getStackTrace()[0].getLineNumber() : 0);
         assert exception != null;
-        exceptionInfo.setCrashLogFile(CrashFileGenerator.generateCrashLog(context, exception, deviceId));
+        exceptionInfo.setCrashLogFile(CrashFileGenerator.generateCrashLog(context, exception));
         exceptionInfo.setCreatedAt(new Date());
         return exceptionInfo;
     }
-    @RequiresApi(api = Build.VERSION_CODES.O)
+
     @NonNull
     public static ExceptionInfo fromJson(@NonNull JSONObject json) {
         ExceptionInfo info = new ExceptionInfo();
@@ -150,7 +148,7 @@ public class ExceptionInfo {
         info.crashLogFile = json.optString("CrashLogFile");
         String dateString = json.optString("CreatedAt");
         try {
-            info.createdAt = Date.from(Instant.parse(dateString));
+            info.createdAt = fromIsoUtc(dateString);
         } catch (Exception e) {
             info.createdAt = DateUtils.getUtcNow();
         }

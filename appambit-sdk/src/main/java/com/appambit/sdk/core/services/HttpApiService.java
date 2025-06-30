@@ -20,6 +20,7 @@ import com.appambit.sdk.core.utils.JsonConvertUtils;
 import com.appambit.sdk.core.utils.MultipartFormData;
 import org.json.JSONObject;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -250,10 +251,19 @@ public class HttpApiService implements ApiService {
                 if (isMultipart) {
                     try {
                         String boundary = connection.getRequestProperty("Content-Type").split("boundary=")[1];
-                        DataOutputStream multipartStream = new DataOutputStream(os);
-                        MultipartFormData.getOutputString(payload, multipartStream, boundary, 0, true);
-                        multipartStream.flush();
-                        multipartStream.close();
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        DataOutputStream debugStream = new DataOutputStream(baos);
+                        MultipartFormData.getOutputString(payload, debugStream, boundary, 0, true);
+                        debugStream.flush();
+                        debugStream.close();
+
+                        String multipartBody = baos.toString(StandardCharsets.UTF_8.name());
+                        Log.d("[HTTP-Request-Body]", "Multipart:\n" + multipartBody);
+
+
+                        os.write(baos.toByteArray());
+                        os.flush();
+                        os.close();
 
                     }catch (Exception e) {
                         Log.e(TAG, "Error during multipart serialization: " + e.getMessage());

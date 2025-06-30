@@ -3,7 +3,6 @@ package com.appambit.sdk.core;
 import android.app.Application;
 import android.content.Context;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
@@ -11,17 +10,14 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
-import android.os.Build;
 import android.util.Log;
 import com.appambit.sdk.analytics.SessionManager;
 import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.enums.ApiErrorType;
-import com.appambit.sdk.core.services.HttpApiService;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.StringUtils;
 import com.appambit.sdk.crashes.Crashes;
 import com.appambit.sdk.core.utils.FileUtils;
-import com.appambit.sdk.core.utils.StringUtils;
 
 public final class AppAmbit {
     private static final String TAG = AppAmbit.class.getSimpleName();
@@ -31,6 +27,7 @@ public final class AppAmbit {
 
     public static void init(Context context, String appKey) {
         mAppKey = appKey;
+        CrashHandler.install(context);
         if (!isInitialized) {
             registerLifecycleObserver(context);
             isInitialized = true;
@@ -78,7 +75,6 @@ public final class AppAmbit {
 
     private static void InitializeServices(Context context) {
         ServiceLocator.initialize(context);
-        registerNetworkCallback(context);
         FileUtils.initialize(context);
         Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService());
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
@@ -86,14 +82,14 @@ public final class AppAmbit {
 
     private static void onCreateApp(Context context) {
         InitializeServices(context);
-        InitializeConsumer(context);
+        registerNetworkCallback(context);
+        InitializeConsumer();
         hasStartedSession = true;
-        Analytics.sendBatchesLogs();
         Analytics.sendBatchesEvents();
         SessionManager.sendBatchSessions();
     }
 
-    private static void InitializeConsumer(Context context) {
+    private static void InitializeConsumer() {
         getNewToken(mAppKey);
 
         if (Analytics.isManualSessionEnabled()) {
@@ -121,7 +117,7 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
-        if (!tokenIsValid()) {
+        if (tokenIsValid()) {
             getNewToken(mAppKey);
         }
 
@@ -129,7 +125,7 @@ public final class AppAmbit {
             SessionManager.removeSavedEndSession();
         }
 
-        Analytics.sendBatchesLogs();
+        Crashes.sendBatchesLogs();
         Analytics.sendBatchesEvents();
     }
 
@@ -152,27 +148,24 @@ public final class AppAmbit {
                 .build();
 
         connectivityManager.registerNetworkCallback(request, new ConnectivityManager.NetworkCallback() {
-            @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void onAvailable(@NonNull Network network) {
                 super.onAvailable(network);
                 Log.d(TAG, "Internet connection available");
-
-                ServiceLocator.getExecutorService().execute(() -> {
                     try {
                         InitializeServices(context);
 
-                        if (!tokenIsValid()) {
-                            ServiceLocator.getApiService().GetNewToken(appKey);
+                        if (tokenIsValid()) {
+                            getNewToken(mAppKey);
                         }
 
                         Crashes.loadCrashFileIfExists(context);
                         Crashes.sendBatchesLogs();
                         Analytics.sendBatchesEvents();
+                        SessionManager.sendBatchSessions();
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored" + e);
                     }
-                });
             }
 
             @Override
@@ -185,6 +178,6 @@ public final class AppAmbit {
 
     private static boolean tokenIsValid() {
         String token = ServiceLocator.getApiService().getToken();
-        return !StringUtils.isNullOrBlank(token);
+        return StringUtils.isNullOrBlank(token);
     }
 }

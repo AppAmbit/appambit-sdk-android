@@ -1,7 +1,6 @@
 package com.appambit.sdk.analytics;
 
 import android.util.Log;
-
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.enums.SessionType;
 import com.appambit.sdk.core.models.analytics.SessionData;
@@ -9,17 +8,15 @@ import com.appambit.sdk.core.models.responses.ApiResult;
 import com.appambit.sdk.core.models.responses.EndSessionResponse;
 import com.appambit.sdk.core.models.responses.EventsBatchResponse;
 import com.appambit.sdk.core.models.responses.StartSessionResponse;
-import com.appambit.sdk.core.services.ApiService;
 import com.appambit.sdk.core.services.endpoints.EndSessionEndpoint;
 import com.appambit.sdk.core.services.endpoints.SessionBatchEndpoint;
 import com.appambit.sdk.core.services.endpoints.StartSessionEndpoint;
+import com.appambit.sdk.core.services.interfaces.ApiService;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.DateUtils;
 import com.appambit.sdk.core.utils.FileUtils;
-
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -33,7 +30,6 @@ public class SessionManager {
     private static String sessionId;
     public static boolean isSessionActivate = false;
     private static final String offlineSessionsFile = "OfflineSessions";
-
 
     public static void initialize(ApiService apiService, ExecutorService executorService) {
         mApiService = apiService;
@@ -132,25 +128,46 @@ public class SessionManager {
         List<SessionData> sessions = FileUtils.getSaveJsonArray(offlineSessionsFile, SessionData.class, null);
 
         if (sessions.isEmpty()) {
+            Log.d("TAG", "No offline sessions to send");
             return;
         }
 
-        List<SessionBatch> sessionBatches = buildSessionBatches(sessions);
-
-        AppAmbitTaskFuture<ApiResult<EventsBatchResponse>> response = sendBatchEndpoint(sessionBatches);
-
-        response.then(result -> {
-            if (result.errorType != ApiErrorType.None) {
-                Log.d(TAG, "Unset sessions");
+        if (sessions.size() == 1) {
+            SessionData sessionData = sessions.get(0);
+            if (sessionData.getSessionType() == SessionType.END) {
+                Log.d(TAG, "Only start session found, skipping batch send");
                 return;
             }
+            AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(sessionData.getTimestamp());
 
-            updateOfflineSessionsFile(sessions);
-        });
+            response.then(result -> {
+                if (result.errorType == ApiErrorType.None) {
+                    updateOfflineSessionsFile(sessions);
+                    Log.d(TAG, "Start Session - save locally");
+                }
+            });
 
-        response.onError(error -> {
-            Log.d(TAG, "Error to Call End Session");
-        });
+            response.onError(error -> {
+                Log.d(TAG, Objects.requireNonNull(error.getMessage()));
+            });
+        } else {
+            List<SessionBatch> sessionBatches = buildSessionBatches(sessions);
+
+            AppAmbitTaskFuture<ApiResult<EventsBatchResponse>> response = sendBatchEndpoint(sessionBatches);
+
+            response.then(result -> {
+                if (result.errorType != ApiErrorType.None) {
+                    Log.d(TAG, "Unset sessions");
+                    return;
+                }
+
+                updateOfflineSessionsFile(sessions);
+            });
+
+            response.onError(error -> {
+                Log.d(TAG, "Error to Call End Session");
+            });
+        }
     }
 
     public static List<SessionBatch> buildSessionBatches(List<SessionData> sessions) {

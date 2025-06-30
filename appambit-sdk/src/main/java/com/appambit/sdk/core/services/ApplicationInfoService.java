@@ -10,6 +10,15 @@ import java.util.Locale;
 
 public class ApplicationInfoService implements AppInfoService {
 
+    private final String appVersion;
+    private final String build;
+    private final String platform;
+    private final String os;
+    private final String deviceModel;
+    private final String country;
+    private final String utcOffset;
+    private final String language;
+
     public ApplicationInfoService(Context context) {
 
         PackageInfo mPackageInfoHelper = PackageInfoHelper.getPackageInfo(context);
@@ -25,76 +34,35 @@ public class ApplicationInfoService implements AppInfoService {
         this.utcOffset = DateUtils.getUtcNow().toString();
     }
 
-    public String appVersion;
-    public String build;
-    public String platform;
-    public String os;
-    public String deviceModel;
-    public String country;
-    public String utcOffset;
-    public String language;
-
     public String getAppVersion() {
         return appVersion;
-    }
-
-    public void setAppVersion(String appVersion) {
-        this.appVersion = appVersion;
     }
 
     public String getBuild() {
         return build;
     }
 
-    public void setBuild(String build) {
-        this.build = build;
-    }
-
     public String getPlatform() {
         return platform;
-    }
-
-    public void setPlatform(String platform) {
-        this.platform = platform;
     }
 
     public String getOs() {
         return os;
     }
 
-    public void setOs(String os) {
-        this.os = os;
-    }
-
     public String getDeviceModel() {
         return deviceModel;
-    }
-
-    public void setDeviceModel(String deviceModel) {
-        this.deviceModel = deviceModel;
     }
 
     public String getCountry() {
         return country;
     }
 
-    public void setCountry(String country) {
-        this.country = country;
-    }
-
     public String getUtcOffset() {
-        return UtcOffset;
-    }
-
-    public void setUtcOffset(String utcOffset) {
-        this.utcOffset = utcOffset;
+        return utcOffset;
     }
 
     public String getLanguage() {
         return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
     }
 }

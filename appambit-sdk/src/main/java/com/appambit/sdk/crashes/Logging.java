@@ -32,8 +32,7 @@ class Logging {
     static Storable mStorable = ServiceLocator.getStorageService();
 
     public static void LogEvent(Context context, String message, LogType logType, Exception exception, Map<String, String> properties, String classFqn, String fileName, int lineNumber, Date createdAt) {
-        var deviceId = mStorable.getDeviceId();
-        ExceptionInfo exceptionInfo = (exception != null) ? ExceptionInfo.fromException(context, exception, deviceId) : null;
+        ExceptionInfo exceptionInfo = (exception != null) ? ExceptionInfo.fromException(context, exception) : null;
         logEvent(context, message, logType, exceptionInfo, properties, classFqn, fileName, lineNumber, createdAt);
     }
 
@@ -88,9 +87,8 @@ class Logging {
         return null;
     }
 
-    private static AppAmbitTaskFuture<Void> storeLogInDb(@NonNull Log log) {
+    private static void storeLogInDb(@NonNull Log log) {
         mExecutor.execute(() -> {
-            AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
             LogEntity logEntity = new LogEntity();
             logEntity.setId(UUID.randomUUID());
             logEntity.setCreatedAt(DateUtils.getUtcNow());
@@ -104,9 +102,8 @@ class Logging {
             logEntity.setType(log.getType());
             logEntity.setFile(log.getFile());
             mStorable.putLogEvent(logEntity);
-            appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Log event stored in database"));
+            android.util.Log.d(TAG, "Log event stored in database");
         });
-        return null;
     }
 
 }

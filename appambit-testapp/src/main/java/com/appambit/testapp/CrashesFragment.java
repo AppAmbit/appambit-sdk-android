@@ -1,12 +1,9 @@
 package com.appambit.testapp;
 
 import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
-import static com.appambit.sdk.core.utils.JsonConvertUtils.objectToJson;
-
 import android.content.Context;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
-
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,12 +14,10 @@ import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.models.logs.ExceptionInfo;
 import com.appambit.sdk.core.utils.DateUtils;
+import com.appambit.sdk.core.utils.JsonConvertUtils;
 import com.appambit.sdk.crashes.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
-
 import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -90,12 +85,12 @@ public class CrashesFragment extends Fragment {
             Exception exception = new NullPointerException();
             for (int index = 1; index <= 30; index++) {
                 Date crashDate = DateUtils.getDateDaysAgo(30 - index);
-                ExceptionInfo info = ExceptionInfo.fromException(context, exception, "Google pixel 7");
+                ExceptionInfo info = ExceptionInfo.fromException(context, exception);
                 info.setCreatedAt(crashDate);
 
-                JSONObject crashJson;
+                String crashJson;
                 try {
-                    crashJson = objectToJson(info);
+                    crashJson = JsonConvertUtils.toJson(info);
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
@@ -110,8 +105,8 @@ public class CrashesFragment extends Fragment {
                 Log.d(TAG, "Crash file saved to: " + crashFile.getAbsolutePath());
 
                 try (FileWriter writer = new FileWriter(crashFile)) {
-                    writer.write(crashJson.toString(2));
-                } catch (IOException | JSONException e) {
+                    writer.write(crashJson);
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
 

@@ -1,42 +1,21 @@
 package com.appambit.sdk.core.services.interfaces;
 
 public interface AppInfoService {
-    String appVersion = "";
-    String build = "";
-    String platform = "";
-    String os = "";
-    String deviceModel = "";
-    String country = "";
-    String UtcOffset = "";
-    String language = "";
 
-    public String getAppVersion();
-    public void setAppVersion(String appVersion);
-    public String getBuild();
-    public void setBuild(String build);
+    String getAppVersion();
 
-    public String getPlatform();
+    String getBuild();
 
-    public void setPlatform(String platform);
+    String getPlatform();
 
-    public String getOs();
+    String getOs();
 
-    public void setOs(String os);
+    String getDeviceModel();
 
-    public String getDeviceModel();
+    String getCountry();
 
-    public void setDeviceModel(String deviceModel);
+    String getUtcOffset();
 
-    public String getCountry();
-
-    public void setCountry(String country);
-
-    public String getUtcOffset();
-
-    public void setUtcOffset(String utcOffset);
-
-    public String getLanguage();
-
-    public void setLanguage(String language);
+    String getLanguage();
 
 }

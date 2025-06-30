@@ -8,10 +8,13 @@ import java.util.Date;
 import java.util.UUID;
 
 public class SessionData implements Identifiable {
+    @JsonKey("id")
     private UUID id;
+    @JsonKey("session_id")
     private String sessionId;
     @JsonKey("timestamp")
     private Date timestamp;
+    @JsonKey("session_type")
     private SessionType sessionType;
 
     @Override

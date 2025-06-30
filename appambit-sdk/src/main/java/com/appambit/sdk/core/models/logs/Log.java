@@ -2,6 +2,7 @@ package com.appambit.sdk.core.models.logs;
 
 import com.appambit.sdk.core.AppConstants;
 import com.appambit.sdk.core.enums.LogType;
+import com.appambit.sdk.core.utils.JsonKey;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -11,14 +12,23 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class Log {
+    @JsonKey("app_version")
     private String appVersion;
+    @JsonKey("classFQN")
     private String classFQN;
+    @JsonKey("file_name")
     private String fileName;
+    @JsonKey("line_number")
     private long lineNumber;
+    @JsonKey("message")
     private String message = "";
+    @JsonKey("stack_trace")
     private String stackTrace = AppConstants.NO_STACK_TRACE_AVAILABLE;
+    @JsonKey("context")
     private String contextJson = "{}";
+    @JsonKey("type")
     private LogType type;
+    @JsonKey("file")
     private String file;
 
     public String getAppVersion() {

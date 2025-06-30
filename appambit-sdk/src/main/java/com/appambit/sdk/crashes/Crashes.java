@@ -2,11 +2,9 @@ package com.appambit.sdk.crashes;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
-import android.os.Build;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import com.appambit.sdk.core.AppConstants;
 import com.appambit.sdk.core.CrashHandler;
 import com.appambit.sdk.core.ServiceLocator;
@@ -46,26 +44,23 @@ public class Crashes {
 
     private static final String TAG = Crashes.class.getSimpleName();
 
-    public static void initialize(Context context) {
-        CrashHandler.install(context);
-        Log.d(TAG, "Crash system initialized");
-    }
-
-    public static AppAmbitTaskFuture<Void> sendBatchesLogs() {
+    public static void sendBatchesLogs() {
         mExecutorService.execute(() -> {
-            AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
             try {
                 List<LogEntity> logs = mStorable.getOldest100Logs();
+                if (logs.isEmpty()) {
+                    Log.d(TAG, "No logs to send");
+                    return;
+                }
                 LogBatch logBatch = new LogBatch();
                 logBatch.setLogs(logs);
                 LogBatchEndpoint logBatchEndpoint = new LogBatchEndpoint(logBatch);
                 ApiResult<LogResponse> logResponse = apiService.executeRequest(logBatchEndpoint, LogResponse.class);
 
                 if(logResponse.errorType != ApiErrorType.None) {
-                    appAmbitTaskFuture.then(result -> Log.d(TAG, "Error sending logs: " + logResponse.errorType));
+                    Log.d(TAG, "Error sending logs: " + logResponse.errorType);
                 }else {
-                    appAmbitTaskFuture.then(result ->
-                            Log.d(TAG, "Logs sent successfully: " + logResponse.data.getMessage()));
+                    Log.d(TAG, "Logs sent successfully: " + logResponse.data.getMessage());
                     if (!logs.isEmpty()) {
                         mStorable.deleteLogList(logs);
                     }
@@ -75,13 +70,10 @@ public class Crashes {
                 Log.e(TAG, "Error to process Logs", ex);
             }
         });
-        return null;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public static AppAmbitTaskFuture<Void> loadCrashFileIfExists(Context context) {
+    public static void loadCrashFileIfExists(Context context) {
         ServiceLocator.getExecutorService().execute(() -> {
-            AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
             try {
                 ensureFileLocked.acquire();
 
@@ -108,11 +100,11 @@ public class Crashes {
 
                 if (exceptionInfos.size() == 1) {
                     logCrash(context, exceptionInfos.get(0));
-                    appAmbitTaskFuture.then(result -> Log.d(TAG, "Sending one crash"));
+                    Log.d(TAG, "Sending one crash");
                     deleteCrashes(context);
                 } else if (exceptionInfos.size() > 1) {
                     storeBatchCrashesLog(context, exceptionInfos);
-                    appAmbitTaskFuture.then(result -> Log.d(TAG, "Sending crash batch: " + exceptionInfos.size() + " items"));
+                    Log.d(TAG, "Sending crash batch: " + exceptionInfos.size() + " items");
                 }
             } catch (InterruptedException e) {
                 Log.d(TAG, "Semaphore interrupted " + e);
@@ -120,7 +112,6 @@ public class Crashes {
                 ensureFileLocked.release();
             }
         });
-        return null;
     }
 
     public static AppAmbitTaskFuture<Void> storeBatchCrashesLog(Context context, @NonNull List<ExceptionInfo> crashList) {
@@ -204,7 +195,6 @@ public class Crashes {
         Log.d(TAG, "All crash files deleted");
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
     @Nullable
     public static ExceptionInfo readCrashFile(String path) {
         try {

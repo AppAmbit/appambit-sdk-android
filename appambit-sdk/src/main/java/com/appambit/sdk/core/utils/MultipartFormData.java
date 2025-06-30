@@ -1,5 +1,7 @@
 package com.appambit.sdk.core.utils;
 
+import static com.appambit.sdk.core.utils.DateUtils.toIsoUtc;
+
 import androidx.annotation.NonNull;
 import com.appambit.sdk.core.models.logs.Log;
 import com.appambit.sdk.core.models.logs.LogEntity;
@@ -162,12 +164,6 @@ public class MultipartFormData {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
         return sdf.format(date);
-    }
-    @NonNull
-    private static String toIsoUtc(Date date) {
-        SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:s", Locale.US);
-        isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return isoFormat.format(date);
     }
 
 }
