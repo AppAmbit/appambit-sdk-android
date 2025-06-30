@@ -1,20 +1,15 @@
 package com.appambit.sdk.core.utils;
-
 import android.util.Log;
+import com.appambit.sdk.core.utils.annotations.CustomDateTimeFormat;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.lang.reflect.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
-import com.appambit.sdk.core.utils.annotations.CustomDateTimeFormat;
-
 public class JsonConvertUtils {
     private static final String TAG = JsonConvertUtils.class.getSimpleName();
-
     private static List<Field> getAllFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<>();
         while (clazz != null && clazz != Object.class) {
@@ -23,45 +18,33 @@ public class JsonConvertUtils {
         }
         return fields;
     }
-
     public static String toJson(Object object) throws JSONException {
         if (object == null) return "null";
-
         if (object instanceof String || object instanceof Number || object instanceof Boolean)
             return JSONObject.quote(object.toString());
-
         if (object instanceof Enum)
             return JSONObject.quote(((Enum<?>) object).name());
-
         if (object instanceof Date)
             return JSONObject.quote(toIsoUtc((Date) object));
-
         if (object instanceof Collection)
             return collectionToJson((Collection<?>) object).toString();
-
         if (object.getClass().isArray())
             return arrayToJson(object).toString();
-
         if (object instanceof Map)
             return mapToJson((Map<?, ?>) object).toString();
-
         return objectToJson(object).toString();
     }
-
     private static JSONObject objectToJson(Object object) throws JSONException {
         JSONObject jsonObject = new JSONObject();
         Class<?> clazz = object.getClass();
-
         for (Field field : getAllFields(clazz)) {
             if (!field.isAnnotationPresent(JsonKey.class)) continue;
             try {
                 field.setAccessible(true);
                 if (Modifier.isStatic(field.getModifiers())) continue;
-
                 String key = getJsonKey(field);
                 Object value = field.get(object);
                 if (value == null) continue;
-
                 if (value instanceof Map)
                     jsonObject.put(key, mapToJson((Map<?, ?>) value));
                 else if (value instanceof Collection)
@@ -79,14 +62,12 @@ public class JsonConvertUtils {
                     jsonObject.put(key, value);
                 else
                     jsonObject.put(key, objectToJson(value));
-
             } catch (IllegalAccessException e) {
                 Log.e(TAG, "Serialization error: " + e.getMessage(), e);
             }
         }
         return jsonObject;
     }
-
     private static JSONArray collectionToJson(Collection<?> collection) throws JSONException {
         JSONArray jsonArray = new JSONArray();
         for (Object item : collection) {
@@ -103,7 +84,6 @@ public class JsonConvertUtils {
         }
         return jsonArray;
     }
-
     private static JSONArray arrayToJson(Object array) throws JSONException {
         JSONArray jsonArray = new JSONArray();
         int length = Array.getLength(array);
@@ -122,7 +102,6 @@ public class JsonConvertUtils {
         }
         return jsonArray;
     }
-
     private static JSONObject mapToJson(Map<?, ?> map) throws JSONException {
         JSONObject jsonObject = new JSONObject();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -145,22 +124,18 @@ public class JsonConvertUtils {
         }
         return jsonObject;
     }
-
     private static boolean isSimpleType(Class<?> clazz) {
         return clazz.isPrimitive() ||
                 clazz.equals(String.class) ||
                 Number.class.isAssignableFrom(clazz) ||
                 clazz.equals(Boolean.class);
     }
-
     private static String toIsoUtc(Date date) {
         return formatDate(date, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     }
-
     private static Date fromIsoUtc(String dateStr) {
         return parseDate(dateStr, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     }
-
     private static String formatDate(Date date, String format) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
@@ -171,7 +146,6 @@ public class JsonConvertUtils {
             return null;
         }
     }
-
     private static Date parseDate(String dateStr, String format) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
@@ -182,33 +156,26 @@ public class JsonConvertUtils {
             return null;
         }
     }
-
     private static String getJsonKey(Field field) {
         JsonKey annotation = field.getAnnotation(JsonKey.class);
         return annotation.value();
     }
-
     private static String getDateFormatFromField(Field field) {
         if (field.isAnnotationPresent(CustomDateTimeFormat.class)) {
             return field.getAnnotation(CustomDateTimeFormat.class).value();
         }
         return "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
     }
-
     public static <T> T fromJson(Class<T> clazz, JSONObject json) throws Exception {
         T instance = clazz.newInstance();
-
         for (Field field : getAllFields(clazz)) {
             if (!field.isAnnotationPresent(JsonKey.class)) continue;
             field.setAccessible(true);
             if (Modifier.isStatic(field.getModifiers())) continue;
-
             String key = getJsonKey(field);
             if (!json.has(key) || json.isNull(key)) continue;
-
             Class<?> type = field.getType();
             Object value = null;
-
             if (type == String.class)
                 value = json.getString(key);
             else if (type == int.class || type == Integer.class)
@@ -257,7 +224,6 @@ public class JsonConvertUtils {
             } else if (json.get(key) instanceof JSONObject) {
                 value = fromJson(type, json.getJSONObject(key));
             }
-
             if (value != null) {
                 field.set(instance, value);
             }
@@ -265,3 +231,5 @@ public class JsonConvertUtils {
         return instance;
     }
 }
+
+

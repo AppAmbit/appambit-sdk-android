@@ -8,6 +8,25 @@
     android:paddingHorizontal="50dp">
 
     <Button
+        android:id="@+id/btnStartSession"
+        android:text="@string/start_session"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnEndSession"
+        android:text="@string/end_session"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+
+    <Button
+        android:id="@+id/btnGenerate30DaysTestSessions"
+        android:text="@string/generate_the_last_30_daily_sessions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
         android:id="@+id/btnEventWProperty"
         android:text="@string/send_quot_button_clicked_quot_event_w_property"
         android:layout_width="match_parent"
@@ -42,4 +61,6 @@
         android:text="@string/send_batch_of_220_events"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
+
+
 </LinearLayout>
