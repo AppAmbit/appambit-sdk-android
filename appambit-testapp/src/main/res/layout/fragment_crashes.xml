@@ -115,42 +115,6 @@
         </LinearLayout>
 
         <Button
-            android:id="@+id/btnSendDefaultLogError"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/send_default_logerror"
-            android:layout_gravity="center" />
-
-        <Button
-            android:id="@+id/btnSendExceptionLogError"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/send_exception_logerror"
-            android:layout_gravity="center" />
-
-        <Button
-            android:id="@+id/btnClassInfoLogError"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/send_classinfo_logerror"
-            android:layout_gravity="center" />
-
-        <Button
-            android:id="@+id/btnGenerateLast30DailyErrors"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/generate_the_last_30_daily_errors"
-            android:layout_gravity="center" />
-
-        <Button
             android:id="@+id/btnGenerateLast30DailyCrashes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
