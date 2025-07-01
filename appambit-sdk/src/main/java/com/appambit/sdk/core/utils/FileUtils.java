@@ -2,8 +2,11 @@ package com.appambit.sdk.core.utils;
 
 import android.content.Context;
 import android.util.Log;
+
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,8 +14,12 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.UUID;
+
 
 public class FileUtils {
     private static final String TAG = FileUtils.class.getSimpleName();
@@ -64,6 +71,7 @@ public class FileUtils {
         }
     }
 
+
     public static <T extends Identifiable> List<T> getSaveJsonArray(
             String fileNameBase,
             Class<T> clazz,
@@ -98,7 +106,7 @@ public class FileUtils {
                     list.add(entry);
                     JSONArray newArr = new JSONArray();
                     for (T item : list) {
-                        newArr.put(new JSONObject(JsonConvertUtils.toJson(item)));
+                        newArr.put(JsonConvertUtils.toJson(item));
                     }
                     writeFile(path, newArr.toString());
                 }
@@ -137,7 +145,7 @@ public class FileUtils {
 
             JSONArray array = new JSONArray();
             for (T item : updatedList) {
-                array.put(new JSONObject(JsonConvertUtils.toJson(item)));
+                array.put(JsonConvertUtils.toJson(item));
             }
             writeFile(path, array.toString());
         } catch (Exception e) {

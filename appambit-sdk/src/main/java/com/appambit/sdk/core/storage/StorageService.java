@@ -349,9 +349,8 @@ public class StorageService implements Storable {
         String sql = "SELECT * FROM " + EventEntityContract.TABLE_NAME + " " +
                 "ORDER BY " + EventEntityContract.Columns.CREATED_AT + " ASC " +
                 "LIMIT 100";
-        Cursor c = db.rawQuery(sql, null);
 
-        try {
+        try (Cursor c = db.rawQuery(sql, null)) {
             if (c.moveToFirst()) {
                 do {
                     EventEntity event = new EventEntity();
@@ -362,8 +361,6 @@ public class StorageService implements Storable {
                     events.add(event);
                 } while (c.moveToNext());
             }
-        } finally {
-            c.close();
         }
 
         return events;

@@ -87,6 +87,7 @@ public final class AppAmbit {
         InitializeConsumer();
         hasStartedSession = true;
         Analytics.sendBatchesEvents();
+        Crashes.sendBatchesLogs();
         SessionManager.sendBatchSessions();
     }
 
@@ -116,7 +117,7 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
-        if (!tokenIsValid()) {
+        if (tokenIsInvalid()) {
             getNewToken(mAppKey);
         }
 
@@ -154,7 +155,7 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
-                        if (!tokenIsValid()) {
+                        if (tokenIsInvalid()) {
                             getNewToken(mAppKey);
                         }
 
@@ -175,8 +176,8 @@ public final class AppAmbit {
         });
     }
 
-    private static boolean tokenIsValid() {
+    private static boolean tokenIsInvalid() {
         String token = ServiceLocator.getApiService().getToken();
-        return StringUtils.isNullOrBlank(token);
+        return !StringUtils.isNullOrBlank(token);
     }
 }
