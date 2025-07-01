@@ -1,5 +1,7 @@
 package com.appambit.testapp;
 
+import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
+
 import android.content.Context;
 import android.os.Bundle;
 
@@ -20,6 +22,7 @@ import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.services.endpoints.LogEndpoint;
 import com.appambit.sdk.core.enums.SessionType;
 import com.appambit.sdk.core.utils.JsonConvertUtils;
+import com.appambit.testapp.utils.AlertsUtils;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.json.JSONArray;
@@ -153,6 +156,7 @@ public class AnalyticsFragment extends Fragment {
         }catch (Exception e) {
             Log.e(TAG, e.toString());
         }
+        AlertsUtils.showAlert(context, "Info", "Turn off and Turn on internet to send the sessions.");
     }
 
 
@@ -219,6 +223,10 @@ public class AnalyticsFragment extends Fragment {
     }
 
     private static void onSend30DailyEvents(Context context) {
+        if (hasInternetConnection(context)) {
+            AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
+            return;
+        }
         for (int index = 0; index < 30; index++) {
             Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
             cal.add(Calendar.DAY_OF_MONTH, -index);
@@ -229,19 +237,19 @@ public class AnalyticsFragment extends Fragment {
 
             Analytics.trackEvent("30 Daily events", properties, date);
         }
-
-        Toast.makeText(context, "30 events generated", Toast.LENGTH_SHORT).show();
+        AlertsUtils.showAlert(context, "Info", "30 events generated, turn on internet to send them");
     }
 
     private static void onGenerateBatchEvents(Context context) {
-
+        if (hasInternetConnection(context)) {
+            AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
+            return;
+        }
         Map<String, String> properties = new HashMap<>();
         for (int index = 1; index <= 220; index++) {
             properties.put("property1", "value1" );
             Analytics.trackEvent("Events 220", properties, null);
         }
-
-        Toast.makeText(context, "220 events generated", Toast.LENGTH_SHORT).show();
-
+        AlertsUtils.showAlert(context, "Info", "220 events generated, turn on internet to send them");
     }
 }
