@@ -16,6 +16,7 @@ import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.StringUtils;
+import com.appambit.sdk.crashes.CrashHandler;
 import com.appambit.sdk.crashes.Crashes;
 import com.appambit.sdk.core.utils.FileUtils;
 
@@ -27,7 +28,7 @@ public final class AppAmbit {
 
     public static void init(Context context, String appKey) {
         mAppKey = appKey;
-        Crashes.initCrashHandler(context);
+        CrashHandler.install(context);
         if (!isInitialized) {
             registerLifecycleObserver(context);
             isInitialized = true;
