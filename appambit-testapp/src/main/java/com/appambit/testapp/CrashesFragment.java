@@ -138,12 +138,6 @@ public class CrashesFragment extends Fragment {
             AlertsUtils.showAlert(context, "Info", "30 daily crashes generated successfully");
         });
 
-        Button btnGenerateLogs = view.findViewById(R.id.btnGenerateLogs);
-        btnGenerateLogs.setOnClickListener(v -> {
-            Log.d(AppAmbit.class.getSimpleName(), "LOG CREADO UI");
-            Toast.makeText(requireContext(), "Generate logs...", Toast.LENGTH_SHORT).show();
-        });
-
         return view;
     }
 
