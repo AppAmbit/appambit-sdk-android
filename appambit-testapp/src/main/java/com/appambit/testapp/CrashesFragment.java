@@ -23,6 +23,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -32,6 +34,13 @@ public class CrashesFragment extends Fragment {
     private final ExecutorService mExecutor = ServiceLocator.getExecutorService();
 
     Button btnDidCrash;
+    Button btnGenerateLogsBatchUpload;
+    Button btnSendCustomLogError;
+    Button btnInvalidateToken;
+    Button btnSendDefaultLogError;
+    Button btnSendExceptionLogError;
+    Button btnClassInfoLogError;
+    Button btnGenerateLast30DailyErrors;
     Button btnSetUserId;
     Button btnSetUserEmail;
     Button btnGenerateLast30DailyCrashes;
@@ -40,6 +49,7 @@ public class CrashesFragment extends Fragment {
 
     EditText etUserId;
     EditText etUserEmail;
+    EditText etCustomLogErrorText;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -57,6 +67,76 @@ public class CrashesFragment extends Fragment {
                 AlertsUtils.showAlert(context, "Crash", "Application did not crash in the last session");
            }
         }));
+
+        btnGenerateLogsBatchUpload = view.findViewById(R.id.btnGenerateLogsBatchUpload);
+        btnGenerateLogsBatchUpload.setOnClickListener(v -> mExecutor.execute(() -> {
+            if (hasInternetConnection(context)) {
+                AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
+                return;
+            }
+            for(int i = 0; i < 220; i++) {
+                Crashes.LogError(context, "Test Log Message", null, null, null, this.getClass().getName(), 0, new Date());
+            }
+            AlertsUtils.showAlert(context, "Info", "Logs batch upload generated. Turn on internet to send the logs");
+        }));
+
+        btnSendCustomLogError = view.findViewById(R.id.btnSendCustomLogError);
+        etCustomLogErrorText = view.findViewById(R.id.etCustomLogErrorText);
+        etCustomLogErrorText.setText("Test Log Message");
+        btnSendCustomLogError.setOnClickListener(v -> mExecutor.execute(() -> {
+            String customLogMessage = etCustomLogErrorText.getText().toString();
+            Crashes.LogError(context, customLogMessage, null, null, null, this.getClass().getName(), 0, new Date());
+            AlertsUtils.showAlert(context, "Info", "LogError sent");
+        }));
+
+        btnSendDefaultLogError = view.findViewById(R.id.btnSendDefaultLogError);
+        btnSendDefaultLogError.setOnClickListener(v -> mExecutor.execute(() -> {
+            Map<String, String> properties = new HashMap<>();
+            properties.put("user_id", "1");
+            Crashes.LogError(context, "Test Log Error", properties, null, null, this.getClass().getName(), 0, new Date());
+            AlertsUtils.showAlert(context, "Info", "Test Default LogError sent");
+        }));
+
+        btnSendExceptionLogError = view.findViewById(R.id.btnSendExceptionLogError);
+        btnSendExceptionLogError.setOnClickListener(v -> {
+            try {
+                throw new NullPointerException();
+            }
+            catch (Exception exception)
+            {
+                Map<String, String> properties = new HashMap<>();
+                properties.put("user_id", "1");
+                Crashes.LogError(context, exception, properties, null, null, 0, DateUtils.getUtcNow());
+                AlertsUtils.showAlert(context, "Info", "Test Exception LogError sent");
+            }
+        });
+
+        btnClassInfoLogError = view.findViewById(R.id.btnClassInfoLogError);
+        btnClassInfoLogError.setOnClickListener(v -> {
+            Map<String, String> properties = new HashMap<>();
+            properties.put("user_id", "1");
+            Crashes.LogError(context, "Test Log Error", properties, this.getClass().getName(), null, null, 0, DateUtils.getUtcNow());
+            AlertsUtils.showAlert(context, "Info", "LogError sent");
+        });
+
+        btnGenerateLast30DailyErrors = view.findViewById(R.id.btnGenerateLast30DailyErrors);
+        btnGenerateLast30DailyErrors.setOnClickListener(v -> {
+            if (hasInternetConnection(context)) {
+                AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
+                return;
+            }
+            for (int index = 1; index <= 30; index++) {
+                Date errorDate = DateUtils.getDateDaysAgo(30 - index);
+                Log.d(TAG, "Generating error for date: " + errorDate);
+                Crashes.LogError(context, "Test 30 Last Days Errors", null, null, null, null, 0, errorDate);
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            AlertsUtils.showAlert(context, "Info", "Last 30 daily errors generated. Turn on internet to send the errors");
+        });
 
         btnSetUserId = view.findViewById(R.id.btnSetUserId);
         etUserId = view.findViewById(R.id.etUserId);
