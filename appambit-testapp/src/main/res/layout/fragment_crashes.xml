@@ -86,34 +86,6 @@
 
         </LinearLayout>
 
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_marginHorizontal="50dp"
-            android:padding="16dp"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card_layout"
-            android:layout_height="wrap_content">
-
-            <EditText
-                android:id="@+id/etCustomLogErrorText"
-                android:autofillHints=""
-                android:hint="@string/type_log_message"
-                android:inputType="textEmailAddress"
-                android:textSize="18sp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <Button
-                android:id="@+id/btnSendCustomLogError"
-                android:contentDescription="@string/user_email"
-                android:layout_marginTop="8dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/send_custom_logerror" />
-
-        </LinearLayout>
-
         <Button
             android:id="@+id/btnGenerateLast30DailyCrashes"
             android:layout_width="match_parent"
