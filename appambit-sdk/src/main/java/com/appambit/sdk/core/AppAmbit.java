@@ -80,7 +80,6 @@ public final class AppAmbit {
         InitializeServices(context);
         InitializeConsumer(context);
         hasStartedSession = true;
-        Analytics.sendBatchesLogs();
         Analytics.sendBatchesEvents();
         SessionManager.sendBatchSessions();
     }
@@ -121,7 +120,6 @@ public final class AppAmbit {
             SessionManager.removeSavedEndSession();
         }
 
-        Analytics.sendBatchesLogs();
         Analytics.sendBatchesEvents();
     }
 

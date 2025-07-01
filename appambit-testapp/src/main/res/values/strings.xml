@@ -8,6 +8,12 @@
     <string name="send_default_logerror">Send Default LogError</string>
     <string name="send_default_log_crash">Send Default LogCrash</string>
     <string name="send_logbatches">Send LogBatches</string>
+    <string name="send_quot_button_clicked_quot_event_w_property">Send \"Button Clicked\" Event w/ property</string>
+    <string name="send_default_event_w_property">Send Default Event w/ property</string>
+    <string name="send_max_300_length_event">Send Max-300-Length Event</string>
+    <string name="send_max_20_properties_event">Send Max-20-Properties Event</string>
+    <string name="send_30_daily_events">Send 30 Daily Events</string>
+    <string name="send_batch_of_220_events">Send Batch of 220 Events</string>
     <string name="start_session">Start Session</string>
     <string name="end_session">End Session</string>
     <string name="generate_the_last_30_daily_sessions">Generate the last 30 daily sessions</string>

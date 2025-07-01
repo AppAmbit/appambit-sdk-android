@@ -128,7 +128,6 @@ public class CrashesFragment extends Fragment {
 
         Button btnGenerateLogs = view.findViewById(R.id.btnGenerateLogs);
         btnGenerateLogs.setOnClickListener(v -> {
-            Analytics.generateSampleLogsEvents();
             Log.d(AppAmbit.class.getSimpleName(), "LOG CREADO UI");
             Toast.makeText(requireContext(), "Generate logs...", Toast.LENGTH_SHORT).show();
         });

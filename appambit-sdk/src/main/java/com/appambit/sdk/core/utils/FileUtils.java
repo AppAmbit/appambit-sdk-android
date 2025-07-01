@@ -145,7 +145,7 @@ public class FileUtils {
 
             JSONArray array = new JSONArray();
             for (T item : updatedList) {
-                array.put(JsonConvertUtils.toJsonObject(item));  // <-- corrección aquí
+                array.put(JsonConvertUtils.toJson(item));
             }
             writeFile(path, array.toString());
         } catch (Exception e) {
