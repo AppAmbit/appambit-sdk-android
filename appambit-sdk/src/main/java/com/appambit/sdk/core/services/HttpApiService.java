@@ -61,7 +61,6 @@ public class HttpApiService implements ApiService {
 
         try {
             HttpURLConnection httpResponse = requestHttp(endpoint);
-            //checkStatusCodeFrom(httpResponse.getResponseCode());
             Log.d("[APIService]", "Request successful: " + httpResponse.getResponseCode());
             Log.d("[HTTP-Response]", "Message: " + httpResponse.getResponseMessage());
 
@@ -85,6 +84,7 @@ public class HttpApiService implements ApiService {
             }
 
             String json = responseBuilder.toString();
+            checkStatusCodeFrom(httpResponse.getResponseCode());
             T response = deserializeFromJSONStringContent(new JSONObject(json), clazz);
             Log.d("[HTTP-Response-Body]", json);
 
