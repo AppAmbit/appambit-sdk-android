@@ -16,7 +16,6 @@ import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.StringUtils;
-import com.appambit.sdk.crashes.CrashHandler;
 import com.appambit.sdk.crashes.Crashes;
 import com.appambit.sdk.core.utils.FileUtils;
 
@@ -28,7 +27,7 @@ public final class AppAmbit {
 
     public static void init(Context context, String appKey) {
         mAppKey = appKey;
-        CrashHandler.install(context);
+        Crashes.initCrashHandler(context);
         if (!isInitialized) {
             registerLifecycleObserver(context);
             isInitialized = true;
@@ -117,7 +116,7 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
-        if (tokenIsInvalid()) {
+        if (!tokenIsValid()) {
             getNewToken(mAppKey);
         }
 
@@ -155,7 +154,7 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
-                        if (tokenIsInvalid()) {
+                        if (!tokenIsValid()) {
                             getNewToken(mAppKey);
                         }
 
@@ -176,7 +175,7 @@ public final class AppAmbit {
         });
     }
 
-    private static boolean tokenIsInvalid() {
+    private static boolean tokenIsValid() {
         String token = ServiceLocator.getApiService().getToken();
         return !StringUtils.isNullOrBlank(token);
     }

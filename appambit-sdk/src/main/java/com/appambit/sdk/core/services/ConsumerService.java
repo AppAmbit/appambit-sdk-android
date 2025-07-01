@@ -14,7 +14,7 @@ class ConsumerService {
     AppInfoService appInfoService = ServiceLocator.getAppInfoService();
 
     protected RegisterEndpoint RegisterConsumer(@NonNull String appKey) {
-        String appId = "";
+        String appId;
         String deviceId = storageService.getDeviceId();
         String userId = storageService.getUserId();
         String userEmail = storageService.getUserEmail();
@@ -23,9 +23,7 @@ class ConsumerService {
         if(!appKey.isEmpty()) {
             appId = appKey;
             storageService.putAppId(appKey);
-        }
-
-        if(appKey.isEmpty()) {
+        }else {
             appId = storageService.getAppId();
         }
 
