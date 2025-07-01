@@ -34,6 +34,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -88,21 +89,22 @@ public class HttpApiService implements ApiService {
             }
 
             String json = responseBuilder.toString();
+            checkStatusCodeFrom(httpResponse.getResponseCode());
             T response = deserializeFromJSONStringContent(new JSONObject(json), clazz);
             Log.d("[HTTP-Response-Body]", json);
             checkStatusCodeFrom(httpResponse.getResponseCode());
 
             return ApiResult.success(response);
-        } catch (UnauthorizedException unauthorizedException) {
-            if (endpoint instanceof RegisterEndpoint) {
-                Log.d(TAG, "Token renew endpoint also failed. Session and Token must be cleared");
-                ClearToken();
-                return ApiResult.fail(ApiErrorType.Unauthorized, "Register endpoint failed");
-            }
+        }catch (UnauthorizedException unauthorizedException) {
 
+            if (endpoint instanceof RegisterEndpoint) {
+                Log.d("[APIService]", "Token renew endpoint also failed. Session and Token must be cleared");
+                ClearToken();
+                return null;
+            }
             if (!IsRenewingToken()) {
                 try {
-                    Log.d(TAG, "Token invalid - triggering renewal");
+                    Log.d("[APIService]", "Token invalid - triggering renewal");
 
                     AppAmbitTaskFuture<ApiErrorType> currentTokenRenewalTask = GetNewToken("");
                     currentTokenRenewalTask.then(result -> {
@@ -110,21 +112,18 @@ public class HttpApiService implements ApiService {
                             HandleFailedRenewalResult(result);
                         }
                     });
-
                     currentTokenRenewalTask.onError(error ->
-                            Log.d(TAG, "Error during token renewal: " + error));
+                            Log.d("[APIService]", "Error during token renewal: " + error));
                 } catch (Exception e) {
                     return HandleTokenRenewalException(e);
                 } finally {
                     currentTokenRenewalTask = null;
                 }
             }
-
-            Log.d(TAG, "Token invalid - no retry will be made");
-            return ApiResult.fail(ApiErrorType.Unauthorized, "Token was invalid and retry was skipped");
-        }
-        catch (Exception e) {
-            Log.d(TAG, "Exception during request: "+e);
+            Log.d("[APIService]", "Retrying request after token renewal");
+            return executeRequest(endpoint, clazz);
+        } catch (Exception e) {
+            Log.d("[APIService]", "Exception during request: "+e);
             return ApiResult.fail(ApiErrorType.Unknown, "Unexpected error during request");
         }
     }
@@ -141,7 +140,7 @@ public class HttpApiService implements ApiService {
 
     @NonNull
     private <T> ApiResult<T> HandleTokenRenewalException(Exception ex) {
-        Log.d(TAG, "Error while renewing token: "+ex);
+        Log.d("[APIService]", "Error while renewing token: "+ex);
         ClearToken();
         return ApiResult.fail(ApiErrorType.Unknown, "Unexpected error during token renewal");
     }
@@ -151,11 +150,11 @@ public class HttpApiService implements ApiService {
     {
         if (result == ApiErrorType.NetworkUnavailable)
         {
-            Log.d(TAG, "Cannot retry request: no internet after token renewal");
+            Log.d("[APIService]", "Cannot retry request: no internet after token renewal");
             return ApiResult.fail(ApiErrorType.NetworkUnavailable, "No internet after token renewal");
         }
 
-        Log.d(TAG, "Could not renew token. Cleaning up");
+        Log.d("[APIService]", "Could not renew token. Cleaning up");
         return ApiResult.fail(result, "Token renewal failed");
     }
 
@@ -166,7 +165,7 @@ public class HttpApiService implements ApiService {
                 RegisterEndpoint registerEndpoint = new ConsumerService().RegisterConsumer(appKey);
                 ApiResult<TokenResponse> tokenResponse = executeRequest(registerEndpoint, TokenResponse.class);
 
-                Log.d(TAG, "Token renew response [type]: " + (tokenResponse != null ? tokenResponse.errorType : "null"));
+                Log.d("[APIService]", "Token renew response [type]: " + (tokenResponse != null ? tokenResponse.errorType : "null"));
 
                 if (tokenResponse == null) {
                     newTokenFuture.complete(ApiErrorType.Unknown);
@@ -178,13 +177,13 @@ public class HttpApiService implements ApiService {
                 }
                 if (tokenResponse.errorType == ApiErrorType.None) {
                     _token = tokenResponse.data.getToken();
-                    Log.d(TAG, "Token renew response [token]: " + _token);
+                    Log.d("[APIService]", "Token renew response [token]: " + _token);
                     newTokenFuture.complete(ApiErrorType.None);
                     return;
                 }
                 newTokenFuture.complete(tokenResponse.errorType);
             } catch (Exception e) {
-                Log.d(TAG, "Exception during token renew attempt: " + e);
+                Log.d("[APIService]", "Exception during token renew attempt: " + e);
                 newTokenFuture.fail(e);
             }
         });
@@ -192,7 +191,7 @@ public class HttpApiService implements ApiService {
     }
 
     private void ClearToken() {
-        Log.d(TAG, "Session is no longer valid. Clearing token.");
+        Log.d("[APIService]", "Session is no longer valid. Clearing token.");
         _token = null;
     }
 
@@ -223,7 +222,7 @@ public class HttpApiService implements ApiService {
             fullUrl = serializedGetUrl(fullUrl, payload);
         }
 
-        Log.d(TAG, "Full URL: " + fullUrl);
+        Log.d("[APIService]", "Full URL: " + fullUrl);
         URL url = new URL(fullUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
@@ -266,13 +265,12 @@ public class HttpApiService implements ApiService {
                         os.close();
 
                     }catch (Exception e) {
-                        Log.e(TAG, "Error during multipart serialization: " + e.getMessage());
+                        Log.e("[APIService]", "Error during multipart serialization: " + e.getMessage());
                         throw new IOException("Error during multipart serialization", e);
                     }
 
                 } else {
                     String json = JsonConvertUtils.toJson(payload);
-                    Log.d(TAG, "HTTP - REQUEST: " + json);
                     byte[] input = json.getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                     os.flush();
@@ -288,6 +286,41 @@ public class HttpApiService implements ApiService {
         if (token != null && !token.isEmpty()) {
             connection.setRequestProperty("Authorization", "Bearer " + token);
         }
+    }
+
+    private static JSONObject serializeToJSONStringContent(Object payload) {
+        if (payload == null) {
+            return new JSONObject();
+        }
+
+        JSONObject json = new JSONObject();
+        Class<?> cls = payload.getClass();
+
+        for (Field field : cls.getDeclaredFields()) {
+            field.setAccessible(true);
+            try {
+                String key = field.isAnnotationPresent(JsonKey.class)
+                        ? Objects.requireNonNull(field.getAnnotation(JsonKey.class)).value()
+                        : field.getName();
+
+                Object value = field.get(payload);
+                if (value != null) {
+                    if (value instanceof Map) {
+                        Map<?, ?> map = (Map<?, ?>) value;
+                        JSONObject mapJson = new JSONObject();
+                        for (Map.Entry<?, ?> entry : map.entrySet()) {
+                            mapJson.put(entry.getKey().toString(), entry.getValue().toString());
+                        }
+                        json.put(key, mapJson);
+                    } else {
+                        json.put(key, value);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return json;
     }
 
     private static String serializeStringPayload(Object payload) throws UnsupportedEncodingException, IllegalAccessException {

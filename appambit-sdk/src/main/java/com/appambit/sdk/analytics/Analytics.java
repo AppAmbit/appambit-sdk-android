@@ -9,6 +9,7 @@ import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.models.analytics.Event;
 import com.appambit.sdk.core.models.analytics.EventEntity;
+import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.models.responses.ApiResult;
 import com.appambit.sdk.core.models.responses.EventResponse;
 import com.appambit.sdk.core.models.responses.EventsBatchResponse;
@@ -109,7 +110,6 @@ public final class Analytics {
 
         AppAmbitTaskFuture<ApiResult<EventResponse>> response = sendEventEndpoint(eventRequest);
 
-
         response.then(result -> {
 
             if (result.errorType != ApiErrorType.None) {
@@ -208,5 +208,4 @@ public final class Analytics {
     public static void setUserEmail(String userEmail) {
         mStorable.putUserEmail(userEmail);
     }
-
 }

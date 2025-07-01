@@ -252,4 +252,94 @@ public class AnalyticsFragment extends Fragment {
         }
         AlertsUtils.showAlert(context, "Info", "220 events generated, turn on internet to send them");
     }
+
+
+    private static void buttonOnClicked(Context context) {
+        try {
+            Map<String, String> map = new HashMap<>();
+            map.put("Count", "41");
+            Analytics.trackEvent("ButtonClicked", map, null);
+            Toast.makeText(context, "OnClick event generated", Toast.LENGTH_SHORT).show();
+        }catch (Exception e) {
+            Log.e(TAG, "Error during log creation: " + e.getMessage());
+        }
+    }
+
+    private static void buttonOnClickedTestEvent(Context context) {
+        Analytics.generateTestEvent();
+        Toast.makeText(context, "Event generated", Toast.LENGTH_SHORT).show();
+    }
+
+    private static void buttonOnClickedTestLimitsEvent(Context context) {
+        Map<String, String> properties = new HashMap<>();
+        String characters300 = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
+        String characters302 = "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
+
+        properties.put(characters300, characters300);
+        properties.put(characters302, characters302);
+
+        Analytics.trackEvent(characters300, properties, null);
+        Toast.makeText(context, "1 event generated", Toast.LENGTH_SHORT).show();
+
+    }
+
+    private static void buttonOnClickedTestMaxPropertiesEvent(Context context) {
+        Map<String, String> properties = new HashMap<>();
+        properties.put( "01", "01");
+        properties.put( "02", "02");
+        properties.put( "03", "03");
+        properties.put( "04", "04");
+        properties.put( "05", "05");
+        properties.put( "06", "06");
+        properties.put( "07", "07");
+        properties.put( "08", "08");
+        properties.put( "09", "09");
+        properties.put( "10", "10");
+        properties.put( "11", "11");
+        properties.put( "12", "12");
+        properties.put( "13", "13");
+        properties.put( "14", "14");
+        properties.put( "15", "15");
+        properties.put( "16", "16");
+        properties.put( "17", "17");
+        properties.put( "18", "18");
+        properties.put( "19", "19");
+        properties.put( "20", "20");
+        properties.put( "21", "21");
+        properties.put( "22", "22");
+        properties.put( "23", "23");
+        properties.put( "24", "24");
+        properties.put( "25", "25");//25
+
+        Analytics.trackEvent("TestMaxProperties", properties, null);
+        Toast.makeText(context, "1 event generated", Toast.LENGTH_SHORT).show();
+
+    }
+
+    private static void onSend30DailyEvents(Context context) {
+        for (int index = 0; index < 30; index++) {
+            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            cal.add(Calendar.DAY_OF_MONTH, -index);
+            Date date = cal.getTime();
+
+            Map<String, String> properties = new HashMap<>();
+            properties.put("30 Daily events", "Event");
+
+            Analytics.trackEvent("30 Daily events", properties, date);
+        }
+
+        Toast.makeText(context, "30 events generated", Toast.LENGTH_SHORT).show();
+    }
+
+    private static void onGenerateBatchEvents(Context context) {
+
+        Map<String, String> properties = new HashMap<>();
+        for (int index = 1; index <= 220; index++) {
+            properties.put("property1", "value1" );
+            Analytics.trackEvent("Events 220", properties, null);
+        }
+
+        Toast.makeText(context, "220 events generated", Toast.LENGTH_SHORT).show();
+
+    }
 }
