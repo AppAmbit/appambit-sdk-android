@@ -153,10 +153,6 @@ public class FileUtils {
         }
     }
 
-
-
-
-
     private static String readFile(String path) throws IOException {
         try (FileInputStream fis = new FileInputStream(path);
              InputStreamReader isr = new InputStreamReader(fis);

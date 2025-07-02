@@ -1,7 +1,6 @@
 package com.appambit.testapp;
 
 import android.os.Bundle;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
@@ -18,8 +17,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         //Uncomment the line for automatic session management
-        //Analytics.enableManualSession();
-        AppAmbit.init(getApplicationContext(), "80add826-80ab-4273-8327-14f403e4d2c1");
+        Analytics.enableManualSession();
+        AppAmbit.init(getApplicationContext(), "3b217ac4-755c-4e8a-bf3e-aa049d205b91");
 
         if (savedInstanceState == null) {
             replaceFragment(new CrashesFragment(), "CrashesFragment");

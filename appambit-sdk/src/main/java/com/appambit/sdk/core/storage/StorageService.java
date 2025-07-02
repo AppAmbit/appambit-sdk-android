@@ -330,7 +330,7 @@ public class StorageService implements Storable {
                     log.setContextJson(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.CONTEXT_JSON)));
                     log.setType(LogType.fromValue(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.TYPE))));
                     log.setFile(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.FILE)));
-                    log.setCreatedAt(new Date(c.getInt(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
+                    log.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
                     logs.add(log);
                 } while (c.moveToNext());
             }

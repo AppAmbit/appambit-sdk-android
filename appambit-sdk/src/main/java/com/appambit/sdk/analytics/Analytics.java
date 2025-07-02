@@ -60,11 +60,15 @@ public final class Analytics {
                 return;
             }
 
-            ApiResult<EventsBatchResponse> responseApi = ServiceLocator.getApiService()
-                    .executeRequest(new EventBatchEndpoint(events), EventsBatchResponse.class);
+            try {
+                ApiResult<EventsBatchResponse> responseApi = ServiceLocator.getApiService()
+                        .executeRequest(new EventBatchEndpoint(events), EventsBatchResponse.class);
+                if (responseApi.errorType != ApiErrorType.None) {
+                    return;
+                }
 
-            if (responseApi.errorType != ApiErrorType.None) {
-                return;
+            }catch (Exception e) {
+                Log.d(TAG, "Error sending event batches - Api" + e.getMessage());
             }
 
             Log.d(TAG, "Event batch sent");
@@ -105,7 +109,6 @@ public final class Analytics {
         eventRequest.setData(data);
 
         AppAmbitTaskFuture<ApiResult<EventResponse>> response = sendEventEndpoint(eventRequest);
-
 
         response.then(result -> {
 
@@ -198,4 +201,11 @@ public final class Analytics {
 
     }
 
+    public static void setUserId(String userId) {
+        mStorable.putUserId(userId);
+    }
+
+    public static void setUserEmail(String userEmail) {
+        mStorable.putUserEmail(userEmail);
+    }
 }
