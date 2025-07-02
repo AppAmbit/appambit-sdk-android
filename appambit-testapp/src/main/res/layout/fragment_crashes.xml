@@ -22,15 +22,6 @@
             android:text="@string/did_the_app_crash_during_your_last_session"
             android:layout_gravity="center" />
 
-        <Button
-            android:id="@+id/btnGenerateLogsBatchUpload"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/generate_logs_for_batch_upload"
-            android:layout_gravity="center" />
-
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
@@ -85,6 +76,70 @@
                 android:text="@string/change_user_email" />
 
         </LinearLayout>
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_marginHorizontal="50dp"
+            android:padding="16dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card_layout"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:id="@+id/etCustomLogErrorText"
+                android:autofillHints=""
+                android:hint="@string/type_log_message"
+                android:inputType="textEmailAddress"
+                android:textSize="18sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Button
+                android:id="@+id/btnSendCustomLogError"
+                android:contentDescription="@string/user_email"
+                android:layout_marginTop="8dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/send_custom_logerror" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnSendDefaultLogError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="50dp"
+            android:text="@string/send_default_logerror"
+            android:layout_gravity="center" />
+
+        <Button
+            android:id="@+id/btnSendExceptionLogError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="50dp"
+            android:text="@string/send_exception_logerror"
+            android:layout_gravity="center" />
+
+        <Button
+            android:id="@+id/btnClassInfoLogError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="50dp"
+            android:text="@string/send_classinfo_logerror"
+            android:layout_gravity="center" />
+
+        <Button
+            android:id="@+id/btnGenerateLast30DailyErrors"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="50dp"
+            android:text="@string/generate_the_last_30_daily_errors"
+            android:layout_gravity="center" />
 
         <Button
             android:id="@+id/btnGenerateLast30DailyCrashes"
