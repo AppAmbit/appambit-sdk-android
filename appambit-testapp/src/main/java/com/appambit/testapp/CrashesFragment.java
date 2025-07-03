@@ -115,11 +115,6 @@ public class CrashesFragment extends Fragment {
                 Date errorDate = DateUtils.getDateDaysAgo(30 - index);
                 Log.d(TAG, "Generating error for date: " + errorDate);
                 Crashes.LogError(context, "Test 30 Last Days Errors", null, null, null, null, 0, errorDate);
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
             }
             AlertsUtils.showAlert(context, "Info", "Last 30 daily errors generated. Turn on internet to send the errors");
         });
