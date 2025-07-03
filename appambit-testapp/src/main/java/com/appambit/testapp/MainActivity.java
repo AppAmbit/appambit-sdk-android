@@ -18,7 +18,7 @@ public class MainActivity extends AppCompatActivity {
 
         //Uncomment the line for automatic session management
         Analytics.enableManualSession();
-        AppAmbit.init(getApplicationContext(), "3b217ac4-755c-4e8a-bf3e-aa049d205b91");
+        AppAmbit.init(getApplicationContext(), "9e36b50f-5164-4914-bfd2-a6f36a2f476c");
 
         if (savedInstanceState == null) {
             replaceFragment(new CrashesFragment(), "CrashesFragment");

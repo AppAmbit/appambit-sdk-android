@@ -9,7 +9,7 @@ import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.models.analytics.Event;
 import com.appambit.sdk.core.models.analytics.EventEntity;
-import com.appambit.sdk.core.models.logs.LogEntity;
+import com.appambit.sdk.core.services.interfaces.ApiService;
 import com.appambit.sdk.core.models.responses.ApiResult;
 import com.appambit.sdk.core.models.responses.EventResponse;
 import com.appambit.sdk.core.models.responses.EventsBatchResponse;
@@ -32,11 +32,13 @@ public final class Analytics {
 
     private static Storable mStorable;
     private static ExecutorService mExecutorService;
+    private static ApiService mApiService;
     private static boolean isManualSessionEnabled = false;
 
-    public static void Initialize(Storable storable, ExecutorService executorService) {
+    public static void Initialize(Storable storable, ExecutorService executorService, ApiService apiService) {
         mStorable = storable;
         mExecutorService = executorService;
+        mApiService = apiService;
     }
 
     public static void startSession() {
@@ -109,6 +111,7 @@ public final class Analytics {
         eventRequest.setData(data);
 
         AppAmbitTaskFuture<ApiResult<EventResponse>> response = sendEventEndpoint(eventRequest);
+
 
         response.then(result -> {
 
@@ -208,4 +211,13 @@ public final class Analytics {
     public static void setUserEmail(String userEmail) {
         mStorable.putUserEmail(userEmail);
     }
+
+    public static void requestToken() {
+        mApiService.GetNewToken("");
+    }
+
+    public static void validateOrInvalidateSession(boolean value) {
+        SessionManager.ValidateOrInvalidateSession(value);
+    }
+
 }

@@ -304,4 +304,9 @@ public class SessionManager {
 
         return response;
     }
+
+    public static void ValidateOrInvalidateSession(boolean value) {
+        isSessionActivate = value;
+    }
+
 }
