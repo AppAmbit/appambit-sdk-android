@@ -63,7 +63,7 @@ public final class Analytics {
             }
 
             try {
-                ApiResult<EventsBatchResponse> responseApi = ServiceLocator.getApiService()
+                ApiResult<EventsBatchResponse> responseApi = mApiService
                         .executeRequest(new EventBatchEndpoint(events), EventsBatchResponse.class);
                 if (responseApi.errorType != ApiErrorType.None) {
                     return;
@@ -157,7 +157,7 @@ public final class Analytics {
 
         mExecutorService.execute(() -> {
             try {
-                ApiResult<EventResponse> apiResponse = ServiceLocator.getApiService()
+                ApiResult<EventResponse> apiResponse = mApiService
                         .executeRequest(new EventEndpoint(event), EventResponse.class);
 
                 result.complete(apiResponse);
