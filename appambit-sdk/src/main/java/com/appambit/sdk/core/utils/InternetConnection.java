@@ -17,7 +17,6 @@ public class InternetConnection {
             return false;
         }
         return networkInfo.getType() == ConnectivityManager.TYPE_WIFI ||
-                networkInfo.getType() == ConnectivityManager.TYPE_MOBILE ||
-                networkInfo.getType() == ConnectivityManager.TYPE_VPN;
+                networkInfo.getType() == ConnectivityManager.TYPE_MOBILE;
     }
 }

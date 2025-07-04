@@ -12,8 +12,6 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import com.appambit.sdk.analytics.SessionManager;
 import com.appambit.sdk.analytics.Analytics;
@@ -156,10 +154,6 @@ public final class AppAmbit {
             public void onAvailable(@NonNull Network network) {
                 super.onAvailable(network);
                 Log.d(TAG, "Internet connection available");
-                new Handler().postDelayed(() -> {
-                    if(!hasInternetConnection(context)) {
-                        return;
-                    }
                     try {
                         InitializeServices(context);
 
@@ -174,7 +168,6 @@ public final class AppAmbit {
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored" + e);
                     }
-                }, 3000);
             }
 
             @Override
