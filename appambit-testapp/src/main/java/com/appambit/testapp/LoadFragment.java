@@ -124,7 +124,7 @@ public class LoadFragment extends Fragment {
                             handler.post(this);
                         } else {
                             tvSendSessionsLabel.setVisibility(View.INVISIBLE);
-                            AlertsUtils.showAlert(requireContext(), "Info", "5 Sessions generated");
+                            AlertsUtils.showAlert(requireContext(), "Info", "500 Sessions generated");
                         }
                     }, 5000);
                 }
