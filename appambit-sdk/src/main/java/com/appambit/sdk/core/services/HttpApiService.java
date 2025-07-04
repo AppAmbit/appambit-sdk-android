@@ -101,7 +101,7 @@ public class HttpApiService implements ApiService {
             if (endpoint instanceof RegisterEndpoint) {
                 Log.d("[APIService]", "Token renew endpoint also failed. Session and Token must be cleared");
                 ClearToken();
-                return null;
+                return ApiResult.fail(ApiErrorType.Unauthorized, "Register endpoint failed");
             }
             if (!IsRenewingToken()) {
                 try {
@@ -121,8 +121,8 @@ public class HttpApiService implements ApiService {
                     currentTokenRenewalTask = null;
                 }
             }
-            Log.d("[APIService]", "Retrying request after token renewal");
-            return executeRequest(endpoint, clazz);
+            Log.d(TAG, "Token invalid - no retry will be made");
+            return ApiResult.fail(ApiErrorType.Unauthorized, "Token was invalid and retry was skipped");
         } catch (Exception e) {
             Log.d("[APIService]", "Exception during request: "+e);
             return ApiResult.fail(ApiErrorType.Unknown, "Unexpected error during request");
