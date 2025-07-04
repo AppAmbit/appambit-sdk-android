@@ -75,13 +75,9 @@ public final class Analytics {
 
             Log.d(TAG, "Event batch sent");
             AppAmbitTaskFuture<Void> deleteEvents = deleteEvents(events);
-            deleteEvents.then(v -> {
-                deleteEvents.complete(null);
-            });
+            deleteEvents.then(v -> deleteEvents.complete(null));
 
-            deleteEvents.onError(erroDelete -> {
-                Log.d(TAG, "Error to delete event batch");
-            });
+            deleteEvents.onError(erroDelete -> Log.d(TAG, "Error to delete event batch"));
         });
 
     }
@@ -111,7 +107,6 @@ public final class Analytics {
         eventRequest.setData(data);
 
         AppAmbitTaskFuture<ApiResult<EventResponse>> response = sendEventEndpoint(eventRequest);
-
 
         response.then(result -> {
 
