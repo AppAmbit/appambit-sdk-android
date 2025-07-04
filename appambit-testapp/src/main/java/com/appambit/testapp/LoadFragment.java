@@ -1,6 +1,8 @@
 package com.appambit.testapp;
 
 import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
+import static java.sql.DriverManager.println;
+
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 
@@ -23,16 +25,12 @@ public class LoadFragment extends Fragment {
 
     Button btnSend500Events;
     Button btnSend500Logs;
-    Button btnSend500StartSessions;
-    Button btnSend500EndSessions;
-    Button btnSend500Tokens;
+    Button btnSend500Sessions;
 
     EditText etLoadCustomMessage;
     TextView tvEventsLabel;
     TextView tvLogsLabel;
-    TextView tvStartSessionsLabel;
-    TextView tvEndSessionsLabel;
-    TextView tvTokensLabel;
+    TextView tvSendSessionsLabel;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -44,9 +42,7 @@ public class LoadFragment extends Fragment {
 
         tvEventsLabel = view.findViewById(R.id.tvEventsLabel);
         tvLogsLabel = view.findViewById(R.id.tvLogsLabel);
-        tvStartSessionsLabel = view.findViewById(R.id.tvStartSessionsLabel);
-        tvEndSessionsLabel = view.findViewById(R.id.tvEndSessionsLabel);
-        tvTokensLabel = view.findViewById(R.id.tvTokensLabel);
+        tvSendSessionsLabel = view.findViewById(R.id.tvSendSessionsLabel);
 
         btnSend500Events = view.findViewById(R.id.btnSend500Events);
         btnSend500Events.setOnClickListener(v -> {
@@ -105,84 +101,36 @@ public class LoadFragment extends Fragment {
             handler.post(sendLogRunnable);
         });
 
-        btnSend500StartSessions = view.findViewById(R.id.btnSend500StartSessions);
-        btnSend500StartSessions.setOnClickListener(v -> {
-            tvStartSessionsLabel.setVisibility(View.VISIBLE);
+        btnSend500Sessions = view.findViewById(R.id.btnSend500Sessions);
+        btnSend500Sessions.setOnClickListener(v -> {
+            if (!hasInternetConnection(requireContext())) {
+                AlertsUtils.showAlert(requireContext(), "Info", "Turn on internet and try again");
+                return;
+            }
+            tvSendSessionsLabel.setVisibility(View.VISIBLE);
             final int[] index = {0};
 
-            Runnable startSessionRunnable = new Runnable() {
+            Runnable sendSessionRunnable = new Runnable() {
                 @Override
                 public void run() {
-                    if (index[0] < 500) {
-                        Analytics.validateOrInvalidateSession(false);
-                        Analytics.startSession();
-                        tvStartSessionsLabel.setText("Starting session: " + (index[0] + 1) + " of 500");
-                        index[0]++;
-                        if(hasInternetConnection(requireContext())) {
-                            handler.postDelayed(this, 500);
-                        }else {
-                            handler.postDelayed(this, 5);
-                        }
-                    } else {
-                        tvStartSessionsLabel.setVisibility(View.INVISIBLE);
-                        AlertsUtils.showAlert(requireContext(), "Info", "500 StartSessions generated");
-                    }
-                }
-            };
-            handler.post(startSessionRunnable);
-        });
+                    Analytics.startSession();
+                    tvSendSessionsLabel.setText("Sending session: " + (index[0] + 1) + " of 500");
 
-        btnSend500EndSessions = view.findViewById(R.id.btnSend500EndSessions);
-        btnSend500EndSessions.setOnClickListener(v -> {
-            tvEndSessionsLabel.setVisibility(View.VISIBLE);
-            final int[] index = {0};
-
-            Runnable endSessionRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    if(index[0] < 500) {
-                        Analytics.validateOrInvalidateSession(true);
+                    handler.postDelayed(() -> {
                         Analytics.endSession();
-                        tvEndSessionsLabel.setText("Ending session: " + (index[0] + 1) + " of 500");
                         index[0]++;
-                        if(hasInternetConnection(requireContext())) {
-                            handler.postDelayed(this, 500);
-                        }else {
-                            handler.postDelayed(this, 5);
+                        println("Session " + index[0] + " sent");
+                        if (index[0] < 5) {
+                            handler.post(this);
+                        } else {
+                            tvSendSessionsLabel.setVisibility(View.INVISIBLE);
+                            AlertsUtils.showAlert(requireContext(), "Info", "5 Sessions generated");
                         }
-                    } else {
-                        tvEndSessionsLabel.setVisibility(View.INVISIBLE);
-                        AlertsUtils.showAlert(requireContext(), "Info", "500 EndSessions generated");
-                    }
+                    }, 5000);
                 }
             };
-            handler.post(endSessionRunnable);
-        });
 
-        btnSend500Tokens = view.findViewById(R.id.btnSend500Tokens);
-        btnSend500Tokens.setOnClickListener(v -> {
-            tvTokensLabel.setVisibility(View.VISIBLE);
-            final int[] index = {0};
-
-            Runnable sendTokenRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    if(index[0] < 500) {
-                        Analytics.requestToken();
-                        tvTokensLabel.setText("Sending token: " + (index[0] + 1) + " of 500");
-                        index[0]++;
-                        if(hasInternetConnection(requireContext())) {
-                            handler.postDelayed(this, 500);
-                        }else {
-                            handler.postDelayed(this, 5);
-                        }
-                    } else {
-                        tvTokensLabel.setVisibility(View.INVISIBLE);
-                        AlertsUtils.showAlert(requireContext(), "Info", "500 Tokens requested");
-                    }
-                }
-            };
-            handler.post(sendTokenRunnable);
+            handler.post(sendSessionRunnable);
         });
 
         return view;

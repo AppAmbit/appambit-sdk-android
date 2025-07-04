@@ -54,52 +54,22 @@
             <Button
                 android:id="@+id/btnSend500Logs"
                 android:contentDescription="@string/user_email"
-                android:layout_marginTop="8dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/send_500_logs" />
 
             <TextView
-                android:id="@+id/tvStartSessionsLabel"
+                android:id="@+id/tvSendSessionsLabel"
                 android:visibility="invisible"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
             <Button
-                android:id="@+id/btnSend500StartSessions"
+                android:id="@+id/btnSend500Sessions"
                 android:contentDescription="@string/user_email"
-                android:layout_marginTop="8dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/send_500_start_sessions" />
-
-            <TextView
-                android:id="@+id/tvEndSessionsLabel"
-                android:visibility="invisible"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <Button
-                android:id="@+id/btnSend500EndSessions"
-                android:contentDescription="@string/user_email"
-                android:layout_marginTop="8dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/send_500_end_sessions" />
-
-            <TextView
-                android:id="@+id/tvTokensLabel"
-                android:visibility="invisible"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <Button
-                android:id="@+id/btnSend500Tokens"
-                android:contentDescription="@string/user_email"
-                android:layout_marginTop="8dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/send_500_token" />
+                android:text="@string/send_500_sessions" />
 
         </LinearLayout>
 

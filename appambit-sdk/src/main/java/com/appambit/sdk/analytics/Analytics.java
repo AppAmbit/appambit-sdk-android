@@ -207,12 +207,4 @@ public final class Analytics {
         mStorable.putUserEmail(userEmail);
     }
 
-    public static void requestToken() {
-        mApiService.GetNewToken("");
-    }
-
-    public static void validateOrInvalidateSession(boolean value) {
-        SessionManager.ValidateOrInvalidateSession(value);
-    }
-
 }

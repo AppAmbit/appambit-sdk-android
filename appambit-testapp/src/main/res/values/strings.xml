@@ -36,7 +36,7 @@
     <string name="send_500_logs">Send 500 Logs</string>
     <string name="test_message">Test Message</string>
     <string name="send_500_events">Send 500 Events</string>
-    <string name="send_500_start_sessions">Send 500 Start Sessions</string>
     <string name="send_500_end_sessions">Send 500 End Sessions</string>
     <string name="send_500_token">Send 500 Token</string>
+    <string name="send_500_sessions">Send 500 Sessions</string>
 </resources>
