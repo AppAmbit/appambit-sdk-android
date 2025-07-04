@@ -9,7 +9,6 @@ import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.models.analytics.Event;
 import com.appambit.sdk.core.models.analytics.EventEntity;
-import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.models.responses.ApiResult;
 import com.appambit.sdk.core.models.responses.EventResponse;
 import com.appambit.sdk.core.models.responses.EventsBatchResponse;
@@ -73,13 +72,9 @@ public final class Analytics {
 
             Log.d(TAG, "Event batch sent");
             AppAmbitTaskFuture<Void> deleteEvents = deleteEvents(events);
-            deleteEvents.then(v -> {
-                deleteEvents.complete(null);
-            });
+            deleteEvents.then(v -> deleteEvents.complete(null));
 
-            deleteEvents.onError(erroDelete -> {
-                Log.d(TAG, "Error to delete event batch");
-            });
+            deleteEvents.onError(erroDelete -> Log.d(TAG, "Error to delete event batch"));
         });
 
     }
