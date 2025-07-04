@@ -120,7 +120,7 @@ public class LoadFragment extends Fragment {
                         Analytics.endSession();
                         index[0]++;
                         println("Session " + index[0] + " sent");
-                        if (index[0] < 5) {
+                        if (index[0] < 500) {
                             handler.post(this);
                         } else {
                             tvSendSessionsLabel.setVisibility(View.INVISIBLE);
