@@ -171,13 +171,17 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
+                        Runnable connectionTasks = () -> {
+                            Crashes.loadCrashFileIfExists(context);
+                            Crashes.sendBatchesLogs();
+                            Analytics.sendBatchesEvents();
+                            SessionManager.sendBatchSessions();
+                        };
+
                         if (!tokenIsValid()) {
-                            getNewTokenAndThen(() -> {
-                                Crashes.loadCrashFileIfExists(context);
-                                Crashes.sendBatchesLogs();
-                                Analytics.sendBatchesEvents();
-                                SessionManager.sendBatchSessions();
-                            });
+                            getNewTokenAndThen(connectionTasks);
+                        }else {
+                            connectionTasks.run();
                         }
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored" + e);
