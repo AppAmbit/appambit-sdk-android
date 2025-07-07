@@ -98,13 +98,13 @@ public final class AppAmbit {
     }
 
     private static void InitializeConsumer() {
-
-        if (Analytics.isManualSessionEnabled()) {
-            return;
-        }
-
-        SessionManager.sendEndSessionIfExists();
-        SessionManager.startSession();
+        getNewTokenAndThen(() -> {
+            if (Analytics.isManualSessionEnabled()) {
+                return;
+            }
+            SessionManager.sendEndSessionIfExists();
+            SessionManager.startSession();
+        });
     }
 
     private static void onSleep()
@@ -125,24 +125,35 @@ public final class AppAmbit {
         if(Analytics.isManualSessionEnabled()) {
             return;
         }
-        if (!tokenIsValid()) {
-            getNewToken(mAppKey);
-        }
+        Runnable resumeTasks = () -> {
+            if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
+                SessionManager.removeSavedEndSession();
+            }
 
-        if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
-            SessionManager.removeSavedEndSession();
+            Crashes.sendBatchesLogs();
+            Analytics.sendBatchesEvents();
+        };
+
+        if (!tokenIsValid()) {
+            getNewTokenAndThen(resumeTasks);
+        } else {
+            resumeTasks.run();
         }
-        Crashes.sendBatchesLogs();
-        Analytics.sendBatchesEvents();
     }
 
-    private static void getNewToken(String appKey)  {
-        try {
-            AppAmbitTaskFuture<ApiErrorType> currentTokenRenewalTask = ServiceLocator.getApiService().GetNewToken(appKey);
-            currentTokenRenewalTask.getBlocking();
-        } catch (Exception e) {
-            Log.d(TAG, "Error -> " + e);
-        }
+    private static void getNewTokenAndThen(Runnable onSuccess) {
+        AppAmbitTaskFuture<ApiErrorType> future = ServiceLocator.getApiService().GetNewToken(mAppKey);
+        future.then(result -> {
+            if (result == ApiErrorType.None) {
+                Log.d(TAG, "Token obtained successfully.");
+                onSuccess.run();
+            } else {
+                Log.e(TAG, "Failed to get token: " + result);
+            }
+        });
+        future.onError(error -> {
+            Log.e(TAG, "Error getting token: ", error);
+        });
     }
 
     private static void registerNetworkCallback(@NonNull Context context) {
@@ -166,14 +177,18 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
-                        if (!tokenIsValid()) {
-                            getNewToken(mAppKey);
-                        }
+                        Runnable connectionTasks = () -> {
+                            Crashes.loadCrashFileIfExists(context);
+                            Crashes.sendBatchesLogs();
+                            Analytics.sendBatchesEvents();
+                            SessionManager.sendBatchSessions();
+                        };
 
-                        Crashes.loadCrashFileIfExists(context);
-                        Crashes.sendBatchesLogs();
-                        Analytics.sendBatchesEvents();
-                        SessionManager.sendBatchSessions();
+                        if (!tokenIsValid()) {
+                            getNewTokenAndThen(connectionTasks);
+                        }else {
+                            connectionTasks.run();
+                        }
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored" + e);
                     }

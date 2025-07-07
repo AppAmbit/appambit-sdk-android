@@ -1,4 +1,4 @@
-package com.appambit.sdk.core.api;
+package com.appambit.sdk.core.services;
 
 import androidx.annotation.NonNull;
 import com.appambit.sdk.core.ServiceLocator;
@@ -8,12 +8,12 @@ import com.appambit.sdk.core.services.interfaces.AppInfoService;
 import com.appambit.sdk.core.storage.Storable;
 import java.util.UUID;
 
-class ConsumerService {
+public class ConsumerService {
 
     Storable storageService = ServiceLocator.getStorageService();
     AppInfoService appInfoService = ServiceLocator.getAppInfoService();
 
-    protected RegisterEndpoint RegisterConsumer(@NonNull String appKey) {
+    public RegisterEndpoint RegisterConsumer(@NonNull String appKey) {
         String appId;
         String deviceId = storageService.getDeviceId();
         String userId = storageService.getUserId();
