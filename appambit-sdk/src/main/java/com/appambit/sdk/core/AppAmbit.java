@@ -87,6 +87,9 @@ public final class AppAmbit {
     private static void onCreateApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
+        if(Analytics.isManualSessionEnabled()) {
+            return;
+        }
         InitializeConsumer();
         hasStartedSession = true;
         Analytics.sendBatchesEvents();
@@ -95,7 +98,6 @@ public final class AppAmbit {
     }
 
     private static void InitializeConsumer() {
-        getNewToken(mAppKey);
 
         if (Analytics.isManualSessionEnabled()) {
             return;
@@ -120,6 +122,9 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
+        if(Analytics.isManualSessionEnabled()) {
+            return;
+        }
         if (!tokenIsValid()) {
             getNewToken(mAppKey);
         }
@@ -127,7 +132,6 @@ public final class AppAmbit {
         if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
             SessionManager.removeSavedEndSession();
         }
-
         Crashes.sendBatchesLogs();
         Analytics.sendBatchesEvents();
     }
@@ -156,7 +160,7 @@ public final class AppAmbit {
                 super.onAvailable(network);
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
-                    if(!hasInternetConnection(context)) {
+                    if(!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
                         return;
                     }
                     try {

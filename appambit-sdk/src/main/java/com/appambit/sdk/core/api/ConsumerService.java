@@ -1,9 +1,9 @@
-package com.appambit.sdk.core.services;
+package com.appambit.sdk.core.api;
 
 import androidx.annotation.NonNull;
 import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.models.Consumer;
-import com.appambit.sdk.core.services.endpoints.RegisterEndpoint;
+import com.appambit.sdk.core.api.endpoints.RegisterEndpoint;
 import com.appambit.sdk.core.services.interfaces.AppInfoService;
 import com.appambit.sdk.core.storage.Storable;
 import java.util.UUID;

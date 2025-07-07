@@ -1,20 +1,21 @@
-package com.appambit.sdk.core.services;
+package com.appambit.sdk.core.api;
 
 import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
 import static com.appambit.sdk.core.utils.JsonDeserializer.deserializeFromJSONStringContent;
 import android.content.Context;
 import android.util.Log;
 import androidx.annotation.NonNull;
+
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.models.logs.LogBatch;
 import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.models.responses.ApiResult;
 import com.appambit.sdk.core.models.responses.TokenResponse;
-import com.appambit.sdk.core.services.ExceptionsCustom.HttpRequestException;
-import com.appambit.sdk.core.services.ExceptionsCustom.UnauthorizedException;
-import com.appambit.sdk.core.services.endpoints.RegisterEndpoint;
-import com.appambit.sdk.core.services.interfaces.ApiService;
-import com.appambit.sdk.core.services.interfaces.IEndpoint;
+import com.appambit.sdk.core.api.exceptionsCustom.HttpRequestException;
+import com.appambit.sdk.core.api.exceptionsCustom.UnauthorizedException;
+import com.appambit.sdk.core.api.endpoints.RegisterEndpoint;
+import com.appambit.sdk.core.api.interfaces.ApiService;
+import com.appambit.sdk.core.api.interfaces.IEndpoint;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.JsonConvertUtils;
 import com.appambit.sdk.core.utils.JsonKey;
