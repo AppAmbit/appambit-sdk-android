@@ -186,6 +186,10 @@ public class HttpApiService implements ApiService {
             } catch (Exception e) {
                 Log.d("[APIService]", "Exception during token renew attempt: " + e);
                 newTokenFuture.fail(e);
+            }finally {
+                if(!newTokenFuture.isDone()) {
+                    newTokenFuture.complete(ApiErrorType.Unknown);
+                }
             }
         });
         return newTokenFuture;
@@ -227,8 +231,8 @@ public class HttpApiService implements ApiService {
         URL url = new URL(fullUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
-        connection.setConnectTimeout((int) TimeUnit.MINUTES.toMillis(2));
-        connection.setReadTimeout((int) TimeUnit.MINUTES.toMillis(2));
+        connection.setConnectTimeout((int) TimeUnit.SECONDS.toMillis(10));
+        connection.setReadTimeout((int) TimeUnit.SECONDS.toMillis(10));
         connection.setRequestMethod(endpoint.getMethod().name());
 
         boolean isMultipart = payload instanceof Log || payload instanceof LogBatch || payload instanceof LogEntity;
