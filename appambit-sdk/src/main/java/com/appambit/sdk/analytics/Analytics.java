@@ -55,6 +55,9 @@ public final class Analytics {
 
     public static void sendBatchesEvents() {
         mExecutorService.execute(() -> {
+            if(!SessionManager.isSessionActivate()) {
+                return;
+            }
             List<EventEntity> events = mStorable.getOldest100Events();
 
             if (events.isEmpty()) {
@@ -97,6 +100,9 @@ public final class Analytics {
     }
 
     private static void SendOrSaveEvent(String eventTitle, Map<String, String> data, Date createdAt) {
+        if(!SessionManager.isSessionActivate) {
+            return;
+        }
         data = processData(data);
 
         eventTitle = truncate(eventTitle, TRACK_EVENT_NAME_MAX_LIMIT);
