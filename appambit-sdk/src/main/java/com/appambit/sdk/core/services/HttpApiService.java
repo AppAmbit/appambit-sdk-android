@@ -257,7 +257,7 @@ public class HttpApiService implements ApiService {
                         String boundary = connection.getRequestProperty("Content-Type").split("boundary=")[1];
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         DataOutputStream debugStream = new DataOutputStream(baos);
-                        MultipartFormData.getOutputString(payload, debugStream, boundary, 0, true);
+                        MultipartFormData.getOutputString(payload, debugStream, boundary, true);
                         debugStream.flush();
                         debugStream.close();
 
