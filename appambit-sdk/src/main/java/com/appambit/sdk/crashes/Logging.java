@@ -3,6 +3,8 @@ package com.appambit.sdk.crashes;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import androidx.annotation.NonNull;
+
+import com.appambit.sdk.analytics.SessionManager;
 import com.appambit.sdk.core.AppConstants;
 import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
@@ -11,8 +13,8 @@ import com.appambit.sdk.core.models.logs.ExceptionInfo;
 import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.models.logs.LogResponse;
 import com.appambit.sdk.core.models.responses.ApiResult;
-import com.appambit.sdk.core.services.endpoints.LogEndpoint;
-import com.appambit.sdk.core.services.interfaces.ApiService;
+import com.appambit.sdk.core.api.endpoints.LogEndpoint;
+import com.appambit.sdk.core.api.interfaces.ApiService;
 import com.appambit.sdk.core.storage.Storable;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.DateUtils;
@@ -38,7 +40,9 @@ class Logging {
     public static void logEvent(Context context, String message, LogType logType, ExceptionInfo exception,
                                 Map<String, String> properties, String classFqn, String fileName,
                                 int lineNumber, Date createdAt) {
-
+        if(!SessionManager.isSessionActivate()) {
+            return;
+        }
         String stackTrace = (exception != null && exception.getStackTrace() != null && !exception.getStackTrace().isEmpty())
                 ? exception.getStackTrace()
                 : AppConstants.NO_STACK_TRACE_AVAILABLE;

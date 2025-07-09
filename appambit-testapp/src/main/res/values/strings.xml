@@ -33,4 +33,10 @@
     <string name="start_session">Start Session</string>
     <string name="end_session">End Session</string>
     <string name="generate_the_last_30_daily_sessions">Generate the last 30 daily sessions</string>
+    <string name="send_500_logs">Send 500 Logs</string>
+    <string name="test_message">Test Message</string>
+    <string name="send_500_events">Send 500 Events</string>
+    <string name="send_500_end_sessions">Send 500 End Sessions</string>
+    <string name="send_500_token">Send 500 Token</string>
+    <string name="send_500_sessions">Send 500 Sessions</string>
 </resources>

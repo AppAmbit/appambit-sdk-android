@@ -5,6 +5,8 @@ import android.content.pm.PackageInfo;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.appambit.sdk.analytics.SessionManager;
 import com.appambit.sdk.core.AppConstants;
 import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
@@ -14,8 +16,8 @@ import com.appambit.sdk.core.models.logs.LogBatch;
 import com.appambit.sdk.core.models.logs.LogEntity;
 import com.appambit.sdk.core.models.logs.LogResponse;
 import com.appambit.sdk.core.models.responses.ApiResult;
-import com.appambit.sdk.core.services.endpoints.LogBatchEndpoint;
-import com.appambit.sdk.core.services.interfaces.ApiService;
+import com.appambit.sdk.core.api.endpoints.LogBatchEndpoint;
+import com.appambit.sdk.core.api.interfaces.ApiService;
 import com.appambit.sdk.core.storage.Storable;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.DateUtils;
@@ -90,7 +92,9 @@ public class Crashes {
         ServiceLocator.getExecutorService().execute(() -> {
             try {
                 ensureFileLocked.acquire();
-
+                if(!SessionManager.isSessionActivate()) {
+                    return;
+                }
                 File crashDir = context.getFilesDir();
                 File[] crashFiles = crashDir.listFiles((dir, name) -> name.startsWith("crash_") && name.endsWith(".json"));
 
