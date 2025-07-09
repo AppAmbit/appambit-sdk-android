@@ -8,10 +8,10 @@ import com.appambit.sdk.core.models.responses.ApiResult;
 import com.appambit.sdk.core.models.responses.EndSessionResponse;
 import com.appambit.sdk.core.models.responses.EventsBatchResponse;
 import com.appambit.sdk.core.models.responses.StartSessionResponse;
-import com.appambit.sdk.core.services.endpoints.EndSessionEndpoint;
-import com.appambit.sdk.core.services.endpoints.SessionBatchEndpoint;
-import com.appambit.sdk.core.services.endpoints.StartSessionEndpoint;
-import com.appambit.sdk.core.services.interfaces.ApiService;
+import com.appambit.sdk.core.api.endpoints.EndSessionEndpoint;
+import com.appambit.sdk.core.api.endpoints.SessionBatchEndpoint;
+import com.appambit.sdk.core.api.endpoints.StartSessionEndpoint;
+import com.appambit.sdk.core.api.interfaces.ApiService;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.DateUtils;
 import com.appambit.sdk.core.utils.FileUtils;
@@ -304,4 +304,5 @@ public class SessionManager {
 
         return response;
     }
+
 }

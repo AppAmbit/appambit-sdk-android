@@ -16,9 +16,9 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        //Uncomment the line for automatic session management
-        //Analytics.enableManualSession();
-        AppAmbit.init(getApplicationContext(), "3b217ac4-755c-4e8a-bf3e-aa049d205b91");
+        //Comment the line for automatic session management
+        Analytics.enableManualSession();
+        AppAmbit.init(getApplicationContext(), "c22900b6-448b-4b65-985a-77da0c8abeb2");
 
         if (savedInstanceState == null) {
             replaceFragment(new CrashesFragment(), "CrashesFragment");

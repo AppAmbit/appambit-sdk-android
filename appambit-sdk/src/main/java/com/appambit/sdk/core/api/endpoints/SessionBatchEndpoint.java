@@ -1,8 +1,8 @@
-package com.appambit.sdk.core.services.endpoints;
+package com.appambit.sdk.core.api.endpoints;
 
 import com.appambit.sdk.analytics.SessionPayload;
 import com.appambit.sdk.core.enums.HttpMethodEnum;
-import com.appambit.sdk.core.services.interfaces.IEndpoint;
+import com.appambit.sdk.core.api.interfaces.IEndpoint;
 
 public class SessionBatchEndpoint extends BaseEndpoint implements IEndpoint {
     public SessionBatchEndpoint(SessionPayload sessionPayload) {

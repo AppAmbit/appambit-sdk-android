@@ -9,11 +9,12 @@ import com.appambit.sdk.core.ServiceLocator;
 import com.appambit.sdk.core.enums.ApiErrorType;
 import com.appambit.sdk.core.models.analytics.Event;
 import com.appambit.sdk.core.models.analytics.EventEntity;
+import com.appambit.sdk.core.api.interfaces.ApiService;
 import com.appambit.sdk.core.models.responses.ApiResult;
 import com.appambit.sdk.core.models.responses.EventResponse;
 import com.appambit.sdk.core.models.responses.EventsBatchResponse;
-import com.appambit.sdk.core.services.endpoints.EventBatchEndpoint;
-import com.appambit.sdk.core.services.endpoints.EventEndpoint;
+import com.appambit.sdk.core.api.endpoints.EventBatchEndpoint;
+import com.appambit.sdk.core.api.endpoints.EventEndpoint;
 import com.appambit.sdk.core.storage.Storable;
 import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.core.utils.DateUtils;
@@ -31,11 +32,13 @@ public final class Analytics {
 
     private static Storable mStorable;
     private static ExecutorService mExecutorService;
+    private static ApiService mApiService;
     private static boolean isManualSessionEnabled = false;
 
-    public static void Initialize(Storable storable, ExecutorService executorService) {
+    public static void Initialize(Storable storable, ExecutorService executorService, ApiService apiService) {
         mStorable = storable;
         mExecutorService = executorService;
+        mApiService = apiService;
     }
 
     public static void startSession() {
@@ -52,6 +55,9 @@ public final class Analytics {
 
     public static void sendBatchesEvents() {
         mExecutorService.execute(() -> {
+            if(!SessionManager.isSessionActivate()) {
+                return;
+            }
             List<EventEntity> events = mStorable.getOldest100Events();
 
             if (events.isEmpty()) {
@@ -60,7 +66,7 @@ public final class Analytics {
             }
 
             try {
-                ApiResult<EventsBatchResponse> responseApi = ServiceLocator.getApiService()
+                ApiResult<EventsBatchResponse> responseApi = mApiService
                         .executeRequest(new EventBatchEndpoint(events), EventsBatchResponse.class);
                 if (responseApi.errorType != ApiErrorType.None) {
                     return;
@@ -94,6 +100,9 @@ public final class Analytics {
     }
 
     private static void SendOrSaveEvent(String eventTitle, Map<String, String> data, Date createdAt) {
+        if(!SessionManager.isSessionActivate) {
+            return;
+        }
         data = processData(data);
 
         eventTitle = truncate(eventTitle, TRACK_EVENT_NAME_MAX_LIMIT);
@@ -149,7 +158,7 @@ public final class Analytics {
 
         mExecutorService.execute(() -> {
             try {
-                ApiResult<EventResponse> apiResponse = ServiceLocator.getApiService()
+                ApiResult<EventResponse> apiResponse = mApiService
                         .executeRequest(new EventEndpoint(event), EventResponse.class);
 
                 result.complete(apiResponse);
@@ -203,4 +212,5 @@ public final class Analytics {
     public static void setUserEmail(String userEmail) {
         mStorable.putUserEmail(userEmail);
     }
+
 }

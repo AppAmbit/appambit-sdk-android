@@ -1,4 +1,4 @@
-package com.appambit.sdk.core.services.interfaces;
+package com.appambit.sdk.core.api.interfaces;
 
 import com.appambit.sdk.core.enums.HttpMethodEnum;
 

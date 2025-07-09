@@ -1,4 +1,4 @@
-package com.appambit.sdk.core.services.ExceptionsCustom;
+package com.appambit.sdk.core.api.exceptionsCustom;
 
 public class HttpRequestException extends Exception {
     public HttpRequestException(String message) {

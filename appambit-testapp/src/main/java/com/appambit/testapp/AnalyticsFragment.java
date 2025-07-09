@@ -15,31 +15,22 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.appambit.sdk.analytics.Analytics;
-import com.appambit.sdk.core.AppAmbit;
-import com.appambit.sdk.core.enums.LogType;
 import com.appambit.sdk.core.models.analytics.SessionData;
-import com.appambit.sdk.core.models.logs.LogEntity;
-import com.appambit.sdk.core.services.endpoints.LogEndpoint;
 import com.appambit.sdk.core.enums.SessionType;
 import com.appambit.sdk.core.utils.JsonConvertUtils;
 import com.appambit.testapp.utils.AlertsUtils;
 import com.google.android.material.snackbar.Snackbar;
 
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;

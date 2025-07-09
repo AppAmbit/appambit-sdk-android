@@ -1,8 +1,8 @@
-package com.appambit.sdk.core.services.endpoints;
+package com.appambit.sdk.core.api.endpoints;
 
 import com.appambit.sdk.core.enums.HttpMethodEnum;
 import com.appambit.sdk.core.models.Consumer;
-import com.appambit.sdk.core.services.interfaces.IEndpoint;
+import com.appambit.sdk.core.api.interfaces.IEndpoint;
 
 public class RegisterEndpoint extends BaseEndpoint implements IEndpoint {
     public RegisterEndpoint(Consumer consumer) {

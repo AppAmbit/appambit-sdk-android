@@ -1,9 +1,9 @@
 package com.appambit.sdk.core;
 
 import android.content.Context;
-import com.appambit.sdk.core.services.interfaces.ApiService;
+import com.appambit.sdk.core.api.interfaces.ApiService;
 import com.appambit.sdk.core.services.ApplicationInfoService;
-import com.appambit.sdk.core.services.HttpApiService;
+import com.appambit.sdk.core.api.HttpApiService;
 import com.appambit.sdk.core.services.interfaces.AppInfoService;
 import com.appambit.sdk.core.storage.StorageService;
 import com.appambit.sdk.core.storage.Storable;

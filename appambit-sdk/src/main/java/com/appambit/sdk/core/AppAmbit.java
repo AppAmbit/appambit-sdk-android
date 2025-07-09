@@ -80,13 +80,16 @@ public final class AppAmbit {
     private static void InitializeServices(Context context) {
         ServiceLocator.initialize(context);
         FileUtils.initialize(context);
-        Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService());
+        Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService(), ServiceLocator.getApiService());
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
     }
 
     private static void onCreateApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
+        if(Analytics.isManualSessionEnabled()) {
+            return;
+        }
         InitializeConsumer();
         hasStartedSession = true;
         Analytics.sendBatchesEvents();
@@ -119,6 +122,9 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
+        if(Analytics.isManualSessionEnabled()) {
+            return;
+        }
         Runnable resumeTasks = () -> {
             if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
                 SessionManager.removeSavedEndSession();
@@ -165,7 +171,7 @@ public final class AppAmbit {
                 super.onAvailable(network);
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
-                    if(!hasInternetConnection(context)) {
+                    if(!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
                         return;
                     }
                     try {
