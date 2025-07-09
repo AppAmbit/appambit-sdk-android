@@ -111,7 +111,7 @@ public class HttpApiService implements ApiService {
                 try {
                     currentRenewalFuture = new AppAmbitTaskFuture<>();
                     Log.d(TAG, "Token invalid - triggering renewal");
-                    ApiErrorType renewalResult = renewToken("", currentRenewalFuture);
+                    ApiErrorType renewalResult = renewToken(null, currentRenewalFuture);
 
                     if (!isRenewSuccess(renewalResult)) {
                         return handleFailedRenewalResult(clazz, renewalResult);
