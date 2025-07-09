@@ -40,15 +40,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class HttpApiService implements ApiService {
 
     private final Context context;
     private static String _token;
-    private ApiErrorType currentTokenRenewalTask;
     private static String TAG = HttpApiService.class.getSimpleName();
     private final ExecutorService mExecutor;
-
+    private final ReentrantLock tokenLock = new ReentrantLock();
+    private volatile AppAmbitTaskFuture<ApiErrorType> currentRenewalFuture = null;
     public HttpApiService(@NonNull Context context, ExecutorService executor) {
         this.context = context.getApplicationContext();
         mExecutor = executor;
@@ -63,12 +64,11 @@ public class HttpApiService implements ApiService {
 
         try {
             HttpURLConnection httpResponse = requestHttp(endpoint);
-            Log.d(TAG, "Request successful: " + httpResponse.getResponseCode());
-            Log.d("[HTTP-Response]", "Message: " + httpResponse.getResponseMessage());
+            Log.d(TAG, "HTTP-Response-Header: " + httpResponse.getResponseCode()  + ": " + httpResponse.getResponseMessage());
 
             Map<String, List<String>> responseHeaders = httpResponse.getHeaderFields();
             for (Map.Entry<String, List<String>> entry : responseHeaders.entrySet()) {
-                Log.d("[HTTP-Response-Header]", entry.getKey() + ": " + entry.getValue());
+                Log.d(TAG, entry.getKey() + ": " + entry.getValue());
             }
 
             InputStream is = (httpResponse.getResponseCode() >= 400)
@@ -98,108 +98,126 @@ public class HttpApiService implements ApiService {
             checkStatusCodeFrom(httpResponse.getResponseCode());
 
             return ApiResult.success(response);
-        }catch (UnauthorizedException unauthorizedException) {
 
+        } catch (UnauthorizedException ex) {
             if (endpoint instanceof RegisterEndpoint) {
-                Log.d("[APIService]", "Token renew endpoint also failed. Session and Token must be cleared");
-                ClearToken();
-                return ApiResult.fail(ApiErrorType.Unauthorized, "Register endpoint failed");
+                clearToken();
+                return ApiResult.fail(ApiErrorType.Unauthorized, "Register failed");
             }
-            if (!IsRenewingToken()) {
+
+            Log.w(TAG, "401 Unauthorized. Need to renew token.");
+
+            if (!isRenewingToken()) {
                 try {
-                    Log.d("[APIService]", "Token invalid - triggering renewal");
+                    currentRenewalFuture = new AppAmbitTaskFuture<>();
+                    Log.d(TAG, "Token invalid - triggering renewal");
+                    ApiErrorType renewalResult = renewToken("", currentRenewalFuture);
 
-                    AppAmbitTaskFuture<ApiErrorType> currentTokenRenewalTask = GetNewToken("");
-                    currentTokenRenewalTask.then(result -> {
-                        if (!IsRenewSuccess(result)) {
-                            HandleFailedRenewalResult(result);
-                        }
-                    });
-                    currentTokenRenewalTask.onError(error ->
-                            Log.d("[APIService]", "Error during token renewal: " + error));
+                    if (!isRenewSuccess(renewalResult)) {
+                        return handleFailedRenewalResult(clazz, renewalResult);
+                    }
                 } catch (Exception e) {
-                    return HandleTokenRenewalException(e);
+                    return handleTokenRenewalException(clazz, e);
                 } finally {
-                    currentTokenRenewalTask = null;
+                    currentRenewalFuture = null;
                 }
+
             }
-            Log.d(TAG, "Token invalid - no retry will be made");
-            return ApiResult.fail(ApiErrorType.Unauthorized, "Token was invalid and retry was skipped");
+
+            Log.d(TAG, "Retrying request after token renewal");
+            return executeRequest(endpoint, clazz);
         } catch (Exception e) {
-            Log.d("[APIService]", "Exception during request: "+e);
-            return ApiResult.fail(ApiErrorType.Unknown, "Unexpected error during request");
+            Log.e(TAG, "Exception: ", e);
+            return ApiResult.fail(ApiErrorType.Unknown, "Unexpected error");
         }
+
     }
 
-    private boolean IsRenewingToken()
-    {
-        return currentTokenRenewalTask != null;
+    private boolean isRenewingToken() {
+        return currentRenewalFuture != null;
     }
 
-    private boolean IsRenewSuccess(ApiErrorType result)
-    {
+    private boolean isRenewSuccess(ApiErrorType result) {
         return result == ApiErrorType.None;
     }
 
-    @NonNull
-    private <T> ApiResult<T> HandleTokenRenewalException(Exception ex) {
-        Log.d("[APIService]", "Error while renewing token: "+ex);
-        ClearToken();
+    private <T> ApiResult<T> handleTokenRenewalException(Class<T> clazz, Exception ex) {
+        Log.e(TAG, "Error while renewing token: " + ex);
+        clearToken();
         return ApiResult.fail(ApiErrorType.Unknown, "Unexpected error during token renewal");
     }
 
-    @NonNull
-    private <T> ApiResult<T> HandleFailedRenewalResult(ApiErrorType result)
-    {
-        if (result == ApiErrorType.NetworkUnavailable)
-        {
-            Log.d("[APIService]", "Cannot retry request: no internet after token renewal");
+    private <T> ApiResult<T> handleFailedRenewalResult(Class<T> clazz, ApiErrorType result) {
+        if (result == ApiErrorType.NetworkUnavailable) {
+            Log.w(TAG, "Cannot retry request: no internet after token renewal");
             return ApiResult.fail(ApiErrorType.NetworkUnavailable, "No internet after token renewal");
         }
 
-        Log.d("[APIService]", "Could not renew token. Cleaning up");
+        Log.w(TAG, "Could not renew token. Cleaning up");
+        clearToken();
         return ApiResult.fail(result, "Token renewal failed");
+    }
+
+    private void clearToken() {
+        _token = null;
     }
 
     public AppAmbitTaskFuture<ApiErrorType> GetNewToken(String appKey) {
         AppAmbitTaskFuture<ApiErrorType> newTokenFuture = new AppAmbitTaskFuture<>();
         mExecutor.execute(() -> {
-            try {
-                RegisterEndpoint registerEndpoint = new ConsumerService().RegisterConsumer(appKey);
-                ApiResult<TokenResponse> tokenResponse = executeRequest(registerEndpoint, TokenResponse.class);
-
-                Log.d("[APIService]", "Token renew response [type]: " + (tokenResponse != null ? tokenResponse.errorType : "null"));
-
-                if (tokenResponse == null) {
-                    newTokenFuture.complete(ApiErrorType.Unknown);
-                    return;
-                }
-                if (tokenResponse.errorType == ApiErrorType.NetworkUnavailable) {
-                    newTokenFuture.complete(ApiErrorType.NetworkUnavailable);
-                    return;
-                }
-                if (tokenResponse.errorType == ApiErrorType.None) {
-                    _token = tokenResponse.data.getToken();
-                    Log.d("[APIService]", "Token renew response [token]: " + _token);
-                    newTokenFuture.complete(ApiErrorType.None);
-                    return;
-                }
-                newTokenFuture.complete(tokenResponse.errorType);
-            } catch (Exception e) {
-                Log.d("[APIService]", "Exception during token renew attempt: " + e);
-                newTokenFuture.fail(e);
-            }finally {
-                if(!newTokenFuture.isDone()) {
-                    newTokenFuture.complete(ApiErrorType.Unknown);
-                }
-            }
+            ApiErrorType result = renewToken(appKey, null);
+            newTokenFuture.complete(result);
         });
         return newTokenFuture;
     }
 
-    private void ClearToken() {
-        Log.d("[APIService]", "Session is no longer valid. Clearing token.");
-        _token = null;
+    private ApiErrorType renewToken(String appKey, AppAmbitTaskFuture<ApiErrorType> asyncFuture) {
+        try {
+            RegisterEndpoint registerEndpoint = new ConsumerService().RegisterConsumer(appKey);
+            ApiResult<TokenResponse> tokenResponse = executeRequest(registerEndpoint, TokenResponse.class);
+
+            tokenLock.lock();
+            try {
+                if (tokenResponse != null && tokenResponse.errorType == ApiErrorType.None) {
+                    _token = tokenResponse.data.getToken();
+                    Log.d(TAG, "Token renewed successfully");
+
+                    if (asyncFuture != null) {
+                        asyncFuture.complete(null);
+                    }
+                    return ApiErrorType.None;
+                } else {
+                    clearToken();
+                    Log.e(TAG, "Token renewal failed");
+
+                    if (asyncFuture != null) {
+                        asyncFuture.fail(new Exception("Token renewal failed"));
+                    }
+                    return tokenResponse != null ? tokenResponse.errorType : ApiErrorType.Unknown;
+                }
+            } finally {
+                if (asyncFuture != null) {
+                    currentRenewalFuture = null;
+                }
+                tokenLock.unlock();
+            }
+        } catch (Exception e) {
+            tokenLock.lock();
+            try {
+                clearToken();
+                Log.e(TAG, "Token renewal error", e);
+
+                if (asyncFuture != null) {
+                    asyncFuture.fail(e);
+                }
+                return ApiErrorType.Unknown;
+            } finally {
+                if (asyncFuture != null) {
+                    currentRenewalFuture = null;
+                }
+                tokenLock.unlock();
+            }
+        }
     }
 
     public String getToken() {
