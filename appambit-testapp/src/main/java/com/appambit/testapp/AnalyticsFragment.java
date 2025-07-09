@@ -258,10 +258,8 @@ public class AnalyticsFragment extends Fragment {
 
     public void onTokenRefreshTest(Context context) {
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        // Limpiar el token
         Analytics.clearToken();
 
-        // Generar 5 errores (logs)
         Map<String, String> properties = new HashMap<>();
         properties.put("user_id", "1");
         List<Future<?>> logTasks = new ArrayList<>();
@@ -271,13 +269,10 @@ public class AnalyticsFragment extends Fragment {
             }));
         }
 
-        // Esperar que terminen los logs antes de eventos
         waitAll(logTasks);
 
-        // Limpiar el token de nuevo
         Analytics.clearToken();
 
-        // Generar 5 eventos
         List<Future<?>> eventTasks = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             eventTasks.add(executor.submit(() -> {

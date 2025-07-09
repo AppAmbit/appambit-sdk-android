@@ -28,13 +28,13 @@
 
     <Button
         android:id="@+id/btnClearToken"
-        android:text="Clear token"
+        android:text="@string/invalidate_token"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <Button
         android:id="@+id/btnTokenRenew"
-        android:text="Token refresh test"
+        android:text="@string/token_refresh_test"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
