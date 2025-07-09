@@ -27,6 +27,18 @@
         android:layout_height="wrap_content" />
 
     <Button
+        android:id="@+id/btnClearToken"
+        android:text="Clear token"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnTokenRenew"
+        android:text="Token refresh test"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
         android:id="@+id/btnEventWProperty"
         android:text="@string/send_quot_button_clicked_quot_event_w_property"
         android:layout_width="match_parent"

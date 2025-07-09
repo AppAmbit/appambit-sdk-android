@@ -17,7 +17,9 @@ import android.widget.Toast;
 import com.appambit.sdk.analytics.Analytics;
 import com.appambit.sdk.core.models.analytics.SessionData;
 import com.appambit.sdk.core.enums.SessionType;
+import com.appambit.sdk.core.utils.DateUtils;
 import com.appambit.sdk.core.utils.JsonConvertUtils;
+import com.appambit.sdk.crashes.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -34,18 +36,22 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 
 public class AnalyticsFragment extends Fragment {
     private static final String TAG = AnalyticsFragment.class.getSimpleName();
-    Button btnStartSession;
-    Button btnEndSession;
-    Button btnGenerate30DaysTestSessions;
-    Button btnEventWProperty;
-    Button btnDefaultClickedEventWProperty;
-    Button btnMax300LengthEvent;
-    Button btnMax20PropertiesEvent;
-    Button btn3DailyEvents;
-    Button btn220BatchEvents;
+    Button btnStartSession, btnEndSession, btnGenerate30DaysTestSessions;
+    Button btnClearToken, btnTokenRenew;
+    Button btnEventWProperty, btnDefaultClickedEventWProperty, btnMax300LengthEvent, btnMax20PropertiesEvent, btn3DailyEvents, btn220BatchEvents;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_analytics, container, false);
@@ -87,8 +93,10 @@ public class AnalyticsFragment extends Fragment {
         btn3DailyEvents.setOnClickListener(v ->  onSend30DailyEvents(requireContext()));
         btn220BatchEvents = view.findViewById(R.id.btn220BatchEvents);
         btn220BatchEvents.setOnClickListener(v ->  onGenerateBatchEvents(requireContext()));
-
-
+        btnClearToken = view.findViewById(R.id.btnClearToken);
+        btnClearToken.setOnClickListener(v-> onClearToken());
+        btnTokenRenew = view.findViewById(R.id.btnTokenRenew);
+        btnTokenRenew.setOnClickListener(v -> onTokenRefreshTest(requireContext()));
        return view;
     }
 
@@ -149,7 +157,6 @@ public class AnalyticsFragment extends Fragment {
         }
         AlertsUtils.showAlert(context, "Info", "Turn off and Turn on internet to send the sessions.");
     }
-
 
     private static void buttonOnClicked(Context context) {
         try {
@@ -242,6 +249,62 @@ public class AnalyticsFragment extends Fragment {
             Analytics.trackEvent("Events 220", properties, null);
         }
         AlertsUtils.showAlert(context, "Info", "220 events generated, turn on internet to send them");
+    }
+
+    private  static void onClearToken() {
+        Analytics.clearToken();
+    }
+
+
+    public void onTokenRefreshTest(Context context) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        // Limpiar el token
+        Analytics.clearToken();
+
+        // Generar 5 errores (logs)
+        Map<String, String> properties = new HashMap<>();
+        properties.put("user_id", "1");
+        List<Future<?>> logTasks = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            logTasks.add(executor.submit(() -> {
+                Crashes.LogError(context, "Sending 5 errors after an invalid token", properties, this.getClass().getName(), null, null, 0, DateUtils.getUtcNow());
+            }));
+        }
+
+        // Esperar que terminen los logs antes de eventos
+        waitAll(logTasks);
+
+        // Limpiar el token de nuevo
+        Analytics.clearToken();
+
+        // Generar 5 eventos
+        List<Future<?>> eventTasks = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            eventTasks.add(executor.submit(() -> {
+                Map<String, String> eventData = new HashMap<>();
+                eventData.put("Test Token", "5 events sent");
+                Analytics.trackEvent("Sending 5 events after an invalid token", eventData, null);
+            }));
+        }
+
+        // Esperar que terminen los eventos
+        waitAll(eventTasks);
+
+        executor.shutdown();
+
+        // Mostrar alert al usuario
+        AlertsUtils.showAlert(context, "Info", "5 events and errors sent");
+    }
+
+    // Helper para esperar tareas (bloqueante, si necesitas no bloquear UI usa otra estrategia)
+    private void waitAll(List<Future<?>> tasks) {
+        for (Future<?> task : tasks) {
+            try {
+                task.get(); // Espera a que termine
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 }
