@@ -50,15 +50,13 @@ public class SessionManager {
         response.then(result -> {
             if (result.errorType != ApiErrorType.None) {
                 saveLocallyStartSession(utcNow);
-                isSessionActivate = true;
                 Log.d(TAG, "Start Session - save locally");
                 return;
             }
 
             sessionId = result.data.getSessionId();
-            isSessionActivate = true;
         });
-
+        isSessionActivate = true;
         response.onError(error -> {
             Log.d(TAG, Objects.requireNonNull(error.getMessage()));
         });
