@@ -13,14 +13,14 @@ public class ConsumerService {
     Storable storageService = ServiceLocator.getStorageService();
     AppInfoService appInfoService = ServiceLocator.getAppInfoService();
 
-    public RegisterEndpoint RegisterConsumer(@NonNull String appKey) {
+    public RegisterEndpoint RegisterConsumer(String appKey) {
         String appId;
         String deviceId = storageService.getDeviceId();
         String userId = storageService.getUserId();
         String userEmail = storageService.getUserEmail();
         String deviceModel = appInfoService.getDeviceModel();
 
-        if(!appKey.isEmpty()) {
+        if(appKey != null && !appKey.isEmpty()) {
             appId = appKey;
             storageService.putAppId(appKey);
         }else {
