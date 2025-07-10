@@ -44,34 +44,37 @@ public final class AppAmbit {
 
             @Override
             public void onCreate(@NonNull LifecycleOwner owner) {
-                onCreateApp(context);
                 Log.d(TAG,"onCreate");
+                onStartApp(context);
             }
 
             @Override
             public void onStart(@NonNull LifecycleOwner owner) {
-                onResumeApp();
                 Log.d(TAG,"onStart");
+                onResumeApp();
             }
 
             @Override
             public void onResume(@NonNull LifecycleOwner owner) {
-                onResumeApp();
                 Log.d(TAG,"onResume");
+                onResumeApp();
             }
 
             @Override
             public void onPause(@NonNull LifecycleOwner owner) {
+                Log.d(TAG,"onPause");
                 onSleep();
             }
 
             @Override
             public void onStop(@NonNull LifecycleOwner owner) {
+                Log.d(TAG,"onStop");
                 onSleep();
             }
 
             @Override
             public void onDestroy(@NonNull LifecycleOwner owner) {
+                Log.d(TAG,"onDestroy");
                 onEnd();
             }
         });
@@ -84,13 +87,13 @@ public final class AppAmbit {
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
     }
 
-    private static void onCreateApp(Context context) {
+    private static void onStartApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
         if(Analytics.isManualSessionEnabled()) {
             return;
         }
-        InitializeConsumer();
+        initializeConsumer();
         hasStartedSession = true;
         Crashes.loadCrashFileIfExists(context);
         Analytics.sendBatchesEvents();
@@ -98,7 +101,7 @@ public final class AppAmbit {
         SessionManager.sendBatchSessions();
     }
 
-    private static void InitializeConsumer() {
+    private static void initializeConsumer() {
         getNewTokenAndThen();
         if (Analytics.isManualSessionEnabled()) {
             return;

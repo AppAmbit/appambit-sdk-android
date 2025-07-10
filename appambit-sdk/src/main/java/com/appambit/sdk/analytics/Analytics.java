@@ -115,7 +115,7 @@ public final class Analytics {
         AppAmbitTaskFuture<ApiResult<EventResponse>> response = sendEventEndpoint(eventRequest);
 
         response.then(result -> {
-
+            Log.d(TAG, "Event ApirErrorType: " + result.errorType.name());
             if (result.errorType != ApiErrorType.None) {
                 EventEntity toSaveEvent = new EventEntity();
                 toSaveEvent.setId(UUID.randomUUID());
@@ -129,6 +129,10 @@ public final class Analytics {
                 saveFuture.onError(saveFuture::fail);
 
             }
+        });
+
+        response.onError(e -> {
+            Log.d(TAG, "onError: Error to sent events: \n" + e.getMessage());
         });
     }
 
@@ -213,4 +217,7 @@ public final class Analytics {
         mStorable.putUserEmail(userEmail);
     }
 
+    public static void clearToken()  {
+        ServiceLocator.getApiService().setToken("");
+    }
 }
