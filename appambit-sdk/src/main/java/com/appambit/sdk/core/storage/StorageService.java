@@ -32,18 +32,24 @@ public class StorageService implements Storable {
 
     @Override
     public void putDeviceId(String deviceId) {
-        try (SQLiteDatabase db = dataStore.getWritableDatabase()) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
             cv.put(AppSecretContract.Columns.DEVICE_ID, deviceId);
 
-            try (Cursor cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null)) {
-                if (cursor.moveToFirst()) {
-                    String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
-                    db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
-                } else {
-                    cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
-                    db.insert(AppSecretContract.TABLE_NAME, null, cv);
-                }
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (cursor != null) {
+                cursor.close();
             }
         }
     }
@@ -51,21 +57,26 @@ public class StorageService implements Storable {
     @Override
     public String getDeviceId() {
         String deviceId = "";
-        try (
-                SQLiteDatabase db = dataStore.getReadableDatabase();
-                Cursor c = db.query(
-                        AppSecretContract.TABLE_NAME,
-                        new String[]{ AppSecretContract.Columns.DEVICE_ID},
-                        null, null,
-                        null, null,
-                        null,
-                        "1"
-                )
-        ) {
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{ AppSecretContract.Columns.DEVICE_ID},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
             if (c.moveToFirst()) {
                 deviceId = c.getString(
                         c.getColumnIndexOrThrow(AppSecretContract.Columns.DEVICE_ID)
                 );
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (c != null) {
+                c.close();
             }
         }
         return deviceId;
@@ -73,18 +84,24 @@ public class StorageService implements Storable {
 
     @Override
     public void putAppId(String appId) {
-        try (SQLiteDatabase db = dataStore.getWritableDatabase()) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
             cv.put(AppSecretContract.Columns.APP_ID, appId);
 
-            try (Cursor cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null)) {
-                if (cursor.moveToFirst()) {
-                    String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
-                    db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
-                } else {
-                    cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
-                    db.insert(AppSecretContract.TABLE_NAME, null, cv);
-                }
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+        }finally {
+            // Ensure the cursor and database are closed to prevent memory leaks
+            if (cursor != null) {
+                cursor.close();
             }
         }
     }
@@ -92,21 +109,26 @@ public class StorageService implements Storable {
     @Override
     public String getAppId() {
         String appId = "";
-        try (
-                SQLiteDatabase db = dataStore.getReadableDatabase();
-                Cursor c = db.query(
-                        AppSecretContract.TABLE_NAME,
-                        new String[]{ AppSecretContract.Columns.APP_ID},
-                        null, null,
-                        null, null,
-                        null,
-                        "1"
-                )
-        ) {
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{ AppSecretContract.Columns.APP_ID},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
             if (c.moveToFirst()) {
                 appId = c.getString(
                         c.getColumnIndexOrThrow(AppSecretContract.Columns.APP_ID)
                 );
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (c != null) {
+                c.close();
             }
         }
         return appId;
@@ -114,18 +136,25 @@ public class StorageService implements Storable {
 
     @Override
     public void putUserId(String userId) {
-        try (SQLiteDatabase db = dataStore.getWritableDatabase()) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
             cv.put(Columns.USER_ID, userId);
 
-            try (Cursor cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null)) {
-                if (cursor.moveToFirst()) {
-                    String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
-                    db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
-                } else {
-                    cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
-                    db.insert(AppSecretContract.TABLE_NAME, null, cv);
-                }
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (cursor != null) {
+                cursor.close();
             }
         }
     }
@@ -133,21 +162,26 @@ public class StorageService implements Storable {
     @Override
     public String getUserId() {
         String userId = "";
-        try (
-                SQLiteDatabase db = dataStore.getReadableDatabase();
-                Cursor c = db.query(
-                        AppSecretContract.TABLE_NAME,
-                        new String[]{ AppSecretContract.Columns.USER_ID},
-                        null, null,
-                        null, null,
-                        null,
-                        "1"
-                )
-        ) {
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{ AppSecretContract.Columns.USER_ID},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
             if (c.moveToFirst()) {
                 userId = c.getString(
                         c.getColumnIndexOrThrow(AppSecretContract.Columns.USER_ID)
                 );
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (c != null) {
+                c.close();
             }
         }
         return userId;
@@ -155,18 +189,26 @@ public class StorageService implements Storable {
 
     @Override
     public void putUserEmail(String email) {
-        try (SQLiteDatabase db = dataStore.getWritableDatabase()) {
+        Cursor cursor = null;
+
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
             cv.put(AppSecretContract.Columns.USER_EMAIL, email);
 
-            try (Cursor cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null)) {
-                if (cursor.moveToFirst()) {
-                    String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
-                    db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
-                } else {
-                    cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
-                    db.insert(AppSecretContract.TABLE_NAME, null, cv);
-                }
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (cursor != null) {
+                cursor.close();
             }
         }
     }
@@ -174,21 +216,26 @@ public class StorageService implements Storable {
     @Override
     public String getUserEmail() {
         String email = "";
-        try (
-                SQLiteDatabase db = dataStore.getReadableDatabase();
-                Cursor c = db.query(
-                        AppSecretContract.TABLE_NAME,
-                        new String[]{ AppSecretContract.Columns.USER_EMAIL},
-                        null, null,
-                        null, null,
-                        null,
-                        "1"
-                )
-        ) {
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{ AppSecretContract.Columns.USER_EMAIL},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
             if (c.moveToFirst()) {
                 email = c.getString(
                         c.getColumnIndexOrThrow(AppSecretContract.Columns.USER_EMAIL)
                 );
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (c != null) {
+                c.close();
             }
         }
         return email;
@@ -196,18 +243,24 @@ public class StorageService implements Storable {
 
     @Override
     public void putSessionId(String sessionId) {
-        try (SQLiteDatabase db = dataStore.getWritableDatabase()) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
             cv.put(AppSecretContract.Columns.SESSION_ID, sessionId);
 
-            try (Cursor cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null)) {
-                if (cursor.moveToFirst()) {
-                    String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
-                    db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
-                } else {
-                    cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
-                    db.insert(AppSecretContract.TABLE_NAME, null, cv);
-                }
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (cursor != null) {
+                cursor.close();
             }
         }
     }
@@ -215,21 +268,26 @@ public class StorageService implements Storable {
     @Override
     public String getSessionId() {
         String sessionId = "";
-        try (
-                SQLiteDatabase db = dataStore.getReadableDatabase();
-                Cursor c = db.query(
-                        AppSecretContract.TABLE_NAME,
-                        new String[]{ AppSecretContract.Columns.SESSION_ID},
-                        null, null,
-                        null, null,
-                        null,
-                        "1"
-                )
-        ) {
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{ AppSecretContract.Columns.SESSION_ID},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
             if (c.moveToFirst()) {
                 sessionId = c.getString(
                         c.getColumnIndexOrThrow(AppSecretContract.Columns.SESSION_ID)
                 );
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (c != null) {
+                c.close();
             }
         }
         return sessionId;
@@ -237,7 +295,8 @@ public class StorageService implements Storable {
 
     @Override
     public void putLogEvent(LogEntity logEntity) {
-        try (SQLiteDatabase db = dataStore.getWritableDatabase()) {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
 
             cv.put(LogEntityContract.Columns.ID, logEntity.getId().toString());
@@ -258,12 +317,15 @@ public class StorageService implements Storable {
                     cv
             );
             Log.d(AppAmbit.class.getSimpleName(), "LOG CREATE - " + logEntity.getId());
+        }catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error inserting log event", e);
         }
     }
 
     @Override
     public void putLogAnalyticsEvent(EventEntity eventEntity) {
-        try (SQLiteDatabase db = dataStore.getWritableDatabase()) {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
 
             cv.put(EventEntityContract.Columns.ID, eventEntity.getId().toString());
@@ -277,6 +339,8 @@ public class StorageService implements Storable {
                     cv
             );
             Log.d(AppAmbit.class.getSimpleName(), "EVENT CREATE - " + eventEntity.getId());
+        }catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error inserting event entity", e);
         }
     }
 
@@ -297,12 +361,15 @@ public class StorageService implements Storable {
         }
         where.append(")");
 
-        try (SQLiteDatabase db = dataStore.getReadableDatabase()) {
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
             db.delete(
                     LogEntityContract.TABLE_NAME,
                     where.toString(),
                     args
             );
+        }catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error deleting log list", e);
         }
     }
 
@@ -314,9 +381,9 @@ public class StorageService implements Storable {
         String sql = "SELECT * FROM " + LogEntityContract.TABLE_NAME + " " +
                 "ORDER BY " + LogEntityContract.Columns.CREATED_AT + " ASC " +
                 "LIMIT 100";
-        Cursor c = db.rawQuery(sql, null);
-
+        Cursor c = null;
         try {
+            c = db.rawQuery(sql, null);
             if (c.moveToFirst()) {
                 do {
                     LogEntity log = new LogEntity();
@@ -335,7 +402,9 @@ public class StorageService implements Storable {
                 } while (c.moveToNext());
             }
         } finally {
-            c.close();
+            if(c != null) {
+                c.close();
+            }
         }
 
         return logs;
@@ -349,8 +418,9 @@ public class StorageService implements Storable {
         String sql = "SELECT * FROM " + EventEntityContract.TABLE_NAME + " " +
                 "ORDER BY " + EventEntityContract.Columns.CREATED_AT + " ASC " +
                 "LIMIT 100";
-
-        try (Cursor c = db.rawQuery(sql, null)) {
+        Cursor c = null;
+        try {
+            c = db.rawQuery(sql, null);
             if (c.moveToFirst()) {
                 do {
                     EventEntity event = new EventEntity();
@@ -360,6 +430,11 @@ public class StorageService implements Storable {
                     event.setName(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.NAME)));
                     events.add(event);
                 } while (c.moveToNext());
+            }
+        }finally {
+            // Ensure the cursor is closed to prevent memory leaks
+            if (c != null) {
+                c.close();
             }
         }
 
@@ -385,12 +460,15 @@ public class StorageService implements Storable {
         }
         where.append(")");
 
-        try (SQLiteDatabase db = dataStore.getReadableDatabase()) {
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
             db.delete(
                     EventEntityContract.TABLE_NAME,
                     where.toString(),
                     args
             );
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error deleting event list", e);
         }
     }
 
