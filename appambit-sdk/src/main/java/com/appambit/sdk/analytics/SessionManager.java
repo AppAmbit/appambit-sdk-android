@@ -51,6 +51,7 @@ public class SessionManager {
             if (result.errorType != ApiErrorType.None) {
                 saveLocallyStartSession(utcNow);
                 Log.d(TAG, "Start Session - save locally");
+                isSessionActivate = true;
                 return;
             }
 
