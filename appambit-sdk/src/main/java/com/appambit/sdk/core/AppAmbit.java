@@ -45,19 +45,19 @@ public final class AppAmbit {
             @Override
             public void onCreate(@NonNull LifecycleOwner owner) {
                 Log.d(TAG,"onCreate");
-                onStartInternal(context);
+                onStartApp(context);
             }
 
             @Override
             public void onStart(@NonNull LifecycleOwner owner) {
                 Log.d(TAG,"onStart");
-                onStartInternal();
+                onResumeApp();
             }
 
             @Override
             public void onResume(@NonNull LifecycleOwner owner) {
                 Log.d(TAG,"onResume");
-                onStartInternal();
+                onResumeApp();
             }
 
             @Override
@@ -87,7 +87,7 @@ public final class AppAmbit {
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
     }
 
-    private static void onStartInternal(Context context) {
+    private static void onStartApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
 
@@ -122,7 +122,7 @@ public final class AppAmbit {
         }
     }
 
-    private static void onStartInternal() {
+    private static void onResumeApp() {
         if(Analytics.isManualSessionEnabled()) {
             return;
         }

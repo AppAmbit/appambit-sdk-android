@@ -282,20 +282,17 @@ public class AnalyticsFragment extends Fragment {
             }));
         }
 
-        // Esperar que terminen los eventos
         waitAll(eventTasks);
 
         executor.shutdown();
 
-        // Mostrar alert al usuario
         AlertsUtils.showAlert(context, "Info", "5 events and errors sent");
     }
 
-    // Helper para esperar tareas (bloqueante, si necesitas no bloquear UI usa otra estrategia)
     private void waitAll(List<Future<?>> tasks) {
         for (Future<?> task : tasks) {
             try {
-                task.get(); // Espera a que termine
+                task.get();
             } catch (Exception e) {
                 e.printStackTrace();
             }
