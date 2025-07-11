@@ -90,9 +90,6 @@ public final class AppAmbit {
     private static void onStartApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
-        if(Analytics.isManualSessionEnabled()) {
-            return;
-        }
         initializeConsumer();
         hasStartedSession = true;
         Crashes.loadCrashFileIfExists(context);
