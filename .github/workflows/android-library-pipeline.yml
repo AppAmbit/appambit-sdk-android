@@ -1,8 +1,7 @@
 name: Android CI/CD Library
 
 on:
-  push:
-    branches: [ "feature/add-cicd-android-library" ]
+  workflow_dispatch:
 
 jobs:
   build:
