@@ -106,7 +106,9 @@ public class FileUtils {
                     list.add(entry);
                     JSONArray newArr = new JSONArray();
                     for (T item : list) {
-                        newArr.put(JsonConvertUtils.toJson(item));
+                        String jsonStr = JsonConvertUtils.toJson(item);
+                        JSONObject jsonObject = new JSONObject(jsonStr);
+                        newArr.put(jsonObject);
                     }
                     writeFile(path, newArr.toString());
                 }
@@ -145,7 +147,9 @@ public class FileUtils {
 
             JSONArray array = new JSONArray();
             for (T item : updatedList) {
-                array.put(JsonConvertUtils.toJson(item));
+                String jsonStr = JsonConvertUtils.toJson(item);
+                JSONObject jsonObject = new JSONObject(jsonStr);
+                array.put(jsonObject);
             }
             writeFile(path, array.toString());
         } catch (Exception e) {

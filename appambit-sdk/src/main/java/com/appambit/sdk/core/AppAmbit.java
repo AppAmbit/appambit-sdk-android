@@ -90,22 +90,21 @@ public final class AppAmbit {
     private static void onStartApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
-
         initializeConsumer();
         hasStartedSession = true;
+        Crashes.loadCrashFileIfExists(context);
         Analytics.sendBatchesEvents();
         Crashes.sendBatchesLogs();
         SessionManager.sendBatchSessions();
     }
 
     private static void initializeConsumer() {
-        getNewTokenAndThen(() -> {
-            if (Analytics.isManualSessionEnabled()) {
-                return;
-            }
-            SessionManager.sendEndSessionIfExists();
-            SessionManager.startSession();
-        });
+        getNewTokenAndThen();
+        if (Analytics.isManualSessionEnabled()) {
+            return;
+        }
+        SessionManager.sendEndSessionIfExists();
+        SessionManager.startSession();
     }
 
     private static void onSleep()
@@ -126,31 +125,21 @@ public final class AppAmbit {
         if(Analytics.isManualSessionEnabled()) {
             return;
         }
-        Runnable resumeTasks = () -> {
-            if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
-                SessionManager.removeSavedEndSession();
-            }
-
-            Crashes.sendBatchesLogs();
-            Analytics.sendBatchesEvents();
-        };
-
         if (!tokenIsValid()) {
-            getNewTokenAndThen(resumeTasks);
-        } else {
-            resumeTasks.run();
+            getNewTokenAndThen();
         }
+        if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
+            SessionManager.removeSavedEndSession();
+        }
+
+        Crashes.sendBatchesLogs();
+        Analytics.sendBatchesEvents();
     }
 
-    private static void getNewTokenAndThen(Runnable onSuccess) {
+    private static void getNewTokenAndThen() {
         AppAmbitTaskFuture<ApiErrorType> future = ServiceLocator.getApiService().GetNewToken(mAppKey);
         future.then(result -> {
-            if (result == ApiErrorType.None) {
-                Log.d(TAG, "Token obtained successfully.");
-                onSuccess.run();
-            } else {
-                Log.e(TAG, "Failed to get token: " + result);
-            }
+            Log.d(TAG, "Token obtained successfully.");
         });
         future.onError(error -> {
             Log.e(TAG, "Error getting token: ", error);
@@ -178,18 +167,13 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
-                        Runnable connectionTasks = () -> {
-                            Crashes.loadCrashFileIfExists(context);
-                            Crashes.sendBatchesLogs();
-                            Analytics.sendBatchesEvents();
-                            SessionManager.sendBatchSessions();
-                        };
-
                         if (!tokenIsValid()) {
-                            getNewTokenAndThen(connectionTasks);
-                        }else {
-                            connectionTasks.run();
+                            getNewTokenAndThen();
                         }
+                        Crashes.loadCrashFileIfExists(context);
+                        Crashes.sendBatchesLogs();
+                        Analytics.sendBatchesEvents();
+                        SessionManager.sendBatchSessions();
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored" + e);
                     }

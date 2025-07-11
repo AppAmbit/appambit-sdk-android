@@ -34,7 +34,7 @@ public class JsonConvertUtils {
             return mapToJson((Map<?, ?>) object).toString();
         return objectToJson(object).toString();
     }
-    private static JSONObject objectToJson(Object object) throws JSONException {
+    static JSONObject objectToJson(Object object) throws JSONException {
         JSONObject jsonObject = new JSONObject();
         Class<?> clazz = object.getClass();
         for (Field field : getAllFields(clazz)) {
