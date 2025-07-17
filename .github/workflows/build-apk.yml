@@ -51,4 +51,4 @@ jobs:
         with:
           name: app_android_{{ env.TYPE_RELEASE }}
           path: |
-            app/build/outputs/apk/release/
+            appambit-testapp/build/outputs/apk/release/*.apk
