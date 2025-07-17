@@ -9,6 +9,7 @@ on:
 env:
   TYPE_RELEASE: beta
   PACKAGE_NAME: appambit-testapp
+  APK_NAME: com_appambit_testapp
   SIGNING_KEY_STORE_PATH: ${{ secrets.SIGNING_KEY_STORE_PATH }}
   SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
   SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
@@ -44,6 +45,15 @@ jobs:
           
       - name: Build Release apk
         run: ./gradlew :${{ env.PACKAGE_NAME }}:assembleRelease
+
+      - name: Rename APK output
+        run: |
+          ORIGINAL_APK=$(find $PACKAGE_NAME/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "APK found: $ORIGINAL_APK"
+          DIR=$(dirname "$ORIGINAL_APK")
+          NEW_NAME="${APK_NAME}_${TYPE_RELEASE}.apk"
+          echo "Renaming to: $NEW_NAME"
+          mv "$ORIGINAL_APK" "$DIR/$NEW_NAME"
 
       - name: Upload Release Build to Artifacts
         uses: actions/upload-artifact@v4
