@@ -5,6 +5,7 @@ on:
     branches:
       - alpha/build-android-pipelines
 
+
 env:
   TYPE_RELEASE: alpha
   PACKAGE_NAME: appambit-testapp
