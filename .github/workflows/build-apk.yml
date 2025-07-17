@@ -5,9 +5,7 @@ on:
     branches:
       - beta/build-android-pipelines
 
-
 env:
-  TYPE_RELEASE: beta
   PACKAGE_NAME: appambit-testapp
   APK_NAME: com_appambit_testapp
   SIGNING_KEY_STORE_PATH: ${{ secrets.SIGNING_KEY_STORE_PATH }}
@@ -23,6 +21,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Extract release type from branch name
+        run: |
+          FULL_BRANCH="${GITHUB_REF#refs/heads/}"
+          if [[ "$FULL_BRANCH" == *"/"* ]]; then
+            TYPE_RELEASE="${FULL_BRANCH%%/*}"
+          else
+            TYPE_RELEASE="$FULL_BRANCH"
+          fi
+          echo "TYPE_RELEASE=$TYPE_RELEASE" >> $GITHUB_ENV
+
       - name: set up JDK 17
         uses: actions/setup-java@v4
         with:
