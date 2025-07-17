@@ -1,9 +1,7 @@
 name: Android CI/CD Test App
 
 on:
-  push:
-    branches:
-      - alpha/build-android-pipelines
+  workflow_dispatch:
 
 env:
   TYPE_RELEASE: alpha
@@ -14,7 +12,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v2.6.0
+      - uses: actions/checkout@v4
 
       - name: Setup JAVA 11
         uses: actions/setup-java@v3
