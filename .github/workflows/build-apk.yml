@@ -1,7 +1,9 @@
 name: Android CI/CD Test App
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - alpha/build-android-pipelines
 
 env:
   TYPE_RELEASE: alpha
