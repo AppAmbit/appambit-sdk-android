@@ -13,7 +13,7 @@ env:
   SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
   SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
   ENCODED_STRING: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
-
+ 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
