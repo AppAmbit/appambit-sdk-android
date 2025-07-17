@@ -3,11 +3,11 @@ name: Android CI/CD Test App
 on:
   push:
     branches:
-      - alpha/build-android-pipelines
+      - production/build-android-pipelines
 
 
 env:
-  TYPE_RELEASE: alpha
+  TYPE_RELEASE: production
   PACKAGE_NAME: appambit-testapp
   SIGNING_KEY_STORE_PATH: ${{ secrets.SIGNING_KEY_STORE_PATH }}
   SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
