@@ -47,12 +47,13 @@ jobs:
 
       - name: Rename APK output
         run: |
-          ORIGINAL_APK=$(find ${{ env.PACKAGE_NAME }}/build/outputs/apk/release -name "*.apk" | head -n 1)
-          echo "APK found: $ORIGINAL_PATH"
-          DIR=$(dirname "$ORIGINAL_PATH")
-          NEW_NAME="${{ env.APK_NAME }}_${{ env.TYPE_RELEASE }}.apk"
+          ORIGINAL_APK=$(find $PACKAGE_NAME/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "APK found: $ORIGINAL_APK"
+          DIR=$(dirname "$ORIGINAL_APK")
+          NEW_NAME="${APK_NAME}_${TYPE_RELEASE}.apk"
           echo "Renaming to: $NEW_NAME"
-          mv "$ORIGINAL_PATH" "$DIR/$NEW_NAME"
+          mv "$ORIGINAL_APK" "$DIR/$NEW_NAME"
+
 
       - name: Upload Release Build to Artifacts
         uses: actions/upload-artifact@v4
