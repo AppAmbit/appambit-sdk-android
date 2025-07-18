@@ -1,9 +1,7 @@
 name: Android CI/CD Test App
 
 on:
-  push:
-    branches:
-      - test/cicd-workflow-branch-validation
+  workflow_dispatch:
 
 env:
   PACKAGE_NAME: appambit-testapp
