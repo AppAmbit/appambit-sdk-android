@@ -1,0 +1,50 @@
+pipelines:
+  branches:
+    develop:
+      - step:
+          name: Build Android APK
+          image: androidsdk/android-30
+          max-time: 10
+          caches:
+            - gradle
+          script:
+            - PACKAGE_NAME="appambit-testapp"
+            - APK_NAME="com_appambit_testapp"
+            
+            - apt-get update && apt-get install -y wget unzip openjdk-17-jdk
+
+            - export FULL_BRANCH="${BITBUCKET_BRANCH}"
+            - if [[ "$FULL_BRANCH" == *"/"* ]]; then
+                export TYPE_RELEASE="${FULL_BRANCH%%/*}";
+              else
+                export TYPE_RELEASE="$FULL_BRANCH";
+              fi
+            - echo "TYPE_RELEASE=$TYPE_RELEASE"
+
+            - echo "$SIGNING_KEY_STORE_BASE64" | base64 -d > appambit.keystore
+
+            - chmod +x ./gradlew
+
+            - ./gradlew :${PACKAGE_NAME}:assembleRelease
+
+            - ORIGINAL_APK=$(find ${PACKAGE_NAME}/build/outputs/apk/release -name "*.apk" | head -n 1)
+            - echo "APK - $ORIGINAL_APK"
+            - DIR=$(dirname "$ORIGINAL_APK")
+            - NEW_NAME="${APK_NAME}_${TYPE_RELEASE}.apk"
+            - mv "$ORIGINAL_APK" "$DIR/$NEW_NAME"
+
+            - mkdir -p artifacts
+            - cp "$DIR/$NEW_NAME" artifacts/
+          artifacts:
+            - artifacts/*.apk
+
+      - step:
+          name: Upload APK
+          max-time: 5
+          image: atlassian/default-image:4
+          script:
+            - pipe: atlassian/bitbucket-upload-file:0.7.4
+              variables:
+                BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+                BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+                FILENAME: "artifacts/*.apk"
