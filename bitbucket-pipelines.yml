@@ -14,12 +14,19 @@ pipelines:
             - apt-get update && apt-get install -y wget unzip openjdk-17-jdk
 
             - export FULL_BRANCH="${BITBUCKET_BRANCH}"
+
             - if [[ "$FULL_BRANCH" == *"/"* ]]; then
                 export TYPE_RELEASE="${FULL_BRANCH%%/*}";
               else
                 export TYPE_RELEASE="$FULL_BRANCH";
               fi
+
             - echo "TYPE_RELEASE=$TYPE_RELEASE"
+
+            - if [[ "$TYPE_RELEASE" != "alpha" && "$TYPE_RELEASE" != "beta" && "$TYPE_RELEASE" != "production" ]]; then
+                echo "Branch not valid to build $FULL_BRANCH";
+                exit 1;
+              fi
 
             - echo "$SIGNING_KEY_STORE_BASE64" | base64 -d > appambit.keystore
 
