@@ -1,0 +1,72 @@
+name: Android CI/CD Test App
+
+on:
+  workflow_dispatch:
+
+env:
+  PACKAGE_NAME: appambit-testapp
+  APK_NAME: com_appambit_testapp
+  SIGNING_KEY_STORE_PATH: ${{ secrets.SIGNING_KEY_STORE_PATH }}
+  SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+  SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+  SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+  ENCODED_STRING: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate and extract release type from branch name
+        run: |
+          FULL_BRANCH="${GITHUB_REF#refs/heads/}"
+
+          if [[ "$FULL_BRANCH" == alpha/* || "$FULL_BRANCH" == beta/* || "$FULL_BRANCH" == production/* ]]; then
+            TYPE_RELEASE="${FULL_BRANCH%%/*}"
+            echo "TYPE_RELEASE=$TYPE_RELEASE" >> $GITHUB_ENV
+          else
+            echo "Branch '$FULL_BRANCH' does not start with alpha/, beta/ or production/. Exiting..."
+            exit 1
+          fi
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Cache Gradle and wrapper
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+    
+      - name: Decode Keystore
+        run: |
+          echo $ENCODED_STRING > keystore-b64.txt
+          base64 -d keystore-b64.txt > $SIGNING_KEY_STORE_PATH
+          
+      - name: Build Release apk
+        run: ./gradlew :${{ env.PACKAGE_NAME }}:assembleRelease
+
+      - name: Rename APK output
+        run: |
+          ORIGINAL_APK=$(find $PACKAGE_NAME/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "APK found: $ORIGINAL_APK"
+          DIR=$(dirname "$ORIGINAL_APK")
+          NEW_NAME="${APK_NAME}_${TYPE_RELEASE}.apk"
+          echo "Renaming to: $NEW_NAME"
+          mv "$ORIGINAL_APK" "$DIR/$NEW_NAME"
+
+      - name: Upload Release Build to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app_android_${{ env.TYPE_RELEASE }}
+          path: |
+            ${{ env.PACKAGE_NAME }}/build/outputs/apk/release/*.apk
