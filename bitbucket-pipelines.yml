@@ -8,25 +8,31 @@ pipelines:
           caches:
             - gradle
           script:
+            - |
+              export FULL_BRANCH="${BITBUCKET_BRANCH}"
+              echo "Current branch: $FULL_BRANCH"
+
+              if [[ "$FULL_BRANCH" == alpha/* || "$FULL_BRANCH" == beta/* || "$FULL_BRANCH" == production/* ]]; then
+                export TYPE_RELEASE="${FULL_BRANCH%%/*}"
+                echo "TYPE_RELEASE=$TYPE_RELEASE"
+              else
+                echo "Branch '$FULL_BRANCH' must start with alpha/, beta/ or production/. Exiting..."
+                exit 1
+              fi
+
             - PACKAGE_NAME="appambit-testapp"
             - APK_NAME="com_appambit_testapp"
+            - BUNDLE_NAME="my_app_bundle.zip"
             
-            - apt-get update && apt-get install -y wget unzip openjdk-17-jdk
+            - apt-get update && apt-get install -y wget unzip zip openjdk-17-jdk
 
             - export FULL_BRANCH="${BITBUCKET_BRANCH}"
-
             - if [[ "$FULL_BRANCH" == *"/"* ]]; then
                 export TYPE_RELEASE="${FULL_BRANCH%%/*}";
               else
                 export TYPE_RELEASE="$FULL_BRANCH";
               fi
-
             - echo "TYPE_RELEASE=$TYPE_RELEASE"
-
-            - if [[ "$TYPE_RELEASE" != "alpha" && "$TYPE_RELEASE" != "beta" && "$TYPE_RELEASE" != "production" ]]; then
-                echo "Branch not valid to build $FULL_BRANCH";
-                exit 1;
-              fi
 
             - echo "$SIGNING_KEY_STORE_BASE64" | base64 -d > appambit.keystore
 
@@ -42,21 +48,20 @@ pipelines:
 
             - mkdir -p artifacts
             - cp "$DIR/$NEW_NAME" artifacts/
+            - cd artifacts
+            - zip "$BUNDLE_NAME" "$NEW_NAME"
           artifacts:
-            - artifacts/*.apk
+            - artifacts/*.zip
 
       - step:
-          name: Upload APK
-          max-time: 5
+          name: Upload APK ZIP to Downloads
           image: atlassian/default-image:4
           script:
             - pipe: atlassian/bitbucket-upload-file:0.7.4
               variables:
                 BITBUCKET_USERNAME: $BITBUCKET_USERNAME
                 BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
-                FILENAME: "artifacts/*.apk"
-          artifacts:
-            - artifacts/*.ipa
+                FILENAME: "artifacts/*.zip"
     
     build-library:
       - step:
