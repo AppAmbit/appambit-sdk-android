@@ -1,0 +1,61 @@
+name: Build & Upload AAR to Downloads
+
+trigger: none
+
+variables:
+  AAR_NAME: 'appambit-sdk-release.aar'
+  PACKAGE_NAME: 'appambit-sdk'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: BuildAndroidApp
+  displayName: 'Build Android Library'
+  timeoutInMinutes: 10
+  steps:
+
+  - checkout: self
+    displayName: 'Checkout repository'
+
+  - task: Bash@3
+    displayName: 'Install OpenJDK'
+    inputs:
+      targetType: 'inline'
+      script: |
+        sudo apt-get update && sudo apt-get install -y openjdk-17-jdk
+
+  - task: Cache@2
+    displayName: 'Cache Gradle dependencies'
+    inputs:
+      key: 'gradle | "$(Agent.OS)"'
+      restoreKeys: |
+        gradle
+      path: $(HOME)/.gradle
+
+  - task: Bash@3
+    displayName: 'Make gradlew executable'
+    inputs:
+      targetType: 'inline'
+      script: chmod +x ./gradlew
+
+  - task: Bash@3
+    displayName: 'Build Android Library AAR'
+    inputs:
+      targetType: 'inline'
+      script: ./gradlew :$(PACKAGE_NAME):assembleRelease
+
+  - task: Bash@3
+    displayName: 'Copy AAR to Artifacts'
+    inputs:
+      targetType: 'inline'
+      script: |
+        mkdir -p artifacts
+        cp $(PACKAGE_NAME)/build/outputs/aar/*.aar artifacts/$(AAR_NAME)
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish AAR Artifact'
+    inputs:
+      PathtoPublish: 'artifacts'
+      ArtifactName: 'release-aar'
+      publishLocation: 'Container'
