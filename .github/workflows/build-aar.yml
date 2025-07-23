@@ -127,7 +127,7 @@ jobs:
         files: artifacts/appambit-sdk-${{ steps.version.outputs.new_version }}.aar
         body: |
           ## 🚀 AppAmbit SDK ${{ steps.version.outputs.new_version }}
-          AppAmbit NuGet package for analytics, crash tracking, and usage monitoring
+          AppAmbit Android package for analytics, crash tracking, and usage monitoring
           - **Previous Version**: v${{ steps.version.outputs.current_version }}
           - **New Version**: ${{ steps.version.outputs.new_tag }}
           - **Increment Type**: ${{ steps.version.outputs.increment_type }}
