@@ -5,6 +5,9 @@ on:
   push:
     branches: [ feature/added-android-library-tag-release ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Android Library with Version
