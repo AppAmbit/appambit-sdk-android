@@ -62,3 +62,38 @@ pipelines:
                 BITBUCKET_USERNAME: $BITBUCKET_USERNAME
                 BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
                 FILENAME: "artifacts/*.zip"
+    
+    build-library:
+      - step:
+          name: Build & Upload AAR to Downloads
+          image: androidsdk/android-30
+          max-time: 10
+          caches:
+            - gradle
+          script:
+            - AAR_NAME="appambit-sdk-release.aar"
+            - PACKAGE_NAME="appambit-sdk"
+
+            - apt-get update && apt-get install -y openjdk-17-jdk
+
+            - chmod +x ./gradlew
+            - ./gradlew :$PACKAGE_NAME:assembleRelease
+
+            - mkdir -p artifacts
+            - cp appambit-sdk/build/outputs/aar/*.aar artifacts/$AAR_NAME
+
+          artifacts:
+            - artifacts/*.aar
+
+      - step:
+          name: Upload AAR
+          max-time: 5
+          image: atlassian/default-image:4
+          script:
+            - pipe: atlassian/bitbucket-upload-file:0.7.4
+              variables:
+                BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+                BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+                FILENAME: "artifacts/*.aar"
+          artifacts:
+          - artifacts/*.ipa
