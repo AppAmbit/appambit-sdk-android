@@ -1,0 +1,99 @@
+pipelines:
+  branches:
+    develop:
+      - step:
+          name: Build Android APK
+          image: androidsdk/android-30
+          max-time: 10
+          caches:
+            - gradle
+          script:
+            - |
+              export FULL_BRANCH="${BITBUCKET_BRANCH}"
+              echo "Current branch: $FULL_BRANCH"
+
+              if [[ "$FULL_BRANCH" == alpha/* || "$FULL_BRANCH" == beta/* || "$FULL_BRANCH" == production/* ]]; then
+                export TYPE_RELEASE="${FULL_BRANCH%%/*}"
+                echo "TYPE_RELEASE=$TYPE_RELEASE"
+              else
+                echo "Branch '$FULL_BRANCH' must start with alpha/, beta/ or production/. Exiting..."
+                exit 1
+              fi
+
+            - PACKAGE_NAME="appambit-testapp"
+            - APK_NAME="com_appambit_testapp"
+            - BUNDLE_NAME="my_app_bundle.zip"
+            
+            - apt-get update && apt-get install -y wget unzip zip openjdk-17-jdk
+
+            - export FULL_BRANCH="${BITBUCKET_BRANCH}"
+            - if [[ "$FULL_BRANCH" == *"/"* ]]; then
+                export TYPE_RELEASE="${FULL_BRANCH%%/*}";
+              else
+                export TYPE_RELEASE="$FULL_BRANCH";
+              fi
+            - echo "TYPE_RELEASE=$TYPE_RELEASE"
+
+            - echo "$SIGNING_KEY_STORE_BASE64" | base64 -d > appambit.keystore
+
+            - chmod +x ./gradlew
+
+            - ./gradlew :${PACKAGE_NAME}:assembleRelease
+
+            - ORIGINAL_APK=$(find ${PACKAGE_NAME}/build/outputs/apk/release -name "*.apk" | head -n 1)
+            - echo "APK - $ORIGINAL_APK"
+            - DIR=$(dirname "$ORIGINAL_APK")
+            - NEW_NAME="${APK_NAME}_${TYPE_RELEASE}.apk"
+            - mv "$ORIGINAL_APK" "$DIR/$NEW_NAME"
+
+            - mkdir -p artifacts
+            - cp "$DIR/$NEW_NAME" artifacts/
+            - cd artifacts
+            - zip "$BUNDLE_NAME" "$NEW_NAME"
+          artifacts:
+            - artifacts/*.zip
+
+      - step:
+          name: Upload APK ZIP to Downloads
+          image: atlassian/default-image:4
+          script:
+            - pipe: atlassian/bitbucket-upload-file:0.7.4
+              variables:
+                BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+                BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+                FILENAME: "artifacts/*.zip"
+    
+    build-library:
+      - step:
+          name: Build & Upload AAR to Downloads
+          image: androidsdk/android-30
+          max-time: 10
+          caches:
+            - gradle
+          script:
+            - AAR_NAME="appambit-sdk-release.aar"
+            - PACKAGE_NAME="appambit-sdk"
+
+            - apt-get update && apt-get install -y openjdk-17-jdk
+
+            - chmod +x ./gradlew
+            - ./gradlew :$PACKAGE_NAME:assembleRelease
+
+            - mkdir -p artifacts
+            - cp appambit-sdk/build/outputs/aar/*.aar artifacts/$AAR_NAME
+
+          artifacts:
+            - artifacts/*.aar
+
+      - step:
+          name: Upload AAR
+          max-time: 5
+          image: atlassian/default-image:4
+          script:
+            - pipe: atlassian/bitbucket-upload-file:0.7.4
+              variables:
+                BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+                BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+                FILENAME: "artifacts/*.aar"
+          artifacts:
+          - artifacts/*.ipa
