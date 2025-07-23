@@ -1,0 +1,110 @@
+name: Build & Upload APK to Downloads
+
+trigger: none
+
+variables:
+- group: ANDROID VARIABLES
+- name: APK_NAME
+  value: 'app_appambit_testapp'
+- name: PACKAGE_NAME
+  value: 'com.appambit.testapp'
+- name: DIRECTORY_NAME
+  value: 'appambit-testapp'
+- name: KEYSTORE_NAME
+  value: 'appambit.keystore'
+- name: RELEASE_TYPE
+  value: 'Release'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: BuildAndroidApp
+  displayName: 'Build Android TestApp'
+  timeoutInMinutes: 10
+  steps:
+
+  - checkout: self
+    displayName: 'Checkout repository'
+
+  - task: Bash@3
+    displayName: 'Validate and extract release type from branch name'
+    inputs:
+      targetType: 'inline'
+      script: |
+        FULL_REF="$(Build.SourceBranch)"
+        echo "Full ref: $FULL_REF"
+        
+        FULL_BRANCH="${FULL_REF#refs/heads/}"
+        echo "Branch name: $FULL_BRANCH"
+        
+        if [[ "$FULL_BRANCH" == alpha/* || "$FULL_BRANCH" == beta/* || "$FULL_BRANCH" == production/* ]]; then
+          TYPE_RELEASE="${FULL_BRANCH%%/*}"
+          echo "##vso[task.setvariable variable=typeRelease]$TYPE_RELEASE"
+          echo "Valid release type: $TYPE_RELEASE"
+        else
+          echo "Branch '$FULL_BRANCH' does not start with alpha/, beta/ or production/. Exiting..."
+          exit 1
+        fi
+
+  - task: Bash@3
+    displayName: 'Install OpenJDK'
+    inputs:
+      targetType: 'inline'
+      script: |
+        sudo apt-get update && sudo apt-get install -y openjdk-17-jdk
+
+  - task: Cache@2
+    displayName: 'Cache Gradle dependencies'
+    inputs:
+      key: 'gradle | "$(Agent.OS)"'
+      restoreKeys: |
+        gradle
+      path: $(HOME)/.gradle
+
+  - task: DownloadSecureFile@1
+    name: downloadKeystore
+    displayName: 'Download Keystore File'
+    inputs:
+      secureFile: '$(KEYSTORE_NAME)'
+
+  - task: Bash@3
+    displayName: 'Move keystore to project root'
+    inputs:
+      targetType: 'inline'
+      script: |
+        cp "$(downloadKeystore.secureFilePath)" "$(Build.SourcesDirectory)/$(KEYSTORE_NAME)"
+        echo "Keystore copied to $(Build.SourcesDirectory)/$(KEYSTORE_NAME)"
+
+  - task: Bash@3
+    displayName: 'Make Gradle wrapper executable'
+    inputs:
+      targetType: 'inline'
+      script: |
+        chmod +x gradlew
+
+  - task: Bash@3
+    displayName: 'Build Android APK'
+    inputs:
+      targetType: 'inline'
+      script: |
+        ./gradlew :$(DIRECTORY_NAME):assemble$(RELEASE_TYPE)
+    env:
+      SIGNING_STORE_PASSWORD: $(STORE_PASSWORD)
+      SIGNING_KEY_PASSWORD: $(KEY_PASSWORD)
+      SIGNING_KEY_ALIAS: kavaup
+
+  - task: Bash@3
+    displayName: 'Upload APK to Downloads'
+    inputs:
+      targetType: 'inline'
+      script: |
+        mkdir -p $(Build.ArtifactStagingDirectory)
+        cp $(DIRECTORY_NAME)/build/outputs/apk/release/$(DIRECTORY_NAME)-release.apk $(Build.ArtifactStagingDirectory)/$(APK_NAME)_$(typeRelease).apk
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish APK Artifact'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: '$(typeRelease)-apk'
+      publishLocation: 'Container'
