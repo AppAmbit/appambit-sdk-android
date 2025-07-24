@@ -1,8 +1,7 @@
 name: Android CI/CD Library
 
 on:
-  push:
-    branches: [ feature/added-android-library-tag-release ]
+  workflow_dispatch:
 
 permissions:
   contents: write
