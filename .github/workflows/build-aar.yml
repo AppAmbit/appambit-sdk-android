@@ -126,7 +126,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         files: artifacts/appambit-sdk-${{ steps.version.outputs.new_version }}.aar
         body: |
-          ## 🚀 AppAmbit SDK ${{ steps.version.outputs.new_version }}
+          ## AppAmbit SDK ${{ steps.version.outputs.new_version }}
           AppAmbit Android package for analytics, crash tracking, and usage monitoring
           - **Previous Version**: v${{ steps.version.outputs.current_version }}
           - **New Version**: ${{ steps.version.outputs.new_tag }}
