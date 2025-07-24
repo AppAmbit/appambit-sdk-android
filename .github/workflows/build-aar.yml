@@ -1,7 +1,6 @@
 name: Android CI/CD Library
 
 on:
-  pull_request:
   push:
     branches: [ feature/added-android-library-tag-release ]
 
