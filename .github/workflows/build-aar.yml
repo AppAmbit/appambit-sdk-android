@@ -3,6 +3,10 @@ name: Android CI/CD Library
 on:
   workflow_dispatch:
 
+env:
+  PACKAGE_NAME: appambit-sdk
+  BUILD_PATH: build/outputs/aar/appambit-sdk-release.aar
+
 permissions:
   contents: write
 
@@ -102,18 +106,18 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew :appambit-sdk:assembleRelease
+      run: ./gradlew :${{ env.PACKAGE_NAME }}:assembleRelease
 
     - name: Rename AAR with version
       run: |
         mkdir -p artifacts
-        cp appambit-sdk/build/outputs/aar/appambit-sdk-release.aar artifacts/appambit-sdk-${{ steps.version.outputs.new_version }}.aar
+        cp ${{ env.PACKAGE_NAME }}/${{ env.BUILD_PATH }} artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}.aar
 
     - name: Upload AAR artifact
       uses: actions/upload-artifact@v4
       with:
-        name: appambit-sdk-${{ steps.version.outputs.new_version }}
-        path: artifacts/appambit-sdk-${{ steps.version.outputs.new_version }}.aar
+        name: ${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}
+        path: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}.aar
 
     - name: Create GitHub Release
       if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || github.ref_name == 'feature/added-android-library-tag-release' }}
@@ -122,7 +126,7 @@ jobs:
         tag_name: ${{ steps.version.outputs.new_tag }}
         name: ${{ steps.version.outputs.new_tag }}
         token: ${{ secrets.GITHUB_TOKEN }}
-        files: artifacts/appambit-sdk-${{ steps.version.outputs.new_version }}.aar
+        files: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}.aar
         body: |
           ## AppAmbit SDK ${{ steps.version.outputs.new_version }}
           AppAmbit Android package for analytics, crash tracking, and usage monitoring
