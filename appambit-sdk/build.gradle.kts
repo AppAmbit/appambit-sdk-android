@@ -29,8 +29,6 @@ android {
 }
 
 dependencies {
-    implementation("androidx.lifecycle:lifecycle-process:2.9.1")
-    implementation("androidx.lifecycle:lifecycle-common-java8:2.9.1")
     implementation(libs.appcompat)
     implementation(libs.material)
     testImplementation(libs.junit)

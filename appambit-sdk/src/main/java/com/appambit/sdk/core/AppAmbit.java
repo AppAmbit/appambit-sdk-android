@@ -2,16 +2,16 @@ package com.appambit.sdk.core;
 
 import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import androidx.annotation.NonNull;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.ProcessLifecycleOwner;
+import androidx.annotation.Nullable;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import com.appambit.sdk.analytics.SessionManager;
@@ -25,6 +25,7 @@ import com.appambit.sdk.core.utils.FileUtils;
 
 public final class AppAmbit {
     private static final String TAG = AppAmbit.class.getSimpleName();
+    private static boolean isAppStarted = false;
     private static String mAppKey;
     private static boolean isInitialized = false;
     private static boolean hasStartedSession = false;
@@ -40,43 +41,55 @@ public final class AppAmbit {
 
     private static void registerLifecycleObserver(Context context) {
         Application app = (Application) context.getApplicationContext();
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(new DefaultLifecycleObserver() {
+        app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
 
             @Override
-            public void onCreate(@NonNull LifecycleOwner owner) {
+            public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
                 Log.d(TAG,"onCreate");
-                onStartApp(context);
+                if (!isAppStarted) {
+                    onStartApp(context);
+                    isAppStarted = true;
+                }
             }
 
             @Override
-            public void onStart(@NonNull LifecycleOwner owner) {
+            public void onActivityStarted(@NonNull Activity activity) {
                 Log.d(TAG,"onStart");
-                onResumeApp();
+                if (!isAppStarted) {
+                    onStartApp(context);
+                    isAppStarted = true;
+                }
             }
 
             @Override
-            public void onResume(@NonNull LifecycleOwner owner) {
+            public void onActivityResumed(@NonNull Activity activity) {
                 Log.d(TAG,"onResume");
-                onResumeApp();
+                if (isAppStarted) {
+                    onResumeApp();
+                }
             }
 
             @Override
-            public void onPause(@NonNull LifecycleOwner owner) {
+            public void onActivityPaused(@NonNull Activity activity) {
                 Log.d(TAG,"onPause");
                 onSleep();
             }
 
             @Override
-            public void onStop(@NonNull LifecycleOwner owner) {
+            public void onActivityStopped(@NonNull Activity activity) {
                 Log.d(TAG,"onStop");
                 onSleep();
             }
 
             @Override
-            public void onDestroy(@NonNull LifecycleOwner owner) {
+            public void onActivityDestroyed(@NonNull Activity activity) {
                 Log.d(TAG,"onDestroy");
                 onEnd();
             }
+
+            @Override
+            public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {}
+
         });
     }
 
