@@ -99,6 +99,7 @@ public final class AppAmbit {
 
                 if (startedActivities == 0) {
                     Log.d(TAG, "onStop (App in background)");
+                    onEnd();
                 }
             }
 
