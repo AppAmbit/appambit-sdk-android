@@ -13,6 +13,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import com.appambit.sdk.analytics.SessionManager;
 import com.appambit.sdk.analytics.Analytics;
@@ -25,68 +26,92 @@ import com.appambit.sdk.core.utils.FileUtils;
 
 public final class AppAmbit {
     private static final String TAG = AppAmbit.class.getSimpleName();
-    private static boolean isAppStarted = false;
     private static String mAppKey;
     private static boolean isInitialized = false;
     private static boolean hasStartedSession = false;
+
+    private static int startedActivities = 0;
+    private static int resumedActivities = 0;
+    private static boolean foreground = false;
+    private static boolean isWaitingPause = false;
+    private static final long ACTIVITY_DELAY = 700;
 
     public static void init(Context context, String appKey) {
         mAppKey = appKey;
         CrashHandler.install(context);
         if (!isInitialized) {
+            onStartApp(context);
             registerLifecycleObserver(context);
             isInitialized = true;
         }
     }
 
+    private static final Handler handler = new Handler(Looper.getMainLooper());
+    private static final Runnable pauseRunnable = () -> {
+        if (resumedActivities == 0 && foreground && isWaitingPause) {
+            foreground = false;
+            Log.d(TAG, "onPause (App in background)");
+            onSleep();
+        }
+        isWaitingPause = false;
+    };
+
     private static void registerLifecycleObserver(Context context) {
         Application app = (Application) context.getApplicationContext();
         app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
-
-            @Override
-            public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
-                Log.d(TAG,"onCreate");
-                if (!isAppStarted) {
-                    onStartApp(context);
-                    isAppStarted = true;
-                }
-            }
-
             @Override
             public void onActivityStarted(@NonNull Activity activity) {
-                Log.d(TAG,"onStart");
-                if (!isAppStarted) {
-                    onStartApp(context);
-                    isAppStarted = true;
+                if (startedActivities == 0) {
+                    Log.d(TAG, "onStart (Foreground)");
                 }
+                startedActivities++;
             }
 
             @Override
             public void onActivityResumed(@NonNull Activity activity) {
-                Log.d(TAG,"onResume");
-                if (isAppStarted) {
+                resumedActivities++;
+
+                if (isWaitingPause) {
+                    handler.removeCallbacks(pauseRunnable);
+                    isWaitingPause = false;
+                }
+
+                if (!foreground) {
+                    foreground = true;
+                    Log.d(TAG, "onResume (App en foreground)");
                     onResumeApp();
                 }
             }
 
             @Override
             public void onActivityPaused(@NonNull Activity activity) {
-                Log.d(TAG,"onPause");
-                onSleep();
+                resumedActivities = Math.max(0, resumedActivities - 1);
+
+                if (resumedActivities == 0) {
+                    isWaitingPause = true;
+                    handler.postDelayed(pauseRunnable, ACTIVITY_DELAY);
+                }
             }
 
             @Override
             public void onActivityStopped(@NonNull Activity activity) {
-                Log.d(TAG,"onStop");
-                onSleep();
+                startedActivities = Math.max(0, startedActivities - 1);
+
+                if (startedActivities == 0) {
+                    Log.d(TAG, "onStop (App in background)");
+                }
             }
 
             @Override
             public void onActivityDestroyed(@NonNull Activity activity) {
-                Log.d(TAG,"onDestroy");
-                onEnd();
+                if (startedActivities == 0 && resumedActivities == 0) {
+                    Log.d(TAG, "onDestroy (App Level)");
+                    onEnd();
+                }
             }
 
+            @Override
+            public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {}
             @Override
             public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {}
 
@@ -112,12 +137,13 @@ public final class AppAmbit {
     }
 
     private static void initializeConsumer() {
-        getNewTokenAndThen();
-        if (Analytics.isManualSessionEnabled()) {
-            return;
-        }
-        SessionManager.sendEndSessionIfExists();
-        SessionManager.startSession();
+        getNewTokenAndThen(() -> {
+            if (Analytics.isManualSessionEnabled()) {
+                return;
+            }
+            SessionManager.sendEndSessionIfExists();
+            SessionManager.startSession();
+        });
     }
 
     private static void onSleep()
@@ -138,21 +164,31 @@ public final class AppAmbit {
         if(Analytics.isManualSessionEnabled()) {
             return;
         }
-        if (!tokenIsValid()) {
-            getNewTokenAndThen();
-        }
-        if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
-            SessionManager.removeSavedEndSession();
-        }
+        Runnable resumeTasks = () -> {
+            if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
+                SessionManager.removeSavedEndSession();
+            }
 
-        Crashes.sendBatchesLogs();
-        Analytics.sendBatchesEvents();
+            Crashes.sendBatchesLogs();
+            Analytics.sendBatchesEvents();
+        };
+
+        if (!tokenIsValid()) {
+            getNewTokenAndThen(resumeTasks);
+        } else {
+            resumeTasks.run();
+        }
     }
 
-    private static void getNewTokenAndThen() {
+    private static void getNewTokenAndThen(Runnable onSuccess) {
         AppAmbitTaskFuture<ApiErrorType> future = ServiceLocator.getApiService().GetNewToken(mAppKey);
         future.then(result -> {
-            Log.d(TAG, "Token obtained successfully.");
+            if (result == ApiErrorType.None) {
+                Log.d(TAG, "Token obtained successfully.");
+                onSuccess.run();
+            } else {
+                Log.e(TAG, "Failed to get token: " + result);
+            }
         });
         future.onError(error -> {
             Log.e(TAG, "Error getting token: ", error);
@@ -180,13 +216,18 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
+                        Runnable connectionTasks = () -> {
+                            Crashes.loadCrashFileIfExists(context);
+                            Crashes.sendBatchesLogs();
+                            Analytics.sendBatchesEvents();
+                            SessionManager.sendBatchSessions();
+                        };
+
                         if (!tokenIsValid()) {
-                            getNewTokenAndThen();
+                            getNewTokenAndThen(connectionTasks);
+                        }else {
+                            connectionTasks.run();
                         }
-                        Crashes.loadCrashFileIfExists(context);
-                        Crashes.sendBatchesLogs();
-                        Analytics.sendBatchesEvents();
-                        SessionManager.sendBatchSessions();
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored" + e);
                     }
