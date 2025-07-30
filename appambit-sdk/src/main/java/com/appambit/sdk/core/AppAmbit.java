@@ -78,7 +78,7 @@ public final class AppAmbit {
 
                 if (!foreground) {
                     foreground = true;
-                    Log.d(TAG, "onResume (App en foreground)");
+                    Log.d(TAG, "onResume (App in foreground)");
                     onResumeApp();
                 }
             }
