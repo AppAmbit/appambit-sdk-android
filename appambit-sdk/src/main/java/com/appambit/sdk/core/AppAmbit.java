@@ -38,11 +38,12 @@ public final class AppAmbit {
 
     public static void init(Context context, String appKey) {
         mAppKey = appKey;
-        CrashHandler.install(context);
         if (!isInitialized) {
+            CrashHandler.initialize(context);
             onStartApp(context);
             registerLifecycleObserver(context);
             isInitialized = true;
+            Log.d(TAG, "onCreate (App Level)");
         }
     }
 
@@ -56,7 +57,7 @@ public final class AppAmbit {
         isWaitingPause = false;
     };
 
-    private static void registerLifecycleObserver(Context context) {
+    private static void registerLifecycleObserver(@NonNull Context context) {
         Application app = (Application) context.getApplicationContext();
         app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
             @Override
@@ -97,22 +98,22 @@ public final class AppAmbit {
             public void onActivityStopped(@NonNull Activity activity) {
                 startedActivities = Math.max(0, startedActivities - 1);
 
-                if (startedActivities == 0) {
+                if (startedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onStop (App in background)");
                     onEnd();
                 }
             }
 
             @Override
+            public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {}
+
+            @Override
             public void onActivityDestroyed(@NonNull Activity activity) {
-                if (startedActivities == 0 && resumedActivities == 0) {
+                if (startedActivities == 0 && resumedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onDestroy (App Level)");
                     onEnd();
                 }
             }
-
-            @Override
-            public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {}
             @Override
             public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {}
 
