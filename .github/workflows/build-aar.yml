@@ -3,13 +3,26 @@ name: Android CI/CD Library
 on:
   workflow_dispatch:
 
+env:
+  PACKAGE_NAME: appambit-sdk
+  BUILD_PATH: build/outputs/aar/appambit-sdk-release.aar
+
+permissions:
+  contents: write
+
 jobs:
   build:
-
+    name: Build Android Library with Version
     runs-on: ubuntu-latest
+    env:
+      INITIAL_VERSION: "0.0.0"
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
     - name: set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -17,13 +30,112 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Calculate Next Version
+      id: version
+      shell: bash
+      run: |
+        CURRENT_VERSION="$INITIAL_VERSION"
+
+        # Get all the tags that match the pattern v*.*.*
+        TAGS=$(git tag -l "v*.*.*" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
+
+        if [ -n "$TAGS" ]; then
+          LATEST_TAG=$(echo "$TAGS" | sort -V | tail -n1)
+          CURRENT_VERSION="${LATEST_TAG#v}"
+          echo "Latest tag found: $LATEST_TAG"
+        else
+          echo "No valid tags found. Using initial version: $CURRENT_VERSION"
+        fi
+
+        IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+
+        COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+        echo "Commit message: $COMMIT_MESSAGE"
+
+        INCREMENT_TYPE="patch"
+        if [[ "$COMMIT_MESSAGE" =~ (\[major\]|BREAKING CHANGE|breaking) ]]; then
+          INCREMENT_TYPE="major"
+        elif [[ "$COMMIT_MESSAGE" =~ (\[minor\]|feat|feature) ]]; then
+          INCREMENT_TYPE="minor"
+        fi
+
+        case "$INCREMENT_TYPE" in
+          major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+          minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+          patch)
+            patch=$((patch + 1))
+            ;;
+        esac
+
+        NEW_VERSION="${major}.${minor}.${patch}"
+        NEW_TAG="v${NEW_VERSION}"
+
+        # Verify if the new tag already exists
+        if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+          echo "Tag $NEW_TAG already exists. Incrementing patch again."
+          patch=$((patch + 1))
+          NEW_VERSION="${major}.${minor}.${patch}"
+          NEW_TAG="v${NEW_VERSION}"
+        fi
+
+        IS_PRERELEASE="false"
+        if [[ "${GITHUB_REF##*/}" != "main" && "${GITHUB_REF##*/}" != "master" ]]; then
+          IS_PRERELEASE="true"
+        fi
+
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+        echo "increment_type=$INCREMENT_TYPE" >> $GITHUB_OUTPUT
+        echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+
+        echo "=== VERSION CALCULATION ==="
+        echo "Current Version: $CURRENT_VERSION"
+        echo "New Version: $NEW_VERSION"
+        echo "New Tag: $NEW_TAG"
+        echo "Increment Type: $INCREMENT_TYPE"
+        echo "Is Prerelease: $IS_PRERELEASE"
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew :appambit-sdk:assembleRelease
-      
+      run: ./gradlew :${{ env.PACKAGE_NAME }}:assembleRelease
+
+    - name: Rename AAR with version
+      run: |
+        mkdir -p artifacts
+        cp ${{ env.PACKAGE_NAME }}/${{ env.BUILD_PATH }} artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}.aar
+
     - name: Upload AAR artifact
       uses: actions/upload-artifact@v4
       with:
-        name: appambit-sdk-release
-        path: appambit-sdk/build/outputs/aar/appambit-sdk-release.aar
+        name: ${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}
+        path: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}.aar
+
+    - name: Create GitHub Release
+      if: ${{ github.ref_name == 'main' || github.ref_name == 'master' || github.ref_name == 'feature/added-android-library-tag-release' }}
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.version.outputs.new_tag }}
+        name: ${{ steps.version.outputs.new_tag }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        files: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.new_version }}.aar
+        body: |
+          ## AppAmbit SDK ${{ steps.version.outputs.new_version }}
+          AppAmbit Android package for analytics, crash tracking, and usage monitoring
+          - **Previous Version**: v${{ steps.version.outputs.current_version }}
+          - **New Version**: ${{ steps.version.outputs.new_tag }}
+          - **Increment Type**: ${{ steps.version.outputs.increment_type }}
+          - **Branch**: `${{ github.ref_name }}`
+          - **Commit**: `${{ github.sha }}`
+          
+          ---
+          **Build**: #${{ github.run_number }} | **Workflow**: ${{ github.workflow }}
+        prerelease: ${{ steps.version.outputs.is_prerelease }}
