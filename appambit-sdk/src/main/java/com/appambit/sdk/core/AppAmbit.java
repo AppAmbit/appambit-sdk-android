@@ -2,17 +2,18 @@ package com.appambit.sdk.core;
 
 import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import androidx.annotation.NonNull;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.ProcessLifecycleOwner;
+import androidx.annotation.Nullable;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import com.appambit.sdk.analytics.SessionManager;
 import com.appambit.sdk.analytics.Analytics;
@@ -29,54 +30,93 @@ public final class AppAmbit {
     private static boolean isInitialized = false;
     private static boolean hasStartedSession = false;
 
+    private static int startedActivities = 0;
+    private static int resumedActivities = 0;
+    private static boolean foreground = false;
+    private static boolean isWaitingPause = false;
+    private static final long ACTIVITY_DELAY = 700;
+
     public static void init(Context context, String appKey) {
         mAppKey = appKey;
-        CrashHandler.install(context);
         if (!isInitialized) {
+            CrashHandler.initialize(context);
+            onStartApp(context);
             registerLifecycleObserver(context);
             isInitialized = true;
+            Log.d(TAG, "onCreate (App Level)");
         }
     }
 
-    private static void registerLifecycleObserver(Context context) {
+    private static final Handler handler = new Handler(Looper.getMainLooper());
+    private static final Runnable pauseRunnable = () -> {
+        if (resumedActivities == 0 && foreground && isWaitingPause) {
+            foreground = false;
+            Log.d(TAG, "onPause (App in background)");
+            onSleep();
+        }
+        isWaitingPause = false;
+    };
+
+    private static void registerLifecycleObserver(@NonNull Context context) {
         Application app = (Application) context.getApplicationContext();
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(new DefaultLifecycleObserver() {
-
+        app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
             @Override
-            public void onCreate(@NonNull LifecycleOwner owner) {
-                Log.d(TAG,"onCreate");
-                onStartApp(context);
+            public void onActivityStarted(@NonNull Activity activity) {
+                if (startedActivities == 0) {
+                    Log.d(TAG, "onStart (Foreground)");
+                }
+                startedActivities++;
             }
 
             @Override
-            public void onStart(@NonNull LifecycleOwner owner) {
-                Log.d(TAG,"onStart");
-                onResumeApp();
+            public void onActivityResumed(@NonNull Activity activity) {
+                resumedActivities++;
+
+                if (isWaitingPause) {
+                    handler.removeCallbacks(pauseRunnable);
+                    isWaitingPause = false;
+                }
+
+                if (!foreground) {
+                    foreground = true;
+                    Log.d(TAG, "onResume (App in foreground)");
+                    onResumeApp();
+                }
             }
 
             @Override
-            public void onResume(@NonNull LifecycleOwner owner) {
-                Log.d(TAG,"onResume");
-                onResumeApp();
+            public void onActivityPaused(@NonNull Activity activity) {
+                resumedActivities = Math.max(0, resumedActivities - 1);
+
+                if (resumedActivities == 0) {
+                    isWaitingPause = true;
+                    handler.postDelayed(pauseRunnable, ACTIVITY_DELAY);
+                }
             }
 
             @Override
-            public void onPause(@NonNull LifecycleOwner owner) {
-                Log.d(TAG,"onPause");
-                onSleep();
+            public void onActivityStopped(@NonNull Activity activity) {
+                startedActivities = Math.max(0, startedActivities - 1);
+
+                if (startedActivities == 0 && !activity.isChangingConfigurations()) {
+                    Log.d(TAG, "onStop (App in background)");
+                    onEnd();
+                }
             }
 
             @Override
-            public void onStop(@NonNull LifecycleOwner owner) {
-                Log.d(TAG,"onStop");
-                onSleep();
-            }
+            public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {}
 
             @Override
-            public void onDestroy(@NonNull LifecycleOwner owner) {
-                Log.d(TAG,"onDestroy");
-                onEnd();
+            public void onActivityDestroyed(@NonNull Activity activity) {
+                if (startedActivities == 0 && resumedActivities == 0 && !activity.isChangingConfigurations()) {
+                    Log.d(TAG, "onDestroy (App Level)");
+                    onEnd();
+                }
             }
+            @Override
+            public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {}
+
         });
     }
 
@@ -99,12 +139,13 @@ public final class AppAmbit {
     }
 
     private static void initializeConsumer() {
-        getNewTokenAndThen();
-        if (Analytics.isManualSessionEnabled()) {
-            return;
-        }
-        SessionManager.sendEndSessionIfExists();
-        SessionManager.startSession();
+        getNewTokenAndThen(() -> {
+            if (Analytics.isManualSessionEnabled()) {
+                return;
+            }
+            SessionManager.sendEndSessionIfExists();
+            SessionManager.startSession();
+        });
     }
 
     private static void onSleep()
@@ -125,21 +166,31 @@ public final class AppAmbit {
         if(Analytics.isManualSessionEnabled()) {
             return;
         }
-        if (!tokenIsValid()) {
-            getNewTokenAndThen();
-        }
-        if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
-            SessionManager.removeSavedEndSession();
-        }
+        Runnable resumeTasks = () -> {
+            if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
+                SessionManager.removeSavedEndSession();
+            }
 
-        Crashes.sendBatchesLogs();
-        Analytics.sendBatchesEvents();
+            Crashes.sendBatchesLogs();
+            Analytics.sendBatchesEvents();
+        };
+
+        if (!tokenIsValid()) {
+            getNewTokenAndThen(resumeTasks);
+        } else {
+            resumeTasks.run();
+        }
     }
 
-    private static void getNewTokenAndThen() {
+    private static void getNewTokenAndThen(Runnable onSuccess) {
         AppAmbitTaskFuture<ApiErrorType> future = ServiceLocator.getApiService().GetNewToken(mAppKey);
         future.then(result -> {
-            Log.d(TAG, "Token obtained successfully.");
+            if (result == ApiErrorType.None) {
+                Log.d(TAG, "Token obtained successfully.");
+                onSuccess.run();
+            } else {
+                Log.e(TAG, "Failed to get token: " + result);
+            }
         });
         future.onError(error -> {
             Log.e(TAG, "Error getting token: ", error);
@@ -167,13 +218,18 @@ public final class AppAmbit {
                     try {
                         InitializeServices(context);
 
+                        Runnable connectionTasks = () -> {
+                            Crashes.loadCrashFileIfExists(context);
+                            Crashes.sendBatchesLogs();
+                            Analytics.sendBatchesEvents();
+                            SessionManager.sendBatchSessions();
+                        };
+
                         if (!tokenIsValid()) {
-                            getNewTokenAndThen();
+                            getNewTokenAndThen(connectionTasks);
+                        }else {
+                            connectionTasks.run();
                         }
-                        Crashes.loadCrashFileIfExists(context);
-                        Crashes.sendBatchesLogs();
-                        Analytics.sendBatchesEvents();
-                        SessionManager.sendBatchSessions();
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored" + e);
                     }

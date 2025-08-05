@@ -3,6 +3,7 @@ package com.appambit.testapp;
 import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -51,7 +52,7 @@ public class AnalyticsFragment extends Fragment {
     private static final String TAG = AnalyticsFragment.class.getSimpleName();
     Button btnStartSession, btnEndSession, btnGenerate30DaysTestSessions;
     Button btnClearToken, btnTokenRenew;
-    Button btnEventWProperty, btnDefaultClickedEventWProperty, btnMax300LengthEvent, btnMax20PropertiesEvent, btn3DailyEvents, btn220BatchEvents;
+    Button btnEventWProperty, btnDefaultClickedEventWProperty, btnMax300LengthEvent, btnMax20PropertiesEvent, btn3DailyEvents, btn220BatchEvents, btnSecondActivity;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_analytics, container, false);
@@ -97,6 +98,8 @@ public class AnalyticsFragment extends Fragment {
         btnClearToken.setOnClickListener(v-> onClearToken());
         btnTokenRenew = view.findViewById(R.id.btnTokenRenew);
         btnTokenRenew.setOnClickListener(v -> onTokenRefreshTest(requireContext()));
+        btnSecondActivity = view.findViewById(R.id.btnSecondActivity);
+        btnSecondActivity.setOnClickListener(v -> changeToSecondActivity());
        return view;
     }
 
@@ -287,6 +290,11 @@ public class AnalyticsFragment extends Fragment {
         executor.shutdown();
 
         AlertsUtils.showAlert(context, "Info", "5 events and errors sent");
+    }
+
+    public void changeToSecondActivity() {
+        requireActivity().finish();
+        startActivity(new Intent(requireContext(), SecondActivity.class));
     }
 
     private void waitAll(List<Future<?>> tasks) {

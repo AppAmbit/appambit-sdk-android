@@ -25,7 +25,7 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
         this.defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
     }
 
-    public static void install(Context context) {
+    public static void initialize(Context context) {
         CrashHandler crashHandler = new CrashHandler(context);
         Thread.setDefaultUncaughtExceptionHandler(crashHandler);
         Log.d(TAG, "Crash handler installed successfully");
