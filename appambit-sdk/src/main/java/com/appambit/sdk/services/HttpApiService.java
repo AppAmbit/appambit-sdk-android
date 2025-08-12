@@ -121,7 +121,6 @@ public class HttpApiService implements ApiService {
                 } finally {
                     currentRenewalFuture = null;
                 }
-
             }
 
             Log.d(TAG, "Retrying request after token renewal");
@@ -388,7 +387,7 @@ public class HttpApiService implements ApiService {
             if (value == null) continue;
 
             String stringValue = value.toString().trim();
-            if (stringValue.isEmpty()) continue; // si está vacío, no lo agrega
+            if (stringValue.isEmpty()) continue;
 
             pairs.add(java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8.name())
                     + "="

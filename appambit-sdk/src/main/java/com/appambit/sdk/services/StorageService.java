@@ -227,7 +227,6 @@ public class StorageService implements Storable {
                 );
             }
         }finally {
-            // Ensure the cursor is closed to prevent memory leaks
             if (c != null) {
                 c.close();
             }
@@ -304,7 +303,6 @@ public class StorageService implements Storable {
                 db.insert(AppSecretContract.TABLE_NAME, null, cv);
             }
         }finally {
-            // Ensure the cursor is closed to prevent memory leaks
             if (cursor != null) {
                 cursor.close();
             }
@@ -477,7 +475,6 @@ public class StorageService implements Storable {
                 } while (c.moveToNext());
             }
         }finally {
-            // Ensure the cursor is closed to prevent memory leaks
             if (c != null) {
                 c.close();
             }
