@@ -1,26 +1,26 @@
-package com.appambit.sdk.core.api;
+package com.appambit.sdk.services;
 
-import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
-import static com.appambit.sdk.core.utils.JsonDeserializer.deserializeFromJSONStringContent;
+import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
+import static com.appambit.sdk.utils.JsonDeserializer.deserializeFromJSONStringContent;
 import android.content.Context;
 import android.util.Log;
 import androidx.annotation.NonNull;
 
-import com.appambit.sdk.core.enums.ApiErrorType;
-import com.appambit.sdk.core.models.logs.LogBatch;
-import com.appambit.sdk.core.models.logs.LogEntity;
-import com.appambit.sdk.core.models.responses.ApiResult;
-import com.appambit.sdk.core.models.responses.TokenResponse;
-import com.appambit.sdk.core.api.exceptionsCustom.HttpRequestException;
-import com.appambit.sdk.core.api.exceptionsCustom.UnauthorizedException;
-import com.appambit.sdk.core.api.endpoints.RegisterEndpoint;
-import com.appambit.sdk.core.api.interfaces.ApiService;
-import com.appambit.sdk.core.api.interfaces.IEndpoint;
-import com.appambit.sdk.core.services.ConsumerService;
-import com.appambit.sdk.core.utils.AppAmbitTaskFuture;
-import com.appambit.sdk.core.utils.JsonConvertUtils;
-import com.appambit.sdk.core.utils.JsonKey;
-import com.appambit.sdk.core.utils.MultipartFormData;
+import com.appambit.sdk.enums.ApiErrorType;
+import com.appambit.sdk.models.logs.LogBatch;
+import com.appambit.sdk.models.logs.LogEntity;
+import com.appambit.sdk.models.responses.ApiResult;
+import com.appambit.sdk.models.responses.TokenResponse;
+import com.appambit.sdk.services.endpoints.TokenEndpoint;
+import com.appambit.sdk.services.exceptionsCustom.HttpRequestException;
+import com.appambit.sdk.services.exceptionsCustom.UnauthorizedException;
+import com.appambit.sdk.services.endpoints.RegisterEndpoint;
+import com.appambit.sdk.services.interfaces.ApiService;
+import com.appambit.sdk.services.interfaces.IEndpoint;
+import com.appambit.sdk.utils.AppAmbitTaskFuture;
+import com.appambit.sdk.utils.JsonConvertUtils;
+import com.appambit.sdk.utils.JsonKey;
+import com.appambit.sdk.utils.MultipartFormData;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -92,9 +92,9 @@ public class HttpApiService implements ApiService {
             }
 
             String json = responseBuilder.toString();
+            Log.d("[HTTP-Response-Body]", json);
             checkStatusCodeFrom(httpResponse.getResponseCode());
             T response = deserializeFromJSONStringContent(new JSONObject(json), clazz);
-            Log.d("[HTTP-Response-Body]", json);
             checkStatusCodeFrom(httpResponse.getResponseCode());
 
             return ApiResult.success(response);
@@ -173,8 +173,8 @@ public class HttpApiService implements ApiService {
 
     private ApiErrorType renewToken(String appKey, AppAmbitTaskFuture<ApiErrorType> asyncFuture) {
         try {
-            RegisterEndpoint registerEndpoint = new ConsumerService().RegisterConsumer(appKey);
-            ApiResult<TokenResponse> tokenResponse = executeRequest(registerEndpoint, TokenResponse.class);
+            TokenEndpoint tokenEndpoint = TokenService.createTokenendpoint();
+            ApiResult<TokenResponse> tokenResponse = executeRequest(tokenEndpoint, TokenResponse.class);
 
             tokenLock.lock();
             try {
@@ -296,6 +296,7 @@ public class HttpApiService implements ApiService {
 
                 } else {
                     String json = JsonConvertUtils.toJson(payload);
+                    Log.d("[HTTP-Request-Body]", json);
                     byte[] input = json.getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                     os.flush();
@@ -370,13 +371,32 @@ public class HttpApiService implements ApiService {
         }
         return serializedPayload.toString();
     }
+    private static String serializedGetUrl(String baseUrl, Object payload)
+            throws IllegalAccessException, java.io.UnsupportedEncodingException {
 
-    private static String serializedGetUrl(String url, Object payload) throws UnsupportedEncodingException, IllegalAccessException {
-        var serializedParameters = serializeStringPayload(payload);
-        if (serializedParameters == null) {
-            return url;
+        if (payload == null) return baseUrl;
+
+        var pairs = new java.util.ArrayList<String>();
+
+        for (var field : payload.getClass().getDeclaredFields()) {
+            field.setAccessible(true);
+
+            JsonKey ann = field.getAnnotation(JsonKey.class);
+            String key = (ann != null && !ann.value().isEmpty()) ? ann.value() : field.getName();
+
+            Object value = field.get(payload);
+            if (value == null) continue;
+
+            String stringValue = value.toString().trim();
+            if (stringValue.isEmpty()) continue; // si está vacío, no lo agrega
+
+            pairs.add(java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8.name())
+                    + "="
+                    + java.net.URLEncoder.encode(stringValue, java.nio.charset.StandardCharsets.UTF_8.name()));
         }
 
-        return url + "?" + serializedParameters;
+        if (pairs.isEmpty()) return baseUrl;
+
+        return baseUrl + "?" + String.join("&", pairs);
     }
 }
