@@ -37,9 +37,7 @@ public class ConsumerService {
 
         try {
             if (mStorageService == null || mAppInfoService == null) {
-                return new RegisterEndpoint(new Consumer(
-                        "", "", "", "", null, "", "", ""
-                ));
+                return new RegisterEndpoint(new Consumer("", "", "", "", null, "", "", ""));
             }
 
             deviceId = mStorageService.getDeviceId();
@@ -50,18 +48,7 @@ public class ConsumerService {
                     ? null
                     : emailFromStorage.trim();
 
-            String storedAppKey = mStorageService.getAppId();
-
-            if (!equalsNullable(storedAppKey, appKey)) {
-                mStorageService.putConsumerId("");
-            }
-
-            if (!isBlank(appKey)) {
-                appId = appKey;
-                mStorageService.putAppId(appKey);
-            } else {
-                appId = nvl(storedAppKey, "");
-            }
+            appId = mStorageService.getAppId();
 
             if (isBlank(deviceId)) {
                 deviceId = java.util.UUID.randomUUID().toString();
@@ -78,18 +65,40 @@ public class ConsumerService {
         }
 
         Consumer consumer = new Consumer(
-                nvl(appId, ""),
-                nvl(deviceId, ""),
-                mAppInfoService != null ? nvl(mAppInfoService.getDeviceModel(), "") : "",
-                nvl(userId, ""),
-                // userEmail es null si venía vacío/en blanco
+                ensureValue(appId, ""),
+                ensureValue(deviceId, ""),
+                mAppInfoService != null ? ensureValue(mAppInfoService.getDeviceModel(), "") : "",
+                ensureValue(userId, ""),
                 userEmail,
-                mAppInfoService != null ? nvl(mAppInfoService.getOs(), "") : "",
-                mAppInfoService != null ? nvl(mAppInfoService.getCountry(), "") : "",
-                mAppInfoService != null ? nvl(mAppInfoService.getLanguage(), "") : ""
+                mAppInfoService != null ? ensureValue(mAppInfoService.getOs(), "") : "",
+                mAppInfoService != null ? ensureValue(mAppInfoService.getCountry(), "") : "",
+                mAppInfoService != null ? ensureValue(mAppInfoService.getLanguage(), "") : ""
         );
 
         return new RegisterEndpoint(consumer);
+    }
+
+    public static String updateAppKeyIfNeeded(String appKey) {
+        String storedAppKey = mStorageService.getAppId();
+        String appId;
+
+        // Si el appKey cambió, siempre resetea el consumerId
+        if (!equalsNullable(storedAppKey, appKey)) {
+            mStorageService.putConsumerId("");
+
+            // Solo actualiza AppId si el nuevo appKey es válido
+            if (!isBlank(appKey)) {
+                mStorageService.putAppId(appKey);
+                appId = appKey;
+            } else {
+                appId = ensureValue(storedAppKey, "");
+            }
+        } else {
+            // Si no cambió, conserva el almacenado
+            appId = ensureValue(storedAppKey, "");
+        }
+
+        return appId;
     }
 
     public static AppAmbitTaskFuture<ApiErrorType> createConsumer(final String appKey) {
@@ -142,7 +151,7 @@ public class ConsumerService {
         return s == null || s.trim().isEmpty();
     }
 
-    private static String nvl(String value, String defaultValue) {
+    private static String ensureValue(String value, String defaultValue) {
         return value != null ? value : defaultValue;
     }
 

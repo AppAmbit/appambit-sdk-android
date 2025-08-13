@@ -268,6 +268,8 @@ public final class AppAmbit {
             Log.w(TAG, "Error reading consumerId", e);
         }
 
+        ConsumerService.updateAppKeyIfNeeded(mAppKey);
+
         if (!StringUtils.isNullOrBlank(consumerId)) {
             final AppAmbitTaskFuture<ApiErrorType> future = api.GetNewToken(mAppKey);
             future.then(result -> {
