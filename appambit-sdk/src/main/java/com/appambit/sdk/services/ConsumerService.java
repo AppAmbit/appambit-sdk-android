@@ -80,20 +80,20 @@ public class ConsumerService {
             return;
         }
 
-        final String newKey = (appKey == null) ? null : appKey.trim();
-        final String storedKey = mStorageService.getAppId();
+        String newKey = (appKey == null) ? "" : appKey.trim();
 
+        if (isBlank(newKey)) {
+            return;
+        }
+
+        String storedKey = mStorageService.getAppId();
         if (equalsNullable(storedKey, newKey)) {
             return;
         }
 
         mStorageService.putConsumerId("");
-
-        if (!isBlank(newKey)) {
-            mStorageService.putAppId(newKey);
-        }
+        mStorageService.putAppId(newKey);
     }
-
 
     public static AppAmbitTaskFuture<ApiErrorType> createConsumer(final String appKey) {
         final AppAmbitTaskFuture<ApiErrorType> promise = new AppAmbitTaskFuture<>();
