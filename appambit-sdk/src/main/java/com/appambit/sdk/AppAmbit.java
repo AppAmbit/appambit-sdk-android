@@ -258,17 +258,20 @@ public final class AppAmbit {
             if (onSuccess != null) tokenWaiters.add(onSuccess);
         }
 
+        if (tokenIsValid()) {
+            return;
+        }
+
         final ApiService api = ServiceLocator.getApiService();
         final Storable storage = ServiceLocator.getStorageService();
 
         String consumerId = null;
         try {
+            ConsumerService.updateAppKeyIfNeeded(mAppKey);
             consumerId = storage.getConsumerId();
         } catch (Exception e) {
             Log.w(TAG, "Error reading consumerId", e);
         }
-
-        ConsumerService.updateAppKeyIfNeeded(mAppKey);
 
         if (!StringUtils.isNullOrBlank(consumerId)) {
             final AppAmbitTaskFuture<ApiErrorType> future = api.GetNewToken(mAppKey);
@@ -291,16 +294,8 @@ public final class AppAmbit {
                 finishTokenOperation(false);
                 return;
             }
-            final AppAmbitTaskFuture<ApiErrorType> tokenFuture = api.GetNewToken(mAppKey);
-            tokenFuture.then(tokenResult -> {
-                boolean ok = (tokenResult == ApiErrorType.None);
-                Log.d(TAG, "GetNewToken after create finished: " + tokenResult);
-                finishTokenOperation(ok);
-            });
-            tokenFuture.onError(err -> {
-                Log.e(TAG, "GetNewToken after create error", err);
-                finishTokenOperation(false);
-            });
+            Log.d(TAG, "Consumer successfully created");
+            finishTokenOperation(true);
         });
         createFuture.onError(err -> {
             Log.e(TAG, "CreateConsumer error", err);

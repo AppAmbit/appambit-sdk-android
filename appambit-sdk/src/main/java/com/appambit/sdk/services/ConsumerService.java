@@ -1,9 +1,7 @@
 package com.appambit.sdk.services;
 
-import android.nfc.Tag;
 import android.util.Log;
 
-import com.appambit.sdk.Analytics;
 import com.appambit.sdk.ServiceLocator;
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.app.Consumer;
@@ -14,8 +12,6 @@ import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.interfaces.AppInfoService;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
-
-import java.util.UUID;
 
 public class ConsumerService {
     private static final String TAG = ConsumerService.class.getSimpleName();
@@ -78,28 +74,26 @@ public class ConsumerService {
         return new RegisterEndpoint(consumer);
     }
 
-    public static String updateAppKeyIfNeeded(String appKey) {
-        String storedAppKey = mStorageService.getAppId();
-        String appId;
-
-        // Si el appKey cambió, siempre resetea el consumerId
-        if (!equalsNullable(storedAppKey, appKey)) {
-            mStorageService.putConsumerId("");
-
-            // Solo actualiza AppId si el nuevo appKey es válido
-            if (!isBlank(appKey)) {
-                mStorageService.putAppId(appKey);
-                appId = appKey;
-            } else {
-                appId = ensureValue(storedAppKey, "");
-            }
-        } else {
-            // Si no cambió, conserva el almacenado
-            appId = ensureValue(storedAppKey, "");
+    public static void updateAppKeyIfNeeded(String appKey) {
+        if (mStorageService == null) {
+            Log.d(TAG, "updateAppKeyIfNeeded: mStorageService is null, skipping.");
+            return;
         }
 
-        return appId;
+        final String newKey = (appKey == null) ? null : appKey.trim();
+        final String storedKey = mStorageService.getAppId();
+
+        if (equalsNullable(storedKey, newKey)) {
+            return;
+        }
+
+        mStorageService.putConsumerId("");
+
+        if (!isBlank(newKey)) {
+            mStorageService.putAppId(newKey);
+        }
     }
+
 
     public static AppAmbitTaskFuture<ApiErrorType> createConsumer(final String appKey) {
         final AppAmbitTaskFuture<ApiErrorType> promise = new AppAmbitTaskFuture<>();

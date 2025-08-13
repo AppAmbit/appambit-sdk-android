@@ -78,7 +78,7 @@ public class HttpApiService implements ApiService {
             StringBuilder responseBuilder = new StringBuilder();
 
             if (is == null) {
-                Log.e("[APIService]", "InputStream is null. Possibly no response body.");
+                Log.e(TAG, "InputStream is null. Possibly no response body.");
             } else {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
                     String line;
@@ -86,13 +86,13 @@ public class HttpApiService implements ApiService {
                         responseBuilder.append(line);
                     }
                 } catch (IOException e) {
-                    Log.e("[APIService]", "Error reading response: " + e.getMessage(), e);
+                    Log.e(TAG, "Error reading response: " + e.getMessage(), e);
                     return ApiResult.fail(ApiErrorType.Unknown, "Failed to read response");
                 }
             }
 
             String json = responseBuilder.toString();
-            Log.d("[HTTP-Response-Body]", json);
+            Log.d(TAG, "[HTTP-Response-Body] " + json);
             checkStatusCodeFrom(httpResponse.getResponseCode());
             T response = deserializeFromJSONStringContent(new JSONObject(json), clazz);
             checkStatusCodeFrom(httpResponse.getResponseCode());
@@ -246,7 +246,7 @@ public class HttpApiService implements ApiService {
             fullUrl = serializedGetUrl(fullUrl, payload);
         }
 
-        Log.d("[APIService]", "Full URL: " + fullUrl);
+        Log.d(TAG, "Full URL: " + fullUrl);
         URL url = new URL(fullUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
@@ -281,7 +281,7 @@ public class HttpApiService implements ApiService {
                         debugStream.close();
 
                         String multipartBody = baos.toString(StandardCharsets.UTF_8.name());
-                        Log.d("[HTTP-Request-Body]", "Multipart:\n" + multipartBody);
+                        Log.d(TAG, "[HTTP-Request-Body] Multipart:\n" + multipartBody);
 
 
                         os.write(baos.toByteArray());
@@ -289,13 +289,13 @@ public class HttpApiService implements ApiService {
                         os.close();
 
                     }catch (Exception e) {
-                        Log.e("[APIService]", "Error during multipart serialization: " + e.getMessage());
+                        Log.e(TAG, "Error during multipart serialization: " + e.getMessage());
                         throw new IOException("Error during multipart serialization", e);
                     }
 
                 } else {
                     String json = JsonConvertUtils.toJson(payload);
-                    Log.d("[HTTP-Request-Body]", json);
+                    Log.d(TAG, "[HTTP-Response-Body] " + json);
                     byte[] input = json.getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                     os.flush();
