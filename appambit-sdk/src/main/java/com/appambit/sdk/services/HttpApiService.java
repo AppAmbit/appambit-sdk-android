@@ -111,7 +111,7 @@ public class HttpApiService implements ApiService {
                 try {
                     currentRenewalFuture = new AppAmbitTaskFuture<>();
                     Log.d(TAG, "Token invalid - triggering renewal");
-                    ApiErrorType renewalResult = renewToken(null, currentRenewalFuture);
+                    ApiErrorType renewalResult = renewToken(currentRenewalFuture);
 
                     if (!isRenewSuccess(renewalResult)) {
                         return handleFailedRenewalResult(clazz, renewalResult);
@@ -161,16 +161,16 @@ public class HttpApiService implements ApiService {
         _token = null;
     }
 
-    public AppAmbitTaskFuture<ApiErrorType> GetNewToken(String appKey) {
+    public AppAmbitTaskFuture<ApiErrorType> GetNewToken() {
         AppAmbitTaskFuture<ApiErrorType> newTokenFuture = new AppAmbitTaskFuture<>();
         mExecutor.execute(() -> {
-            ApiErrorType result = renewToken(appKey, null);
+            ApiErrorType result = renewToken(null);
             newTokenFuture.complete(result);
         });
         return newTokenFuture;
     }
 
-    private ApiErrorType renewToken(String appKey, AppAmbitTaskFuture<ApiErrorType> asyncFuture) {
+    private ApiErrorType renewToken(AppAmbitTaskFuture<ApiErrorType> asyncFuture) {
         try {
             TokenEndpoint tokenEndpoint = TokenService.createTokenendpoint();
             ApiResult<TokenResponse> tokenResponse = executeRequest(tokenEndpoint, TokenResponse.class);
@@ -313,63 +313,6 @@ public class HttpApiService implements ApiService {
         }
     }
 
-    private static JSONObject serializeToJSONStringContent(Object payload) {
-        if (payload == null) {
-            return new JSONObject();
-        }
-
-        JSONObject json = new JSONObject();
-        Class<?> cls = payload.getClass();
-
-        for (Field field : cls.getDeclaredFields()) {
-            field.setAccessible(true);
-            try {
-                String key = field.isAnnotationPresent(JsonKey.class)
-                        ? Objects.requireNonNull(field.getAnnotation(JsonKey.class)).value()
-                        : field.getName();
-
-                Object value = field.get(payload);
-                if (value != null) {
-                    if (value instanceof Map) {
-                        Map<?, ?> map = (Map<?, ?>) value;
-                        JSONObject mapJson = new JSONObject();
-                        for (Map.Entry<?, ?> entry : map.entrySet()) {
-                            mapJson.put(entry.getKey().toString(), entry.getValue().toString());
-                        }
-                        json.put(key, mapJson);
-                    } else {
-                        json.put(key, value);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return json;
-    }
-
-    private static String serializeStringPayload(Object payload) throws UnsupportedEncodingException, IllegalAccessException {
-        if (payload == null) {
-            return null;
-        }
-
-        StringBuilder serializedPayload = new StringBuilder();
-        Field[] fields = payload.getClass().getDeclaredFields();
-
-        for (Field field : fields) {
-            field.setAccessible(true);
-            Object value = field.get(payload);
-            if (value != null) {
-                if (serializedPayload.length() > 0) {
-                    serializedPayload.append("&");
-                }
-                serializedPayload.append(URLEncoder.encode(field.getName(), "UTF-8"))
-                        .append("=")
-                        .append(URLEncoder.encode(value.toString(), "UTF-8"));
-            }
-        }
-        return serializedPayload.toString();
-    }
     private static String serializedGetUrl(String baseUrl, Object payload)
             throws IllegalAccessException, java.io.UnsupportedEncodingException {
 

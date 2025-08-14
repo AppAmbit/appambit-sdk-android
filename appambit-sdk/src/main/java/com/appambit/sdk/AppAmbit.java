@@ -274,7 +274,7 @@ public final class AppAmbit {
         }
 
         if (!StringUtils.isNullOrBlank(consumerId)) {
-            final AppAmbitTaskFuture<ApiErrorType> future = api.GetNewToken(mAppKey);
+            final AppAmbitTaskFuture<ApiErrorType> future = api.GetNewToken();
             future.then(result -> {
                 boolean ok = (result == ApiErrorType.None);
                 Log.d(TAG, "GetNewToken finished: " + result);
@@ -287,7 +287,7 @@ public final class AppAmbit {
             return;
         }
 
-        final AppAmbitTaskFuture<ApiErrorType> createFuture = ConsumerService.createConsumer(mAppKey);
+        final AppAmbitTaskFuture<ApiErrorType> createFuture = ConsumerService.createConsumer();
         createFuture.then(createResult -> {
             if (createResult != ApiErrorType.None) {
                 Log.e(TAG, "CreateConsumer failed: " + createResult);

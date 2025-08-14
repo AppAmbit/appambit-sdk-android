@@ -2,6 +2,7 @@ package com.appambit.sdk.services;
 
 import android.util.Log;
 
+import com.appambit.sdk.Crashes;
 import com.appambit.sdk.ServiceLocator;
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.app.Consumer;
@@ -25,7 +26,7 @@ public class ConsumerService {
         mApiService = apiService;
     }
 
-    private static RegisterEndpoint buildRegisterEndpoint(String appKey) {
+    private static RegisterEndpoint buildRegisterEndpoint() {
         String appId = null;
         String deviceId = "";
         String userId = "";
@@ -38,7 +39,6 @@ public class ConsumerService {
 
             deviceId = mStorageService.getDeviceId();
             userId = mStorageService.getUserId();
-
             String emailFromStorage = mStorageService.getUserEmail();
             userEmail = (emailFromStorage == null || emailFromStorage.trim().isEmpty())
                     ? null
@@ -56,22 +56,22 @@ public class ConsumerService {
                 mStorageService.putUserId(userId);
             }
 
+            Consumer consumer = new Consumer(
+                    ensureValue(appId, ""),
+                    ensureValue(deviceId, ""),
+                    mAppInfoService != null ? ensureValue(mAppInfoService.getDeviceModel(), "") : "",
+                    ensureValue(userId, ""),
+                    userEmail,
+                    mAppInfoService != null ? ensureValue(mAppInfoService.getOs(), "") : "",
+                    mAppInfoService != null ? ensureValue(mAppInfoService.getCountry(), "") : "",
+                    mAppInfoService != null ? ensureValue(mAppInfoService.getLanguage(), "") : ""
+            );
+
+            return new RegisterEndpoint(consumer);
+
         } catch (Exception ex) {
-            System.out.println("[ConsumerService] Error getting data for ConsumerService: " + ex);
+            throw new RuntimeException("Failed to build RegisterEndpoint", ex);
         }
-
-        Consumer consumer = new Consumer(
-                ensureValue(appId, ""),
-                ensureValue(deviceId, ""),
-                mAppInfoService != null ? ensureValue(mAppInfoService.getDeviceModel(), "") : "",
-                ensureValue(userId, ""),
-                userEmail,
-                mAppInfoService != null ? ensureValue(mAppInfoService.getOs(), "") : "",
-                mAppInfoService != null ? ensureValue(mAppInfoService.getCountry(), "") : "",
-                mAppInfoService != null ? ensureValue(mAppInfoService.getLanguage(), "") : ""
-        );
-
-        return new RegisterEndpoint(consumer);
     }
 
     public static void updateAppKeyIfNeeded(String appKey) {
@@ -95,7 +95,7 @@ public class ConsumerService {
         mStorageService.putAppId(newKey);
     }
 
-    public static AppAmbitTaskFuture<ApiErrorType> createConsumer(final String appKey) {
+    public static AppAmbitTaskFuture<ApiErrorType> createConsumer() {
         final AppAmbitTaskFuture<ApiErrorType> promise = new AppAmbitTaskFuture<>();
 
         if (mApiService == null) {
@@ -103,10 +103,9 @@ public class ConsumerService {
             return promise;
         }
 
-        final RegisterEndpoint registerEndpoint = buildRegisterEndpoint(appKey);
-
         ServiceLocator.getExecutorService().execute(() -> {
             try {
+                final RegisterEndpoint registerEndpoint = buildRegisterEndpoint();
                 ApiResult<TokenResponse> responseApi =
                         mApiService.executeRequest(registerEndpoint, TokenResponse.class);
 
