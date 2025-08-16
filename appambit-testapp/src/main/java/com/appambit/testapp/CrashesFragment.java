@@ -1,6 +1,6 @@
 package com.appambit.testapp;
 
-import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
+import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
 import android.content.Context;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
@@ -10,12 +10,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import com.appambit.sdk.analytics.Analytics;
-import com.appambit.sdk.core.ServiceLocator;
-import com.appambit.sdk.core.models.logs.ExceptionInfo;
-import com.appambit.sdk.core.utils.DateUtils;
-import com.appambit.sdk.core.utils.JsonConvertUtils;
-import com.appambit.sdk.crashes.Crashes;
+import com.appambit.sdk.Analytics;
+import com.appambit.sdk.ServiceLocator;
+import com.appambit.sdk.models.logs.ExceptionInfo;
+import com.appambit.sdk.utils.DateUtils;
+import com.appambit.sdk.utils.JsonConvertUtils;
+import com.appambit.sdk.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
 import org.json.JSONException;
 import java.io.File;

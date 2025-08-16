@@ -1,6 +1,6 @@
 package com.appambit.testapp;
 
-import static com.appambit.sdk.core.utils.InternetConnection.hasInternetConnection;
+import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
 
 import android.content.Context;
 import android.content.Intent;
@@ -15,12 +15,12 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
 
-import com.appambit.sdk.analytics.Analytics;
-import com.appambit.sdk.core.models.analytics.SessionData;
-import com.appambit.sdk.core.enums.SessionType;
-import com.appambit.sdk.core.utils.DateUtils;
-import com.appambit.sdk.core.utils.JsonConvertUtils;
-import com.appambit.sdk.crashes.Crashes;
+import com.appambit.sdk.Analytics;
+import com.appambit.sdk.models.analytics.SessionData;
+import com.appambit.sdk.enums.SessionType;
+import com.appambit.sdk.utils.DateUtils;
+import com.appambit.sdk.utils.JsonConvertUtils;
+import com.appambit.sdk.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -39,13 +39,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 
 public class AnalyticsFragment extends Fragment {
