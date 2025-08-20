@@ -2,6 +2,7 @@ package com.appambit.sdk;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
+
 import androidx.annotation.NonNull;
 
 import com.appambit.sdk.enums.ApiErrorType;
@@ -16,6 +17,7 @@ import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.PackageInfoHelper;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,14 +78,14 @@ class Logging {
                 storeLogInDb(log);
                 appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Log event stored in database: " + log.getMessage()));
             }
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Error sending log event: " + ex.getMessage()));
         }
     }
 
     private static void storeLogInDb(@NonNull LogEntity log) {
         mExecutor.execute(() -> {
+            log.setSessionId(SessionManager.sessionId);
             mStorable.putLogEvent(log);
             android.util.Log.d(TAG, "Log event stored in database");
         });

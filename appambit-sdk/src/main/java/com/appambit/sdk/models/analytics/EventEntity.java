@@ -11,6 +11,9 @@ public class EventEntity extends Event {
     @JsonKey("id")
     private UUID id;
 
+    @JsonKey("sessionId")
+    private String sessionId;
+
     @JsonKey("created_at")
     @CustomDateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private Date createdAt;
@@ -29,5 +32,13 @@ public class EventEntity extends Event {
 
     public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 }

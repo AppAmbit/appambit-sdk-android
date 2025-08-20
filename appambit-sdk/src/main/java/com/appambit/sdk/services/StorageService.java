@@ -11,12 +11,15 @@ import android.util.Log;
 import com.appambit.sdk.AppAmbit;
 import com.appambit.sdk.enums.LogType;
 import com.appambit.sdk.models.analytics.EventEntity;
+import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.LogEntity;
 import com.appambit.sdk.services.storage.DataStore;
 import com.appambit.sdk.services.storage.contract.AppSecretContract;
 import com.appambit.sdk.services.storage.contract.EventEntityContract;
 import com.appambit.sdk.services.storage.contract.LogEntityContract;
 import com.appambit.sdk.services.interfaces.Storable;
+import com.appambit.sdk.services.storage.contract.SessionContract;
+import com.appambit.sdk.utils.DateUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,7 +65,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.DEVICE_ID},
+                    new String[]{AppSecretContract.Columns.DEVICE_ID},
                     null, null,
                     null, null,
                     null,
@@ -112,7 +115,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.APP_ID},
+                    new String[]{AppSecretContract.Columns.APP_ID},
                     null, null,
                     null, null,
                     null,
@@ -163,7 +166,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.USER_ID},
+                    new String[]{AppSecretContract.Columns.USER_ID},
                     null, null,
                     null, null,
                     null,
@@ -215,7 +218,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.USER_EMAIL},
+                    new String[]{AppSecretContract.Columns.USER_EMAIL},
                     null, null,
                     null, null,
                     null,
@@ -226,7 +229,7 @@ public class StorageService implements Storable {
                         c.getColumnIndexOrThrow(AppSecretContract.Columns.USER_EMAIL)
                 );
             }
-        }finally {
+        } finally {
             if (c != null) {
                 c.close();
             }
@@ -267,7 +270,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.CONSUMER_ID},
+                    new String[]{AppSecretContract.Columns.CONSUMER_ID},
                     null, null,
                     null, null,
                     null,
@@ -302,7 +305,7 @@ public class StorageService implements Storable {
                 cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
                 db.insert(AppSecretContract.TABLE_NAME, null, cv);
             }
-        }finally {
+        } finally {
             if (cursor != null) {
                 cursor.close();
             }
@@ -317,7 +320,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.SESSION_ID},
+                    new String[]{AppSecretContract.Columns.SESSION_ID},
                     null, null,
                     null, null,
                     null,
@@ -343,6 +346,7 @@ public class StorageService implements Storable {
             ContentValues cv = new ContentValues();
 
             cv.put(LogEntityContract.Columns.ID, logEntity.getId().toString());
+            cv.put(LogEntityContract.Columns.SESSION_ID, logEntity.getSessionId());
             cv.put(LogEntityContract.Columns.CREATED_AT, logEntity.getCreatedAt().getTime());
             cv.put(LogEntityContract.Columns.APP_VERSION, logEntity.getAppVersion());
             cv.put(LogEntityContract.Columns.CLASS_FQN, logEntity.getClassFQN());
@@ -360,7 +364,7 @@ public class StorageService implements Storable {
                     cv
             );
             Log.d(AppAmbit.class.getSimpleName(), "LOG CREATE - " + logEntity.getId());
-        }catch (Exception e) {
+        } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error inserting log event", e);
         }
     }
@@ -372,6 +376,7 @@ public class StorageService implements Storable {
             ContentValues cv = new ContentValues();
 
             cv.put(EventEntityContract.Columns.ID, eventEntity.getId().toString());
+            cv.put(EventEntityContract.Columns.SESSION_ID, eventEntity.getSessionId());
             cv.put(EventEntityContract.Columns.NAME, eventEntity.getName());
             cv.put(EventEntityContract.Columns.DATA_JSON, eventEntity.getDataJson());
             cv.put(EventEntityContract.Columns.CREATED_AT, eventEntity.getCreatedAt().getTime());
@@ -382,8 +387,82 @@ public class StorageService implements Storable {
                     cv
             );
             Log.d(AppAmbit.class.getSimpleName(), "EVENT CREATE - " + eventEntity.getId());
-        }catch (Exception e) {
+        } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error inserting event entity", e);
+        }
+    }
+
+    @Override
+    public void putSessionData(SessionData sessionData) {
+        Cursor c = null;
+        try {
+            switch (sessionData.getSessionType()) {
+                case START:
+                    SQLiteDatabase db = dataStore.getReadableDatabase();
+                    ContentValues cv = new ContentValues();
+
+                    cv.put(SessionContract.Columns.ID, sessionData.getId().toString());
+                    cv.put(SessionContract.Columns.SESSION_ID, sessionData.getSessionId());
+                    cv.put(SessionContract.Columns.START_SESSION_DATE, DateUtils.toIsoUtc(sessionData.getTimestamp()));
+                    cv.putNull(SessionContract.Columns.END_SESSION_DATE);
+
+                    db.insert(
+                            SessionContract.TABLE_NAME,
+                            null,
+                            cv
+                    );
+                    Log.d(AppAmbit.class.getSimpleName(), "SESSION START CREATE - " + sessionData.getSessionId());
+                    break;
+                case END:
+                    String selectSql = "SELECT " + SessionContract.Columns.ID +
+                            " FROM " + SessionContract.TABLE_NAME +
+                            " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL " +
+                            " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC " +
+                            " LIMIT 1";
+                    SQLiteDatabase db2 = dataStore.getReadableDatabase();
+                    c = db2.rawQuery(selectSql, null);
+
+                    String querySessionId = "";
+                    if (c.moveToFirst()) {
+                        querySessionId = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID));
+                    }
+
+                    if (!querySessionId.isEmpty()) {
+                        String updateSql = "UPDATE " + SessionContract.TABLE_NAME +
+                                " SET " + SessionContract.Columns.END_SESSION_DATE + " = ? " +
+                                " WHERE " + SessionContract.Columns.ID + " = ?";
+                        c = db2.rawQuery(updateSql, new String[]{DateUtils.toIsoUtc(sessionData.getTimestamp()), querySessionId});
+
+                        if (c.getCount() > 0) {
+                            Log.d(AppAmbit.class.getSimpleName(), "SESSION END UPDATE - " + sessionData.getSessionId());
+                        } else {
+                            Log.w(AppAmbit.class.getSimpleName(), "No session found to update for session ID: " + sessionData.getSessionId());
+                        }
+
+                    } else {
+                        String insertSql = "INSERT INTO " + SessionContract.TABLE_NAME + " (" +
+                                SessionContract.Columns.ID + ", " +
+                                SessionContract.Columns.SESSION_ID + ", " +
+                                SessionContract.Columns.START_SESSION_DATE + ", " +
+                                SessionContract.Columns.END_SESSION_DATE + ") VALUES (?, ?, ?, ?)";
+
+                        c = db2.rawQuery(insertSql, new String[]{
+                                sessionData.getId().toString(),
+                                sessionData.getSessionId(),
+                                DateUtils.toIsoUtc(sessionData.getTimestamp()),
+                                null
+                        });
+
+                        Log.d(AppAmbit.class.getSimpleName(), "SESSION START CREATE - " + sessionData.getSessionId());
+                    }
+                    break;
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error inserting log session", e);
+        } finally {
+            if (c != null) {
+                c.close();
+            }
         }
     }
 
@@ -411,9 +490,13 @@ public class StorageService implements Storable {
                     where.toString(),
                     args
             );
-        }catch (Exception e) {
+        } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error deleting log list", e);
         }
+    }
+
+    public void updateSessionsId() {
+
     }
 
     @Override
@@ -445,7 +528,7 @@ public class StorageService implements Storable {
                 } while (c.moveToNext());
             }
         } finally {
-            if(c != null) {
+            if (c != null) {
                 c.close();
             }
         }
@@ -474,7 +557,7 @@ public class StorageService implements Storable {
                     events.add(event);
                 } while (c.moveToNext());
             }
-        }finally {
+        } finally {
             if (c != null) {
                 c.close();
             }
@@ -482,7 +565,6 @@ public class StorageService implements Storable {
 
         return events;
     }
-
 
 
     @Override

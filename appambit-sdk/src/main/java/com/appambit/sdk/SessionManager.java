@@ -1,5 +1,6 @@
 package com.appambit.sdk;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.appambit.sdk.models.analytics.SessionPayload;
@@ -15,10 +16,13 @@ import com.appambit.sdk.services.endpoints.EndSessionEndpoint;
 import com.appambit.sdk.services.endpoints.SessionBatchEndpoint;
 import com.appambit.sdk.services.endpoints.StartSessionEndpoint;
 import com.appambit.sdk.services.interfaces.ApiService;
+import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.FileUtils;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -29,14 +33,16 @@ import java.util.concurrent.ExecutorService;
 public class SessionManager {
     private static final String TAG = SessionManager.class.getSimpleName();
     private static ApiService mApiService;
-    private static ExecutorService  mExecutorService;
-    private static String sessionId;
+    private static ExecutorService mExecutorService;
+    private static Storable mStorageService;
+    public static String sessionId;
     public static boolean isSessionActivate = false;
     private static final String offlineSessionsFile = "OfflineSessions";
 
-    public static void initialize(ApiService apiService, ExecutorService executorService) {
+    public static void initialize(ApiService apiService, ExecutorService executorService, Storable storageService) {
         mApiService = apiService;
         mExecutorService = executorService;
+        mStorageService = storageService;
     }
 
     public static void startSession() {
@@ -52,6 +58,7 @@ public class SessionManager {
 
         response.then(result -> {
             if (result.errorType != ApiErrorType.None) {
+                sessionId = UUID.randomUUID().toString();
                 saveLocallyStartSession(utcNow);
                 Log.d(TAG, "Start Session - save locally");
                 isSessionActivate = true;
@@ -154,7 +161,7 @@ public class SessionManager {
             });
         } else {
             List<SessionBatch> sessionBatches = buildSessionBatches(sessions);
-
+            Log.d(TAG, Arrays.toString(sessionBatches.toArray()));
             AppAmbitTaskFuture<ApiResult<EventsBatchResponse>> response = sendBatchEndpoint(sessionBatches);
 
             response.then(result -> {
@@ -187,7 +194,7 @@ public class SessionManager {
         List<SessionData> batchSessions = setLimitListSessionData(sorted);
 
         List<Date> starts = new ArrayList<>();
-        List<Date> ends   = new ArrayList<>();
+        List<Date> ends = new ArrayList<>();
         for (SessionData sd : batchSessions) {
             if (sd.getSessionType() == SessionType.START) {
                 starts.add(sd.getTimestamp());
@@ -235,16 +242,18 @@ public class SessionManager {
         sessionData.setTimestamp(dateUtc);
         sessionData.setSessionId(sessionId);
 
-        FileUtils.getSaveJsonArray(offlineSessionsFile, SessionData.class, sessionData);
+        mStorageService.putSessionData(sessionData);
     }
 
     private static void closeCurrentSession(SessionData sessionData) {
-
+        if (sessionData.getSessionId().isEmpty() || !TextUtils.isDigitsOnly(sessionData.getSessionId())) {
+            sessionData.setSessionId(null);
+        }
         AppAmbitTaskFuture<ApiResult<EndSessionResponse>> response = sendEndSessionEndpoint(sessionData);
 
         response.then(result -> {
             if (result.errorType != ApiErrorType.None) {
-                saveLocalEndSession(sessionData);
+                mStorageService.putSessionData(sessionData);
             }
         });
 
@@ -252,7 +261,6 @@ public class SessionManager {
             Log.d(TAG, "Error to Call End Session");
         });
 
-        sessionId = "";
         isSessionActivate = false;
     }
 
