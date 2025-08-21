@@ -163,13 +163,12 @@ public final class AppAmbit {
     }
 
     private static void initializeConsumer() {
-        getNewToken(() -> {
-            if (Analytics.isManualSessionEnabled()) {
-                return;
-            }
-            SessionManager.sendEndSessionIfExists();
-            SessionManager.startSession();
-        });
+        getNewToken(null);
+        if (Analytics.isManualSessionEnabled()) {
+            return;
+        }
+        SessionManager.sendEndSessionIfExists();
+        SessionManager.startSession();
     }
 
     private static void onSleep() {
@@ -228,7 +227,8 @@ public final class AppAmbit {
                             Analytics.sendBatchesEvents();
                             SessionManager.sendBatchSessions();
                         };
-                        getNewToken(connectionTasks);
+                        getNewToken(null);
+                        connectionTasks.run();
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }

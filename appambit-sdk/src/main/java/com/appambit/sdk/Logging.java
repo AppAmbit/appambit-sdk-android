@@ -67,19 +67,21 @@ class Logging {
 
     private static void sendOrSaveLogEventAsync(LogEntity log) {
         AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
-        var logEndpoint = new LogEndpoint(log);
+        mExecutor.execute(() -> {
+            var logEndpoint = new LogEndpoint(log);
 
-        try {
-            ApiResult<LogResponse> logResponse = mApiService.executeRequest(logEndpoint, LogResponse.class);
+            try {
+                ApiResult<LogResponse> logResponse = mApiService.executeRequest(logEndpoint, LogResponse.class);
 
-            if (logResponse == null || logResponse.errorType != ApiErrorType.None) {
-                storeLogInDb(log);
-                appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Log event stored in database: " + log.getMessage()));
+                if (logResponse == null || logResponse.errorType != ApiErrorType.None) {
+                    storeLogInDb(log);
+                    appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Log event stored in database: " + log.getMessage()));
+                }
             }
-        }
-        catch (Exception ex) {
-            appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Error sending log event: " + ex.getMessage()));
-        }
+            catch (Exception ex) {
+                appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Error sending log event: " + ex.getMessage()));
+            }
+        });
     }
 
     private static void storeLogInDb(@NonNull LogEntity log) {
