@@ -10,8 +10,8 @@ public final class SessionContract {
 
         public static final String ID = "id";
         public static final String SESSION_ID = "sessionId";
-        public static final String START_SESSION_DATE = "startSessionDate";
-        public static final String END_SESSION_DATE = "endSessionDate";
+        public static final String START_SESSION_DATE = "startedAt";
+        public static final String END_SESSION_DATE = "endedAt";
 
         static final String TYPE_TEXT = "TEXT";
 
@@ -21,7 +21,7 @@ public final class SessionContract {
             "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " ("
                     + Columns.ID + " " + Columns.TYPE_TEXT + " PRIMARY KEY, "
                     + Columns.SESSION_ID + " " + Columns.TYPE_TEXT + ", "
-                    + Columns.START_SESSION_DATE + " " + Columns.TYPE_TEXT + " DEFAULT NULL, "
-                    + Columns.END_SESSION_DATE + " " + Columns.TYPE_TEXT + " DEFAULT NULL"
+                    + Columns.START_SESSION_DATE + " " + Columns.TYPE_TEXT + ", "
+                    + Columns.END_SESSION_DATE + " " + Columns.TYPE_TEXT
                     + ");";
 }

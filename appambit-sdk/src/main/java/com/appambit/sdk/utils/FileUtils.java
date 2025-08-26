@@ -67,7 +67,6 @@ public class FileUtils {
         }
     }
 
-
     public static <T extends Identifiable> List<T> getSaveJsonArray(
             String fileNameBase,
             Class<T> clazz,

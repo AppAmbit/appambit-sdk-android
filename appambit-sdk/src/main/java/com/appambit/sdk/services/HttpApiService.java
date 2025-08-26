@@ -1,11 +1,10 @@
 package com.appambit.sdk.services;
 
 import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
-import static com.appambit.sdk.utils.JsonDeserializer.deserializeFromJSONStringContent;
+import static com.appambit.sdk.utils.JsonDeserializer.deserializeFromJSONResponse;
 import android.content.Context;
 import android.util.Log;
 import androidx.annotation.NonNull;
-
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.logs.LogBatch;
 import com.appambit.sdk.models.logs.LogEntity;
@@ -21,7 +20,6 @@ import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.JsonConvertUtils;
 import com.appambit.sdk.utils.JsonKey;
 import com.appambit.sdk.utils.MultipartFormData;
-import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -29,15 +27,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -46,7 +40,7 @@ public class HttpApiService implements ApiService {
 
     private final Context context;
     private static String _token;
-    private static String TAG = HttpApiService.class.getSimpleName();
+    private static final String TAG = HttpApiService.class.getSimpleName();
     private final ExecutorService mExecutor;
     private final ReentrantLock tokenLock = new ReentrantLock();
     private volatile AppAmbitTaskFuture<ApiErrorType> currentRenewalFuture = null;
@@ -94,7 +88,7 @@ public class HttpApiService implements ApiService {
             String json = responseBuilder.toString();
             Log.d(TAG, "[HTTP-Response-Body] " + json);
             checkStatusCodeFrom(httpResponse.getResponseCode());
-            T response = deserializeFromJSONStringContent(new JSONObject(json), clazz);
+            T response = deserializeFromJSONResponse(json, clazz);
             checkStatusCodeFrom(httpResponse.getResponseCode());
 
             return ApiResult.success(response);

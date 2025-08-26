@@ -37,7 +37,7 @@ public final class AppAmbit {
     private static boolean isRefreshingToken = false;
     private static final List<Runnable> tokenWaiters = new ArrayList<>();
 
-    private static void safeRun(@Nullable Runnable r) {
+    static void safeRun(@Nullable Runnable r) {
         if (r == null) return;
         try {
             r.run();
@@ -169,15 +169,18 @@ public final class AppAmbit {
         registerNetworkCallback(context);
         initializeConsumer();
         hasStartedSession = true;
-        SessionManager.sendBatchSessions();
-        Crashes.loadCrashFileIfExists(context);
-        Analytics.sendBatchesEvents();
-        Crashes.sendBatchesLogs();
+        final Runnable batchesTasks = () -> {
+            Crashes.loadCrashFileIfExists(context);
+            Analytics.sendBatchesEvents();
+            Crashes.sendBatchesLogs();
+        };
+        SessionManager.sendBatchSessions(batchesTasks);
     }
 
     private static void initializeConsumer() {
         Runnable initializeTasks = () -> {
             if (Analytics.isManualSessionEnabled()) {
+                Log.d(TAG, "Manual session management is enabled");
                 return;
             }
             SessionManager.sendEndSessionIfExists();
@@ -240,13 +243,16 @@ public final class AppAmbit {
                     }
                     try {
                         InitializeServices(context);
-                        final Runnable connectionTasks = () -> {
-                            SessionManager.sendBatchSessions();
-                            Crashes.loadCrashFileIfExists(context);
+                        final Runnable batchTasks = () -> {
                             Crashes.sendBatchesLogs();
                             Analytics.sendBatchesEvents();
                         };
-                        getNewToken(connectionTasks);
+                        final Runnable connectionTasks = () -> {
+                            SessionManager.sendBatchSessions(batchTasks);
+                            Crashes.loadCrashFileIfExists(context);
+                        };
+                        getNewToken(null);
+                        connectionTasks.run();
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }

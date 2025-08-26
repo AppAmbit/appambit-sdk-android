@@ -43,7 +43,7 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
             saveCrashToFileJson(context, exceptionInfo);
 
             createCrashFlag(context);
-
+            SessionManager.saveEndSession();
             Log.e(TAG, "Crash detected and saved", throwable);
 
         } catch (Exception e) {

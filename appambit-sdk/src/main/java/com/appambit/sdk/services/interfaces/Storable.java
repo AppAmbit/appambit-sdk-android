@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.util.List;
 
 import com.appambit.sdk.models.analytics.EventEntity;
+import com.appambit.sdk.models.analytics.SessionBatch;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.LogEntity;
 
@@ -38,6 +39,16 @@ public interface Storable extends Closeable {
     void putLogAnalyticsEvent(EventEntity logEntity);
 
     void putSessionData(SessionData sessionData);
+
+    List<SessionBatch> getOldest100Session();
+
+    void deleteSessionList(List<SessionBatch> sessions);
+
+    void deleteSessionById(String sessionId);
+
+    void updateLogsAndEventsId(String localId, String remoteId);
+
+    List<SessionData> getUnpairedSessions();
 
     void deleteLogList(List<LogEntity> logs);
 

@@ -2,12 +2,15 @@ package com.appambit.sdk.utils;
 
 import android.annotation.SuppressLint;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.lang.reflect.Field;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -57,4 +60,37 @@ public class JsonDeserializer {
             throw new RuntimeException("Could not parse JSON. Something went wrong.", e);
         }
     }
+
+    public static <T> List<T> deserializeFromJSONArrayContent(JSONArray jsonArray, Class<T> cls) {
+        try {
+            List<T> resultList = new ArrayList<>();
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                T item = deserializeFromJSONStringContent(jsonObject, cls);
+                resultList.add(item);
+            }
+            return resultList;
+        } catch (Exception e) {
+            throw new RuntimeException("Could not parse JSON Array. Something went wrong.", e);
+        }
+    }
+
+    public static <T> T deserializeFromJSONResponse(String jsonString, Class<T> cls) {
+        try {
+            String trimmedJson = jsonString.trim();
+
+            if (trimmedJson.startsWith("[")) {
+                JSONArray jsonArray = new JSONArray(jsonString);
+                return (T) deserializeFromJSONArrayContent(jsonArray, cls);
+            } else if (trimmedJson.startsWith("{")) {
+                JSONObject jsonObject = new JSONObject(jsonString);
+                return deserializeFromJSONStringContent(jsonObject, cls);
+            } else {
+                throw new RuntimeException("Invalid JSON format. Must start with '[' or '{'");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Could not parse JSON response. Something went wrong.", e);
+        }
+    }
+
 }

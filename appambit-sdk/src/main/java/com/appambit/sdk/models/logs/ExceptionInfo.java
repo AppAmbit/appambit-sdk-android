@@ -2,6 +2,7 @@ package com.appambit.sdk.models.logs;
 
 import static com.appambit.sdk.utils.DateUtils.fromIsoUtc;
 import com.appambit.sdk.AppConstants;
+import com.appambit.sdk.SessionManager;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.JsonKey;
 import com.appambit.sdk.crashFileGenerator.CrashFileGenerator;
@@ -28,6 +29,8 @@ public class ExceptionInfo {
     private String classFullName;
     @JsonKey("LineNumberFromStackTrace")
     private long lineNumberFromStackTrace;
+    @JsonKey("SessionId")
+    private String sessionId;
     @JsonKey("CrashLogFile")
     private String crashLogFile;
     @JsonKey("CreatedAt")
@@ -113,6 +116,14 @@ public class ExceptionInfo {
         this.createdAt = createdAt;
     }
 
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
     @NonNull
     public static ExceptionInfo fromException(Context context, Exception exception) {
         ExceptionInfo exceptionInfo = new ExceptionInfo();
@@ -126,6 +137,7 @@ public class ExceptionInfo {
         exceptionInfo.setLineNumberFromStackTrace(exception != null ? exception.getStackTrace()[0].getLineNumber() : 0);
         assert exception != null;
         exceptionInfo.setCrashLogFile(CrashFileGenerator.generateCrashLog(context, exception));
+        exceptionInfo.setSessionId(SessionManager.getCurrentSessionId());
         exceptionInfo.setCreatedAt(new Date());
         return exceptionInfo;
     }
@@ -146,6 +158,7 @@ public class ExceptionInfo {
             info.lineNumberFromStackTrace = 0;
         }
         info.crashLogFile = json.optString("CrashLogFile");
+        info.sessionId = json.optString("SessionId");
         String dateString = json.optString("CreatedAt");
         try {
             info.createdAt = fromIsoUtc(dateString);

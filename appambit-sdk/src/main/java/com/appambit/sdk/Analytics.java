@@ -53,9 +53,6 @@ public final class Analytics {
 
     public static void sendBatchesEvents() {
         mExecutorService.execute(() -> {
-            if (!SessionManager.isSessionActivate()) {
-                return;
-            }
             List<EventEntity> events = mStorable.getOldest100Events();
 
             if (events.isEmpty()) {
@@ -78,7 +75,7 @@ public final class Analytics {
             AppAmbitTaskFuture<Void> deleteEvents = deleteEvents(events);
             deleteEvents.then(v -> deleteEvents.complete(null));
 
-            deleteEvents.onError(erroDelete -> Log.d(TAG, "Error to delete event batch"));
+            deleteEvents.onError(errorDelete -> Log.d(TAG, "Error to delete event batch"));
         });
 
     }
@@ -117,7 +114,7 @@ public final class Analytics {
             if (result.errorType != ApiErrorType.None) {
                 EventEntity toSaveEvent = new EventEntity();
                 toSaveEvent.setId(UUID.randomUUID());
-                toSaveEvent.setSessionId(SessionManager.sessionId);
+                toSaveEvent.setSessionId(SessionManager.getCurrentSessionId());
                 toSaveEvent.setName(eventRequest.getName());
                 toSaveEvent.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
                 toSaveEvent.setData(eventRequest.getData());
