@@ -632,9 +632,12 @@ public class StorageService implements Storable {
                     log.setType(LogType.fromValue(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.TYPE))));
                     log.setFile(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.FILE)));
                     log.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
-                    if(TextUtils.isDigitsOnly(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.SESSION_ID)))) {
+
+                    String sessionId = c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.SESSION_ID));
+                    if (sessionId == null || TextUtils.isDigitsOnly(sessionId)) {
                         logs.add(log);
                     }
+
                 } while (c.moveToNext());
             }
         } finally {
