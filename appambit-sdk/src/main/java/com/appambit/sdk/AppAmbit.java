@@ -19,6 +19,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.appambit.sdk.enums.ApiErrorType;
+import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.services.ConsumerService;
 import com.appambit.sdk.services.TokenService;
 import com.appambit.sdk.services.interfaces.ApiService;
@@ -56,7 +57,7 @@ public final class AppAmbit {
         if (success) {
             for (Runnable r : callbacks) safeRun(r);
         } else {
-            Log.e(TAG, "Token operation failed; callbacks dropped");
+            Log.d(TAG, "Token operation failed; callbacks dropped");
         }
     }
 
@@ -69,12 +70,12 @@ public final class AppAmbit {
     private static boolean isWaitingPause = false;
     private static final long ACTIVITY_DELAY = 700;
 
-    public static void init(Context context, String appKey) {
+    public static void start(Context context, String appKey) {
         mAppKey = appKey;
         if (!isInitialized) {
             CrashHandler.initialize(context);
-            onStartApp(context);
             registerLifecycleObserver(context);
+            onStartApp(context);
             isInitialized = true;
             Log.d(TAG, "onCreate (App Level)");
         }
@@ -219,9 +220,8 @@ public final class AppAmbit {
 
         if (!tokenIsValid()) {
             getNewToken(resumeTasks);
-        } else {
-            resumeTasks.run();
         }
+        resumeTasks.run();
     }
 
     private static void registerNetworkCallback(@NonNull Context context) {

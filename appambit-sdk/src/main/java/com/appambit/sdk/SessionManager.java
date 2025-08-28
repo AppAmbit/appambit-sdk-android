@@ -1,6 +1,7 @@
 package com.appambit.sdk;
 
 import static com.appambit.sdk.AppAmbit.safeRun;
+import static com.appambit.sdk.utils.FileUtils.deleteSingleObject;
 
 import android.text.TextUtils;
 import android.util.Log;
@@ -92,9 +93,6 @@ public class SessionManager {
 
     public static void sendEndSessionIfExists() {
 
-        String file = FileUtils.getFilePath(FileUtils.getFileName(SessionData.class));
-        Log.d(TAG, "File: " + file);
-
         SessionData sessionData = FileUtils.getSavedSingleObject(SessionData.class);
 
         if (sessionData == null) {
@@ -115,6 +113,7 @@ public class SessionManager {
             mExecutorService.execute(() -> {
                 try {
                     FileUtils.saveToFile(endSession);
+                    Log.d(TAG, "End session saved locally");
                 } catch (Exception e) {
                     Log.d(TAG, e.toString());
                 }
@@ -130,7 +129,7 @@ public class SessionManager {
     }
 
     public static void removeSavedEndSession() {
-        FileUtils.getSavedSingleObject(SessionData.class);
+        FileUtils.deleteSingleObject(SessionData.class);
     }
 
     public static void sendBatchSessions(@Nullable Runnable onSuccess) {
@@ -318,7 +317,9 @@ public class SessionManager {
         response.then(result -> {
             if (result.errorType != ApiErrorType.None) {
                 mStorageService.putSessionData(sessionData);
+                Log.d(TAG, "End Session - saved locally and file deleted");
             }
+            deleteSingleObject(SessionData.class);
         });
 
         response.onError(error -> {
@@ -385,7 +386,7 @@ public class SessionManager {
         if (success) {
             for (Runnable r : callbacks) safeRun(r);
         } else {
-            Log.e(TAG, "Session batch operation failed; callbacks dropped");
+            Log.d(TAG, "Session batch operation failed; callbacks dropped");
         }
     }
 

@@ -3,7 +3,7 @@ package com.appambit.sdk.utils;
 import android.content.Context;
 import android.util.Log;
 
-import org.json.JSONArray;
+import com.appambit.sdk.models.analytics.SessionData;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -13,9 +13,6 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.List;
-
 
 public class FileUtils {
     private static final String TAG = FileUtils.class.getSimpleName();
@@ -38,19 +35,31 @@ public class FileUtils {
     public static <T extends Identifiable> T getSavedSingleObject(Class<T> clazz) {
         try {
             String fileName = getFileName(clazz);
+            String filePath = getFilePath(FileUtils.getFileName(SessionData.class));
+            Log.d(TAG, "File: " + filePath);
+
             String path = getFilePath(fileName);
             File file = new File(path);
             if (!file.exists()) return null;
 
             String text = readFile(path);
-            boolean isDelete = file.delete();
-            Log.d(TAG, "Delete file: " + isDelete);
             JSONObject json = new JSONObject(text);
             return JsonConvertUtils.fromJson(clazz, json);
         } catch (Exception e) {
             Log.d(TAG, "getSavedSingleObject Exception: " + e.getMessage());
             return null;
         }
+    }
+
+    public static <T extends Identifiable> void deleteSingleObject(Class<T> clazz) {
+        String fileName = getFileName(clazz);
+        String path = getFilePath(fileName);
+        File file = new File(path);
+        if (!file.exists()) {
+            return;
+        }
+        boolean isDelete = file.delete();
+        Log.d(TAG, "Delete file: " + isDelete);
     }
 
     public static <T extends Identifiable> void saveToFile(T entry) {
@@ -66,92 +75,6 @@ public class FileUtils {
             Log.d(TAG, "saveToFile Exception: " + e.getMessage());
         }
     }
-
-    public static <T extends Identifiable> List<T> getSaveJsonArray(
-            String fileNameBase,
-            Class<T> clazz,
-            T entry
-    ) {
-        List<T> list = new ArrayList<>();
-        try {
-            String fileName = fileNameBase.toLowerCase().endsWith(".json")
-                    ? fileNameBase
-                    : fileNameBase + ".json";
-            String path = getFilePath(fileName);
-            File file = new File(path);
-
-            if (file.exists()) {
-                String text = readFile(path);
-                JSONArray array = new JSONArray(text);
-                for (int i = 0; i < array.length(); i++) {
-                    JSONObject obj = array.getJSONObject(i);
-                    list.add(JsonConvertUtils.fromJson(clazz, obj));
-                }
-            }
-
-            if (entry != null) {
-                boolean exists = false;
-                for (T item : list) {
-                    if (item.getId().equals(entry.getId())) {
-                        exists = true;
-                        break;
-                    }
-                }
-                if (!exists) {
-                    list.add(entry);
-                    JSONArray newArr = new JSONArray();
-                    for (T item : list) {
-                        String jsonStr = JsonConvertUtils.toJson(item);
-                        JSONObject jsonObject = new JSONObject(jsonStr);
-                        newArr.put(jsonObject);
-                    }
-                    writeFile(path, newArr.toString());
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "getSaveJsonArray Exception: " + e.getMessage());
-        }
-        return list;
-    }
-
-    public static <T extends Identifiable> List<T> getSaveJsonArray(
-            String fileNameBase,
-            Class<T> clazz
-    ) {
-        return getSaveJsonArray(fileNameBase, clazz, null);
-    }
-
-    public static <T extends Identifiable> void updateJsonArray(
-            String fileNameBase,
-            List<T> updatedList
-    ) {
-        try {
-            String fileName = fileNameBase.toLowerCase().endsWith(".json")
-                    ? fileNameBase
-                    : fileNameBase + ".json";
-            String path = getFilePath(fileName);
-            File file = new File(path);
-
-            if (updatedList == null || updatedList.isEmpty()) {
-                if (file.exists()) {
-                    boolean isDelete = file.delete();
-                    Log.d(TAG, "Delete file: " + isDelete);
-                }
-                return;
-            }
-
-            JSONArray array = new JSONArray();
-            for (T item : updatedList) {
-                String jsonStr = JsonConvertUtils.toJson(item);
-                JSONObject jsonObject = new JSONObject(jsonStr);
-                array.put(jsonObject);
-            }
-            writeFile(path, array.toString());
-        } catch (Exception e) {
-            Log.e(TAG, "updateJsonArray Exception: " + e.getMessage());
-        }
-    }
-
     private static String readFile(String path) throws IOException {
         try (FileInputStream fis = new FileInputStream(path);
              InputStreamReader isr = new InputStreamReader(fis);

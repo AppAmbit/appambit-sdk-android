@@ -402,6 +402,32 @@ public class StorageService implements Storable {
             switch (sessionData.getSessionType()) {
                 case START:
                     SQLiteDatabase db = dataStore.getReadableDatabase();
+
+                    String sqlCheckSession =
+                        "SELECT " + SessionContract.Columns.ID +
+                        " FROM " + SessionContract.TABLE_NAME +
+                        " WHERE " + SessionContract.Columns.SESSION_ID + " IS NULL" +
+                        " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
+                        " LIMIT 1";
+
+                    c = db.rawQuery(sqlCheckSession, null);
+
+                    String openId = "";
+                    if(c.moveToNext()) {
+                        openId = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID));
+                    }
+
+                    if(openId != null) {
+                        String updateSql = "UPDATE " + SessionContract.TABLE_NAME +
+                                " SET " + SessionContract.Columns.END_SESSION_DATE + " = ? " +
+                                " WHERE " + SessionContract.Columns.ID + " = ?";
+                        c = db.rawQuery(updateSql, new String[]{DateUtils.toIsoUtcWithMillis(sessionData.getTimestamp()), openId});
+
+                        if(c.getCount() > 0) {
+                            Log.d(AppAmbit.class.getSimpleName(), "SESSION START UPDATE - " + sessionData.getId());
+                        }
+                    }
+
                     ContentValues cv = new ContentValues();
 
                     cv.put(SessionContract.Columns.ID, sessionData.getId().toString());
