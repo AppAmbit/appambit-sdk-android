@@ -19,7 +19,6 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.appambit.sdk.enums.ApiErrorType;
-import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.services.ConsumerService;
 import com.appambit.sdk.services.TokenService;
 import com.appambit.sdk.services.interfaces.ApiService;
@@ -179,6 +178,11 @@ public final class AppAmbit {
     }
 
     private static void initializeConsumer() {
+
+        if (!Analytics.isManualSessionEnabled()) {
+            SessionManager.saveSessionEndToDatabaseIfExist();
+        }
+
         Runnable initializeTasks = () -> {
             if (Analytics.isManualSessionEnabled()) {
                 Log.d(TAG, "Manual session management is enabled");
