@@ -12,7 +12,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import com.appambit.sdk.Analytics;
 import com.appambit.sdk.ServiceLocator;
+import com.appambit.sdk.SessionManager;
+import com.appambit.sdk.enums.SessionType;
+import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.ExceptionInfo;
+import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.JsonConvertUtils;
 import com.appambit.sdk.Crashes;
@@ -25,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -48,6 +53,8 @@ public class CrashesFragment extends Fragment {
     EditText etUserId;
     EditText etUserEmail;
     EditText etCustomLogErrorText;
+
+    Storable StorableApp = ServiceLocator.getStorageService();
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -111,12 +118,59 @@ public class CrashesFragment extends Fragment {
                 AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
                 return;
             }
-            for (int index = 1; index <= 30; index++) {
-                Date errorDate = DateUtils.getDateDaysAgo(30 - index);
-                Log.d(TAG, "Generating error for date: " + errorDate);
-                Crashes.LogError(context, "Test 30 Last Days Errors", null, null, null, null, 0, errorDate);
+
+            Exception exception = new NullPointerException();
+            try {
+                StorableApp.putSessionData(new SessionData() {
+                    {
+                        setId(UUID.randomUUID());
+                        setSessionType(SessionType.END);
+                        setTimestamp(DateUtils.getDateDaysAgo(31));
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting initial end session", e);
             }
-            AlertsUtils.showAlert(context, "Info", "Last 30 daily errors generated. Turn on internet to send the errors");
+
+            for (int index = 1; index <= 30; index++) {
+
+                SessionData sessionData = new SessionData();
+                UUID sessionId = UUID.randomUUID();
+                SessionManager.setCurrentSessionId(sessionId.toString());
+                sessionData.setId(sessionId);
+                sessionData.setSessionType(SessionType.START);
+                Date errorDate = DateUtils.getDateDaysAgo(30 - index);
+                sessionData.setTimestamp(errorDate);
+
+                try {
+                    StorableApp.putSessionData(sessionData);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error inserting start session", e);
+                    continue;
+                }
+
+                ExceptionInfo info = ExceptionInfo.fromException(context, exception);
+                info.setCreatedAt(errorDate);
+
+                Crashes.LogError(context, "Test 30 Last Days Errors", null, null, null, null, 0, errorDate);
+
+                try {
+                    int finalIndex = index;
+                    Random random = new Random();
+                    long randomOffset = random.nextInt(60 * 60 * 1000);
+                    StorableApp.putSessionData(new SessionData() {
+                        {
+                            setId(UUID.randomUUID());
+                            setSessionType(SessionType.END);
+                            setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error inserting end session", e);
+                }
+
+            }
+            AlertsUtils.showAlert(context, "Info", "Logs generated, turn on internet");
         });
 
         btnSetUserId = view.findViewById(R.id.btnSetUserId);
@@ -149,41 +203,77 @@ public class CrashesFragment extends Fragment {
                 AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
                 return;
             }
+
             Exception exception = new NullPointerException();
+            try {
+                StorableApp.putSessionData(new SessionData() {
+                    {
+                        setId(UUID.randomUUID());
+                        setSessionType(SessionType.END);
+                        setTimestamp(DateUtils.getDateDaysAgo(31));
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting initial end session", e);
+            }
+
             for (int index = 1; index <= 30; index++) {
+
+                SessionData sessionData = new SessionData();
+                UUID sessionId = UUID.randomUUID();
+                SessionManager.setCurrentSessionId(sessionId.toString());
+                sessionData.setId(sessionId);
+                sessionData.setSessionType(SessionType.START);
                 Date crashDate = DateUtils.getDateDaysAgo(30 - index);
+                sessionData.setTimestamp(crashDate);
+
+                try {
+                    StorableApp.putSessionData(sessionData);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error inserting start session", e);
+                    continue;
+                }
+
                 ExceptionInfo info = ExceptionInfo.fromException(context, exception);
                 info.setCreatedAt(crashDate);
 
-                String crashJson;
                 try {
-                    crashJson = JsonConvertUtils.toJson(info);
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
+                    String crashJson = JsonConvertUtils.toJson(info);
 
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                String formattedDate = sdf.format(crashDate);
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                    String formattedDate = sdf.format(crashDate);
 
-                String fileName = "crash_" + formattedDate + "_" + index + ".json";
+                    String fileName = "crash_" + formattedDate + "_" + index + ".json";
 
-                File crashFile = new File(context.getFilesDir(), fileName);
-                Log.d(TAG, "Crash file saved to: " + crashFile.getAbsolutePath());
+                    File crashFile = new File(context.getFilesDir(), fileName);
+                    Log.d(TAG, "Crash file saved to: " + crashFile.getAbsolutePath());
 
-                try (FileWriter writer = new FileWriter(crashFile)) {
-                    writer.write(crashJson);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    try (FileWriter writer = new FileWriter(crashFile)) {
+                        writer.write(crashJson);
+                    }
+
+                } catch (Exception e) {
+                    Log.e(TAG, "Error saving crash file", e);
                 }
 
                 try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    int finalIndex = index;
+                    Random random = new Random();
+                    long randomOffset = random.nextInt(60 * 60 * 1000);
+                    StorableApp.putSessionData(new SessionData() {
+                        {
+                            setId(UUID.randomUUID());
+                            setSessionType(SessionType.END);
+                            setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error inserting end session", e);
                 }
+
             }
-            AlertsUtils.showAlert(context, "Info", "30 daily crashes generated successfully");
+            AlertsUtils.showAlert(context, "Info", "Crashes generated, turn on internet");
         });
 
         return view;

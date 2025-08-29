@@ -160,7 +160,7 @@ public class SessionManager {
                 response.then(result -> {
                     if (result.errorType != ApiErrorType.None) {
                         Log.d(TAG, "Unset sessions");
-                        finishSessionOperation(false);
+                        finishSessionOperation(true);
                         return;
                     }
 
@@ -402,6 +402,10 @@ public class SessionManager {
 
     public static String getCurrentSessionId() {
         return currentSessionId;
+    }
+
+    public static void setCurrentSessionId(String sessionId) {
+        currentSessionId = sessionId;
     }
 
 }

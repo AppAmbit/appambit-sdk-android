@@ -167,7 +167,7 @@ public final class AppAmbit {
     private static void onStartApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
-        initializeConsumer();
+        initializeConsumer(context);
         hasStartedSession = true;
         final Runnable batchesTasks = () -> {
             Crashes.loadCrashFileIfExists(context);
@@ -177,7 +177,7 @@ public final class AppAmbit {
         SessionManager.sendBatchSessions(batchesTasks);
     }
 
-    private static void initializeConsumer() {
+    private static void initializeConsumer(Context context) {
 
         if (!Analytics.isManualSessionEnabled()) {
             SessionManager.saveSessionEndToDatabaseIfExist();
@@ -190,6 +190,7 @@ public final class AppAmbit {
             }
             SessionManager.sendEndSessionIfExists();
             SessionManager.startSession();
+            Crashes.loadCrashFileIfExists(context);
         };
         if (!tokenIsValid()) {
             getNewToken(null);

@@ -5,6 +5,7 @@ import static com.appambit.sdk.services.storage.contract.AppSecretContract.*;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
 import android.text.TextUtils;
 import android.util.Log;
@@ -406,7 +407,7 @@ public class StorageService implements Storable {
                     String sqlCheckSession =
                         "SELECT " + SessionContract.Columns.ID +
                         " FROM " + SessionContract.TABLE_NAME +
-                        " WHERE " + SessionContract.Columns.SESSION_ID + " IS NULL" +
+                        " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
                         " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
                         " LIMIT 1";
 
@@ -475,11 +476,17 @@ public class StorageService implements Storable {
                         cv2.putNull(SessionContract.Columns.START_SESSION_DATE);
                         cv2.put(SessionContract.Columns.END_SESSION_DATE, DateUtils.toIsoUtcWithMillis(sessionData.getTimestamp()));
 
-                        db2.insert(
-                            SessionContract.TABLE_NAME,
-                            null,
-                            cv2
-                        );
+                        try {
+                            db2.insert(
+                                    SessionContract.TABLE_NAME,
+                                    null,
+                                    cv2
+                            );
+                        }catch (SQLiteConstraintException e) {
+                            Log.d(AppAmbit.class.getSimpleName(), "Session duplicate avoided - " + sessionData.getSessionId());
+                        }catch (Exception e) {
+                            Log.d(AppAmbit.class.getSimpleName(), "Error inserting end session", e);
+                        }
 
                         Log.d(AppAmbit.class.getSimpleName(), "SESSION END CREATE - " + sessionData.getSessionId());
                     }

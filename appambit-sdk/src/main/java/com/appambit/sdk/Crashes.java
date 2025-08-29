@@ -143,6 +143,9 @@ public class Crashes {
                 } else {
                     logEntity.setCreatedAt(crash.getCreatedAt());
                 }
+                if(logEntity.getSessionId() == null) {
+                    logEntity.setSessionId(crash.getSessionId());
+                }
                 if (mStorable == null) {
                     return;
                 }
