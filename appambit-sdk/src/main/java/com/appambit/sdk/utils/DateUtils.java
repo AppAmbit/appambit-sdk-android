@@ -36,7 +36,7 @@ public class DateUtils {
     @Nullable
     public static Date fromIsoUtc(String dateStr) {
         try {
-            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SS'Z'", Locale.US);
             isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
             return isoFormat.parse(dateStr);
         } catch (Exception e) {

@@ -183,21 +183,20 @@ public class SessionManager {
                 finishSessionOperation(false);
             }
         };
-
-        sendUnpairedSessions(batchSessionTask);
+        batchSessionTask.run();
     }
 
     public static void saveSessionEndToDatabaseIfExist() {
         SessionData sessionData = FileUtils.getSavedSingleObject(SessionData.class);
 
-        if(sessionData != null) {
+        if(sessionData != null && !TextUtils.isDigitsOnly(sessionData.getSessionId()) && mStorageService.isSessionOpen()) {
             mStorageService.putSessionData(sessionData);
             FileUtils.deleteSingleObject(SessionData.class);
             Log.d(TAG, "Saved end session from file to database");
         }
     }
 
-    private static void sendUnpairedSessions(Runnable onComplete) {
+    public static void sendUnpairedSessions(Runnable onComplete) {
 
         List<SessionData> unpairedSessions = mStorageService.getUnpairedSessions();
 

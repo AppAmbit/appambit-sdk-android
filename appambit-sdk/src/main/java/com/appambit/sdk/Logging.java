@@ -2,7 +2,6 @@ package com.appambit.sdk;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
-import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 
@@ -90,7 +89,7 @@ class Logging {
                     appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Log event stored in database: " + log.getMessage()));
                 }
             } catch (Exception ex) {
-                appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Error sending log event: " + ex.getMessage()));
+                appAmbitTaskFuture.onError(error -> android.util.Log.d(TAG, "Error sending log event - Api: " + ex.getMessage()));
             }
         });
     }

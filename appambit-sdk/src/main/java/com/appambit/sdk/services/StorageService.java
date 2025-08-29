@@ -617,6 +617,26 @@ public class StorageService implements Storable {
         return results;
     }
 
+    public boolean isSessionOpen() {
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+        Cursor c = null;
+        try {
+            String sql = "SELECT id FROM " + SessionContract.TABLE_NAME +
+                    " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
+                    " AND " + SessionContract.Columns.START_SESSION_DATE + " IS NOT NULL" +
+                    " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
+                    " LIMIT 1";
+
+            c = db.rawQuery(sql, null);
+
+            return c.moveToFirst();
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+    }
+
     public void updateLogsAndEventsId(String localId, String remoteId) {
         SQLiteDatabase db = dataStore.getReadableDatabase();
 

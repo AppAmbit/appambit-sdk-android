@@ -188,9 +188,12 @@ public final class AppAmbit {
                 Log.d(TAG, "Manual session management is enabled");
                 return;
             }
-            SessionManager.sendEndSessionIfExists();
-            SessionManager.startSession();
-            Crashes.loadCrashFileIfExists(context);
+            Runnable initializeSession = () -> {
+                SessionManager.sendEndSessionIfExists();
+                SessionManager.startSession();
+                Crashes.loadCrashFileIfExists(context);
+            };
+            SessionManager.sendUnpairedSessions(initializeSession);
         };
         if (!tokenIsValid()) {
             getNewToken(null);
