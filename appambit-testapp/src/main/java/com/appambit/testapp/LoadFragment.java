@@ -46,6 +46,10 @@ public class LoadFragment extends Fragment {
 
         btnSend500Events = view.findViewById(R.id.btnSend500Events);
         btnSend500Events.setOnClickListener(v -> {
+            if (!hasInternetConnection(requireContext())) {
+                AlertsUtils.showAlert(requireContext(), "Info", "Turn on internet and try again");
+                return;
+            }
             tvEventsLabel.setVisibility(View.VISIBLE);
             Map<String, String> eventProperties = new HashMap<>();
             eventProperties.put("Test 500", "Events");
@@ -55,14 +59,12 @@ public class LoadFragment extends Fragment {
                 @Override
                 public void run() {
                     if (index[0] < 500) {
+                        Analytics.startSession();
                         Analytics.trackEvent(etLoadCustomMessage.getText().toString(), eventProperties, null);
                         tvEventsLabel.setText("Sending event: " + (index[0] + 1) + " of 500");
                         index[0]++;
-                        if(hasInternetConnection(requireContext())) {
-                            handler.postDelayed(this, 500);
-                        }else {
-                            handler.postDelayed(this, 5);
-                        }
+                        handler.postDelayed(this, 1000);
+                        Analytics.endSession();
                     } else {
                         tvEventsLabel.setVisibility(View.INVISIBLE);
                         AlertsUtils.showAlert(requireContext(), "Info", "500 Events generated");
@@ -74,6 +76,10 @@ public class LoadFragment extends Fragment {
 
         btnSend500Logs = view.findViewById(R.id.btnSend500Logs);
         btnSend500Logs.setOnClickListener(v -> {
+            if (!hasInternetConnection(requireContext())) {
+                AlertsUtils.showAlert(requireContext(), "Info", "Turn on internet and try again");
+                return;
+            }
             tvLogsLabel.setVisibility(View.VISIBLE);
             final int[] index = {0};
 
@@ -81,17 +87,15 @@ public class LoadFragment extends Fragment {
                 @Override
                 public void run() {
                     if (index[0] < 500) {
+                        Analytics.startSession();
                         Crashes.LogError(
                                 requireContext(),
                                 etLoadCustomMessage.getText().toString(),
                                 null, null, null, null, 0, null);
                         tvLogsLabel.setText("Sending log: " + (index[0] + 1) + " of 500");
                         index[0]++;
-                        if(hasInternetConnection(requireContext())) {
-                            handler.postDelayed(this, 500);
-                        }else {
-                            handler.postDelayed(this, 5);
-                        }
+                        handler.postDelayed(this, 1000);
+                        Analytics.endSession();
                     } else {
                         tvLogsLabel.setVisibility(View.INVISIBLE);
                         AlertsUtils.showAlert(requireContext(), "Info", "500 Logs generated");

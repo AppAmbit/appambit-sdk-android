@@ -107,28 +107,34 @@ public final class Analytics {
         eventRequest.setName(eventTitle);
         eventRequest.setData(data);
 
-        AppAmbitTaskFuture<ApiResult<EventResponse>> response = sendEventEndpoint(eventRequest);
+        AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
 
-        response.then(result -> {
-            Log.d(TAG, "Event ApiErrorType: " + result.errorType.name());
-            if (result.errorType != ApiErrorType.None) {
-                EventEntity toSaveEvent = new EventEntity();
-                toSaveEvent.setId(UUID.randomUUID());
-                toSaveEvent.setSessionId(SessionManager.getCurrentSessionId());
-                toSaveEvent.setName(eventRequest.getName());
-                toSaveEvent.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
-                toSaveEvent.setData(eventRequest.getData());
+        mExecutorService.execute(() -> {
+            try {
 
-                AppAmbitTaskFuture<Void> saveFuture = saveEventLocally(toSaveEvent);
+                ApiResult<EventResponse> response = mApiService.executeRequest(new EventEndpoint(eventRequest), EventResponse.class);
 
-                saveFuture.then(v -> saveFuture.complete(null));
-                saveFuture.onError(saveFuture::fail);
+                if (response == null || response.errorType != ApiErrorType.None) {
+                    EventEntity toSaveEvent = new EventEntity();
+                    toSaveEvent.setId(UUID.randomUUID());
+                    toSaveEvent.setSessionId(SessionManager.getCurrentSessionId());
+                    toSaveEvent.setName(eventRequest.getName());
+                    toSaveEvent.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
+                    toSaveEvent.setData(eventRequest.getData());
 
+                    AppAmbitTaskFuture<Void> saveFuture = saveEventLocally(toSaveEvent);
+
+                    saveFuture.then(v -> saveFuture.complete(null));
+                    saveFuture.onError(saveFuture::fail);
+                }
+                appAmbitTaskFuture.then(result -> {
+                    Log.d(TAG, "Event sent: " + eventRequest.getName());
+                });
+            }catch (Exception e) {
+                appAmbitTaskFuture.onError(error -> {
+                    Log.d(TAG, "Error sending event - Api: " + e.getMessage());
+                });
             }
-        });
-
-        response.onError(e -> {
-            Log.d(TAG, "onError: Error to sent events: \n" + e.getMessage());
         });
     }
 

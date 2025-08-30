@@ -120,18 +120,6 @@ public class CrashesFragment extends Fragment {
             }
 
             Exception exception = new NullPointerException();
-            try {
-                StorableApp.putSessionData(new SessionData() {
-                    {
-                        setId(UUID.randomUUID());
-                        setSessionType(SessionType.END);
-                        setTimestamp(DateUtils.getDateDaysAgo(31));
-                    }
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Error inserting initial end session", e);
-            }
-
             for (int index = 1; index <= 30; index++) {
 
                 SessionData sessionData = new SessionData();
@@ -205,18 +193,6 @@ public class CrashesFragment extends Fragment {
             }
 
             Exception exception = new NullPointerException();
-            try {
-                StorableApp.putSessionData(new SessionData() {
-                    {
-                        setId(UUID.randomUUID());
-                        setSessionType(SessionType.END);
-                        setTimestamp(DateUtils.getDateDaysAgo(31));
-                    }
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Error inserting initial end session", e);
-            }
-
             for (int index = 1; index <= 30; index++) {
 
                 SessionData sessionData = new SessionData();

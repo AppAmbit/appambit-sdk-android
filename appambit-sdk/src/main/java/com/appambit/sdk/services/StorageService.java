@@ -418,6 +418,9 @@ public class StorageService implements Storable {
                         openId = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID));
                     }
 
+                    c.close();
+                    c = null;
+
                     if(openId != null) {
                         String updateSql = "UPDATE " + SessionContract.TABLE_NAME +
                                 " SET " + SessionContract.Columns.END_SESSION_DATE + " = ? " +
@@ -457,6 +460,9 @@ public class StorageService implements Storable {
                         querySessionId = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID));
                     }
 
+                    c.close();
+                    c = null;
+
                     if (!querySessionId.isEmpty()) {
                         String updateSql = "UPDATE " + SessionContract.TABLE_NAME +
                                 " SET " + SessionContract.Columns.END_SESSION_DATE + " = ? " +
@@ -466,7 +472,7 @@ public class StorageService implements Storable {
                         if (c.getCount() > 0) {
                             Log.d(AppAmbit.class.getSimpleName(), "SESSION END UPDATE - " + sessionData.getSessionId());
                         } else {
-                            Log.w(AppAmbit.class.getSimpleName(), "No session found to update for session ID: " + sessionData.getSessionId());
+                            Log.d(AppAmbit.class.getSimpleName(), "No session found to update for session ID");
                         }
 
                     } else {

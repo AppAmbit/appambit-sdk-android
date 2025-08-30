@@ -219,7 +219,7 @@ public final class AppAmbit {
         }
 
         Runnable resumeTasks = () -> {
-            if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
+            if (!Analytics.isManualSessionEnabled() && isInitialized) {
                 SessionManager.removeSavedEndSession();
             }
             Crashes.sendBatchesLogs();
@@ -256,8 +256,8 @@ public final class AppAmbit {
                             Analytics.sendBatchesEvents();
                         };
                         final Runnable connectionTasks = () -> {
-                            SessionManager.sendBatchSessions(batchTasks);
                             Crashes.loadCrashFileIfExists(context);
+                            SessionManager.sendBatchSessions(batchTasks);
                         };
                         getNewToken(null);
                         connectionTasks.run();

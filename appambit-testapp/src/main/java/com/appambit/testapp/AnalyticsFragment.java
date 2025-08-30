@@ -96,18 +96,6 @@ public class AnalyticsFragment extends Fragment {
             return;
         }
 
-        try {
-            StorableApp.putSessionData(new SessionData() {
-                {
-                    setId(UUID.randomUUID());
-                    setSessionType(SessionType.END);
-                    setTimestamp(DateUtils.getDateDaysAgo(31));
-                }
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "Error inserting initial end session", e);
-        }
-
         for (int index = 1; index <= 30; index++) {
 
             SessionData sessionData = new SessionData();
@@ -211,7 +199,24 @@ public class AnalyticsFragment extends Fragment {
             AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
             return;
         }
+
         for (int index = 0; index < 30; index++) {
+
+            SessionData sessionData = new SessionData();
+            UUID sessionId = UUID.randomUUID();
+            SessionManager.setCurrentSessionId(sessionId.toString());
+            sessionData.setId(sessionId);
+            sessionData.setSessionType(SessionType.START);
+            Date errorDate = DateUtils.getDateDaysAgo(30 - index);
+            sessionData.setTimestamp(errorDate);
+
+            try {
+                StorableApp.putSessionData(sessionData);
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting start session", e);
+                continue;
+            }
+
             Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
             cal.add(Calendar.DAY_OF_MONTH, -index);
             Date date = cal.getTime();
@@ -220,6 +225,22 @@ public class AnalyticsFragment extends Fragment {
             properties.put("30 Daily events", "Event");
 
             Analytics.trackEvent("30 Daily events", properties, date);
+
+            try {
+                int finalIndex = index;
+                Random random = new Random();
+                long randomOffset = random.nextInt(60 * 60 * 1000);
+                StorableApp.putSessionData(new SessionData() {
+                    {
+                        setId(UUID.randomUUID());
+                        setSessionType(SessionType.END);
+                        setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting end session", e);
+            }
+
         }
         AlertsUtils.showAlert(context, "Info", "30 events generated, turn on internet to send them");
     }
@@ -229,10 +250,38 @@ public class AnalyticsFragment extends Fragment {
             AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
             return;
         }
+
+        SessionData sessionData = new SessionData();
+        UUID sessionId = UUID.randomUUID();
+        SessionManager.setCurrentSessionId(sessionId.toString());
+        sessionData.setId(sessionId);
+        sessionData.setSessionType(SessionType.START);
+        sessionData.setTimestamp(DateUtils.getUtcNow());
+
+        try {
+            StorableApp.putSessionData(sessionData);
+        } catch (Exception e) {
+            Log.e(TAG, "Error inserting start session", e);
+        }
+
         Map<String, String> properties = new HashMap<>();
         for (int index = 1; index <= 220; index++) {
             properties.put("property1", "value1" );
             Analytics.trackEvent("Events 220", properties, null);
+        }
+
+        try {
+            Random random = new Random();
+            long randomOffset = random.nextInt(60 * 60 * 1000);
+            StorableApp.putSessionData(new SessionData() {
+                {
+                    setId(UUID.randomUUID());
+                    setSessionType(SessionType.END);
+                    setTimestamp(new Date(DateUtils.getUtcNow().getTime() + randomOffset));
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error inserting end session", e);
         }
         AlertsUtils.showAlert(context, "Info", "220 events generated, turn on internet to send them");
     }
