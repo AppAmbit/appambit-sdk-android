@@ -643,6 +643,37 @@ public class StorageService implements Storable {
         }
     }
 
+    public SessionData getLastStartSession() {
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+        Cursor c = null;
+        try {
+            String sql = "SELECT " + SessionContract.Columns.ID + ", " +
+                    SessionContract.Columns.START_SESSION_DATE +
+                    " FROM " + SessionContract.TABLE_NAME +
+                    " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
+                    " AND " + SessionContract.Columns.START_SESSION_DATE + " IS NOT NULL" +
+                    " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
+                    " LIMIT 1";
+
+            c = db.rawQuery(sql, null);
+
+            if (c.moveToFirst()) {
+                SessionData sessionData = new SessionData();
+                sessionData.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID))));
+                sessionData.setTimestamp(DateUtils.fromIsoUtc(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.START_SESSION_DATE))));
+                sessionData.setSessionType(SessionType.START);
+                return sessionData;
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error fetching last start session ID", e);
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return null;
+    }
+
     public void updateLogsAndEventsId(String localId, String remoteId) {
         SQLiteDatabase db = dataStore.getReadableDatabase();
 
@@ -799,7 +830,7 @@ public class StorageService implements Storable {
         }
     }
 
-    public void deleteSessionById(String sessionId) {
+    public void deleteSessionBySessionId(String sessionId) {
         SQLiteDatabase db = dataStore.getReadableDatabase();
 
         String sqlDeleteSession = "DELETE FROM " + SessionContract.TABLE_NAME +
@@ -807,6 +838,20 @@ public class StorageService implements Storable {
 
         try {
             db.execSQL(sqlDeleteSession, new String[]{sessionId});
+            Log.d(AppAmbit.class.getSimpleName(), "Deleted session by id: " + sessionId);
+        }catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error deleting session by id", e);
+        }
+    }
+
+    public void deleteSessionById(UUID sessionId) {
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+
+        String sqlDeleteSession = "DELETE FROM " + SessionContract.TABLE_NAME +
+                " WHERE " + SessionContract.Columns.ID + " = ?";
+
+        try {
+            db.execSQL(sqlDeleteSession, new String[]{sessionId.toString()});
             Log.d(AppAmbit.class.getSimpleName(), "Deleted session by id: " + sessionId);
         }catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error deleting session by id", e);

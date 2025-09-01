@@ -221,7 +221,7 @@ public class SessionManager {
             response.then(result -> {
                 if (result.errorType == ApiErrorType.None) {
                     Log.d(TAG, "Unpaired session sent successfully, deleting " + sessionData.getSessionId());
-                    mStorageService.deleteSessionById(sessionData.getSessionId());
+                    mStorageService.deleteSessionBySessionId(sessionData.getSessionId());
                 }
             });
 
@@ -234,7 +234,7 @@ public class SessionManager {
             response.then(result -> {
                 if (result.errorType == ApiErrorType.None) {
                     Log.d(TAG, "Unpaired session sent successfully, deleting " + sessionData.getSessionId());
-                    mStorageService.deleteSessionById(sessionData.getSessionId());
+                    mStorageService.deleteSessionBySessionId(sessionData.getSessionId());
                 }
             });
 
@@ -243,6 +243,30 @@ public class SessionManager {
             });
         }
 
+    }
+
+    public static void sendStartSessionToGetRemoteId() {
+
+        SessionData sessionData = mStorageService.getLastStartSession();
+
+        if(sessionData == null) {
+            return;
+        }
+
+        AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(sessionData.getTimestamp());
+
+        response.then(result -> {
+            if (result.errorType == ApiErrorType.None) {
+                Log.d(TAG, "Start session sent successfully, deleting " + sessionData.getId());
+                currentSessionId = result.data.getSessionId();
+                mStorageService.updateLogsAndEventsId(sessionData.getId().toString(), currentSessionId);
+                mStorageService.deleteSessionById(sessionData.getId());
+                Crashes.sendBatchesLogs();
+                Analytics.sendBatchesEvents();
+            }
+        });
+
+        response.onError(error -> Log.d(TAG, "Error to Call Start Session"));
     }
 
     private static void updateOfflineSessionsLogsEvents(@NonNull List<SessionBatch> sorted, List<SessionBatch> sessions) {

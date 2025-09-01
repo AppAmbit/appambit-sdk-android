@@ -2,6 +2,7 @@ package com.appambit.sdk.services.interfaces;
 
 import java.io.Closeable;
 import java.util.List;
+import java.util.UUID;
 
 import com.appambit.sdk.models.analytics.EventEntity;
 import com.appambit.sdk.models.analytics.SessionBatch;
@@ -44,9 +45,13 @@ public interface Storable extends Closeable {
 
     void deleteSessionList(List<SessionBatch> sessions);
 
-    void deleteSessionById(String sessionId);
+    void deleteSessionBySessionId(String sessionId);
+
+    void deleteSessionById(UUID sessionId);
 
     boolean isSessionOpen();
+
+    SessionData getLastStartSession();
     void updateLogsAndEventsId(String localId, String remoteId);
 
     List<SessionData> getUnpairedSessions();
