@@ -55,7 +55,6 @@ public class LoadFragment extends Fragment {
                 @Override
                 public void run() {
                     if (index[0] < 500) {
-                        Analytics.startSession();
                         Analytics.trackEvent(etLoadCustomMessage.getText().toString(), eventProperties, null);
                         tvEventsLabel.setText("Sending event: " + (index[0] + 1) + " of 500");
                         index[0]++;
@@ -64,7 +63,6 @@ public class LoadFragment extends Fragment {
                         }else {
                             handler.postDelayed(this, 5);
                         }
-                        Analytics.endSession();
                     } else {
                         tvEventsLabel.setVisibility(View.INVISIBLE);
                         AlertsUtils.showAlert(requireContext(), "Info", "500 Events generated");
@@ -83,7 +81,6 @@ public class LoadFragment extends Fragment {
                 @Override
                 public void run() {
                     if (index[0] < 500) {
-                        Analytics.startSession();
                         Crashes.LogError(
                                 requireContext(),
                                 etLoadCustomMessage.getText().toString(),
@@ -95,7 +92,6 @@ public class LoadFragment extends Fragment {
                         }else {
                             handler.postDelayed(this, 5);
                         }
-                        Analytics.endSession();
                     } else {
                         tvLogsLabel.setVisibility(View.INVISIBLE);
                         AlertsUtils.showAlert(requireContext(), "Info", "500 Logs generated");

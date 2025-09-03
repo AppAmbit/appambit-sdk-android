@@ -64,6 +64,7 @@ public final class AppAmbit {
     private static String mAppKey;
     private static boolean isInitialized = false;
     private static boolean hasStartedSession = false;
+    private static boolean isReadyForSendingBatches = false;
     private static int startedActivities = 0;
     private static int resumedActivities = 0;
     private static boolean foreground = false;
@@ -168,17 +169,17 @@ public final class AppAmbit {
     private static void onStartApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
-        initializeConsumer(context);
+        initializeConsumer();
         hasStartedSession = true;
         final Runnable batchesTasks = () -> {
-            Crashes.loadCrashFileIfExists(context);
             Analytics.sendBatchesEvents();
             Crashes.sendBatchesLogs();
         };
+        Crashes.loadCrashFileIfExists(context);
         SessionManager.sendBatchSessions(batchesTasks);
     }
 
-    private static void initializeConsumer(Context context) {
+    private static void initializeConsumer() {
 
         if (!Analytics.isManualSessionEnabled()) {
             SessionManager.saveSessionEndToDatabaseIfExist();
@@ -192,7 +193,6 @@ public final class AppAmbit {
             Runnable initializeSession = () -> {
                 SessionManager.sendEndSessionIfExists();
                 SessionManager.startSession();
-                Crashes.loadCrashFileIfExists(context);
             };
             SessionManager.sendUnpairedSessions(initializeSession);
         };
@@ -215,7 +215,8 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
-        if (Analytics.isManualSessionEnabled()) {
+        if (Analytics.isManualSessionEnabled() || !isReadyForSendingBatches) {
+            isReadyForSendingBatches = true;
             return;
         }
 
@@ -229,8 +230,9 @@ public final class AppAmbit {
 
         if (!tokenIsValid()) {
             getNewToken(resumeTasks);
+        }else {
+            resumeTasks.run();
         }
-        resumeTasks.run();
     }
 
     private static void registerNetworkCallback(@NonNull Context context) {
@@ -245,6 +247,9 @@ public final class AppAmbit {
             @Override
             public void onAvailable(@NonNull Network network) {
                 super.onAvailable(network);
+                if (!isReadyForSendingBatches) {
+                    return;
+                }
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
                     if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
@@ -258,7 +263,7 @@ public final class AppAmbit {
                         };
                         final Runnable connectionTasks = () -> {
                             Crashes.loadCrashFileIfExists(context);
-                            SessionManager.sendStartSessionToGetRemoteId();
+                            SessionManager.sendSessionEndIfExist();
                             SessionManager.sendBatchSessions(batchTasks);
                         };
                         getNewToken(null);

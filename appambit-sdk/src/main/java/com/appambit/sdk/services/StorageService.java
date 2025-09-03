@@ -575,7 +575,7 @@ public class StorageService implements Storable {
         return sessionDataList;
     }
 
-    public List<SessionData> getUnpairedSessions() {
+    public List<SessionData> getSessionsEnd() {
         String sqlUnpairedSessions =
             "SELECT " +
                 SessionContract.Columns.ID                 + ", " +
@@ -827,20 +827,6 @@ public class StorageService implements Storable {
             Log.d(AppAmbit.class.getSimpleName(), "Deleted sessions size: " + sessions.size());
         } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error deleting session list", e);
-        }
-    }
-
-    public void deleteSessionBySessionId(String sessionId) {
-        SQLiteDatabase db = dataStore.getReadableDatabase();
-
-        String sqlDeleteSession = "DELETE FROM " + SessionContract.TABLE_NAME +
-                " WHERE " + SessionContract.Columns.SESSION_ID + " = ?";
-
-        try {
-            db.execSQL(sqlDeleteSession, new String[]{sessionId});
-            Log.d(AppAmbit.class.getSimpleName(), "Deleted session by id: " + sessionId);
-        }catch (Exception e) {
-            Log.e(AppAmbit.class.getSimpleName(), "Error deleting session by id", e);
         }
     }
 

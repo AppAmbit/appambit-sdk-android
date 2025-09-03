@@ -198,7 +198,7 @@ public class SessionManager {
 
     public static void sendUnpairedSessions(Runnable onComplete) {
 
-        List<SessionData> unpairedSessions = mStorageService.getUnpairedSessions();
+        List<SessionData> unpairedSessions = mStorageService.getSessionsEnd();
 
         if (unpairedSessions.isEmpty()) {
             Log.d(TAG, "No unpaired sessions to send");
@@ -221,7 +221,7 @@ public class SessionManager {
             response.then(result -> {
                 if (result.errorType == ApiErrorType.None) {
                     Log.d(TAG, "Unpaired session sent successfully, deleting " + sessionData.getSessionId());
-                    mStorageService.deleteSessionBySessionId(sessionData.getSessionId());
+                    mStorageService.deleteSessionById(sessionData.getId());
                 }
             });
 
@@ -234,7 +234,7 @@ public class SessionManager {
             response.then(result -> {
                 if (result.errorType == ApiErrorType.None) {
                     Log.d(TAG, "Unpaired session sent successfully, deleting " + sessionData.getSessionId());
-                    mStorageService.deleteSessionBySessionId(sessionData.getSessionId());
+                    mStorageService.deleteSessionById(sessionData.getId());
                 }
             });
 
@@ -245,7 +245,9 @@ public class SessionManager {
 
     }
 
-    public static void sendStartSessionToGetRemoteId() {
+    public static void sendSessionEndIfExist() {
+
+        sendUnpairedSessions(null);
 
         SessionData sessionData = mStorageService.getLastStartSession();
 

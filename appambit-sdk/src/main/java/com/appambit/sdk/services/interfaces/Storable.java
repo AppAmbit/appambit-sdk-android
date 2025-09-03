@@ -45,8 +45,6 @@ public interface Storable extends Closeable {
 
     void deleteSessionList(List<SessionBatch> sessions);
 
-    void deleteSessionBySessionId(String sessionId);
-
     void deleteSessionById(UUID sessionId);
 
     boolean isSessionOpen();
@@ -54,7 +52,7 @@ public interface Storable extends Closeable {
     SessionData getLastStartSession();
     void updateLogsAndEventsId(String localId, String remoteId);
 
-    List<SessionData> getUnpairedSessions();
+    List<SessionData> getSessionsEnd();
 
     void deleteLogList(List<LogEntity> logs);
 
