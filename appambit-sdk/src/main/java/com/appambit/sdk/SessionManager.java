@@ -189,7 +189,9 @@ public class SessionManager {
     public static void saveSessionEndToDatabaseIfExist() {
         SessionData sessionData = FileUtils.getSavedSingleObject(SessionData.class);
 
-        if(sessionData != null && !TextUtils.isDigitsOnly(sessionData.getSessionId()) && mStorageService.isSessionOpen()) {
+        if(sessionData != null && sessionData.getSessionId() != null
+           && !TextUtils.isDigitsOnly(sessionData.getSessionId())
+           && mStorageService.isSessionOpen()) {
             mStorageService.putSessionData(sessionData);
             FileUtils.deleteSingleObject(SessionData.class);
             Log.d(TAG, "Saved end session from file to database");
