@@ -137,7 +137,7 @@ public class ExceptionInfo {
         exceptionInfo.setLineNumberFromStackTrace(exception != null ? exception.getStackTrace()[0].getLineNumber() : 0);
         assert exception != null;
         exceptionInfo.setCrashLogFile(CrashFileGenerator.generateCrashLog(context, exception));
-        exceptionInfo.setSessionId(SessionManager.getCurrentSessionId());
+        exceptionInfo.setSessionId(SessionManager.getSessionId());
         exceptionInfo.setCreatedAt(new Date());
         return exceptionInfo;
     }

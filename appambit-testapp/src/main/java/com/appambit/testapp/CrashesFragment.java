@@ -12,19 +12,17 @@ import android.widget.Button;
 import android.widget.EditText;
 import com.appambit.sdk.Analytics;
 import com.appambit.sdk.ServiceLocator;
-import com.appambit.sdk.SessionManager;
 import com.appambit.sdk.enums.SessionType;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.ExceptionInfo;
-import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.JsonConvertUtils;
 import com.appambit.sdk.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
-import org.json.JSONException;
+import com.appambit.testapp.utils.StorageServiceTest;
+import com.appambit.testapp.utils.storage.StorableTest;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,6 +31,7 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class CrashesFragment extends Fragment {
 
@@ -54,7 +53,7 @@ public class CrashesFragment extends Fragment {
     EditText etUserEmail;
     EditText etCustomLogErrorText;
 
-    Storable StorableApp = ServiceLocator.getStorageService();
+    StorableTest storableApp;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -63,6 +62,12 @@ public class CrashesFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_crashes, container, false);
         final String TAG = CrashesFragment.class.getSimpleName();
         Context context = requireContext();
+
+        try {
+            storableApp = new StorageServiceTest(context);
+        }catch (Exception e) {
+            Log.e(TAG, "Error initializing storage", e);
+        }
 
         btnDidCrash = view.findViewById(R.id.btnDidCrash);
         btnDidCrash.setOnClickListener(v -> mExecutor.execute(() -> {
@@ -119,36 +124,40 @@ public class CrashesFragment extends Fragment {
                 return;
             }
 
-            Exception exception = new NullPointerException();
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+
             for (int index = 1; index <= 30; index++) {
 
                 SessionData sessionData = new SessionData();
                 UUID sessionId = UUID.randomUUID();
-                SessionManager.setCurrentSessionId(sessionId.toString());
+
                 sessionData.setId(sessionId);
                 sessionData.setSessionType(SessionType.START);
                 Date errorDate = DateUtils.getDateDaysAgo(30 - index);
                 sessionData.setTimestamp(errorDate);
 
                 try {
-                    StorableApp.putSessionData(sessionData);
+                    storableApp.putSessionData(sessionData);
                 } catch (Exception e) {
                     Log.e(TAG, "Error inserting start session", e);
                     continue;
                 }
 
-                ExceptionInfo info = ExceptionInfo.fromException(context, exception);
-                info.setCreatedAt(errorDate);
-
                 Crashes.LogError(context, "Test 30 Last Days Errors", null, null, null, null, 0, errorDate);
+                try {
+                    Thread.sleep(100);
+                }catch (Exception e) {
+                    Log.e(TAG, "Sleep error", e);
+                }
+                executor.execute(() -> storableApp.updateLogSessionId(sessionId.toString()));
 
                 try {
                     int finalIndex = index;
                     Random random = new Random();
                     long randomOffset = random.nextInt(60 * 60 * 1000);
-                    StorableApp.putSessionData(new SessionData() {
+                    storableApp.putSessionData(new SessionData() {
                         {
-                            setId(UUID.randomUUID());
+                            setId(sessionId);
                             setSessionType(SessionType.END);
                             setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
                         }
@@ -197,14 +206,13 @@ public class CrashesFragment extends Fragment {
 
                 SessionData sessionData = new SessionData();
                 UUID sessionId = UUID.randomUUID();
-                SessionManager.setCurrentSessionId(sessionId.toString());
                 sessionData.setId(sessionId);
                 sessionData.setSessionType(SessionType.START);
                 Date crashDate = DateUtils.getDateDaysAgo(30 - index);
                 sessionData.setTimestamp(crashDate);
 
                 try {
-                    StorableApp.putSessionData(sessionData);
+                    storableApp.putSessionData(sessionData);
                 } catch (Exception e) {
                     Log.e(TAG, "Error inserting start session", e);
                     continue;
@@ -212,6 +220,7 @@ public class CrashesFragment extends Fragment {
 
                 ExceptionInfo info = ExceptionInfo.fromException(context, exception);
                 info.setCreatedAt(crashDate);
+                info.setSessionId(sessionId.toString());
 
                 try {
                     String crashJson = JsonConvertUtils.toJson(info);
@@ -237,7 +246,7 @@ public class CrashesFragment extends Fragment {
                     int finalIndex = index;
                     Random random = new Random();
                     long randomOffset = random.nextInt(60 * 60 * 1000);
-                    StorableApp.putSessionData(new SessionData() {
+                    storableApp.putSessionData(new SessionData() {
                         {
                             setId(UUID.randomUUID());
                             setSessionType(SessionType.END);

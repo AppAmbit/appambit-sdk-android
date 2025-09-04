@@ -2,8 +2,7 @@ package com.appambit.sdk;
 
 import static com.appambit.sdk.AppAmbit.safeRun;
 import static com.appambit.sdk.utils.FileUtils.deleteSingleObject;
-
-import android.text.TextUtils;
+import static com.appambit.sdk.utils.StringValidation.isUIntNumber;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -38,7 +37,7 @@ public class SessionManager {
     private static ExecutorService mExecutorService;
     private static final Object SESSION_LOCK = new Object();
     private static boolean isSendingBatch = false;
-    private static String currentSessionId;
+    private static String sessionId;
     private static final List<Runnable> sessionWaiters = new ArrayList<>();
     private static Storable mStorageService;
     public static boolean isSessionActivate = false;
@@ -62,13 +61,13 @@ public class SessionManager {
 
         response.then(result -> {
             if (result.errorType != ApiErrorType.None) {
-                currentSessionId = UUID.randomUUID().toString();
+                sessionId = UUID.randomUUID().toString();
                 saveLocallyStartSession(utcNow);
                 Log.d(TAG, "Start Session - save locally");
                 isSessionActivate = true;
                 return;
             }
-            currentSessionId = result.data != null ? result.data.getSessionId() : UUID.randomUUID().toString();
+            sessionId = result.data != null ? result.data.getSessionId() : UUID.randomUUID().toString();
         });
         isSessionActivate = true;
         response.onError(error -> {
@@ -85,9 +84,9 @@ public class SessionManager {
         sessionData.setId(UUID.randomUUID());
         sessionData.setSessionType(SessionType.END);
         sessionData.setTimestamp(DateUtils.getUtcNow());
-        sessionData.setSessionId(currentSessionId);
+        sessionData.setSessionId(sessionId);
 
-        closeCurrentSession(sessionData);
+        sendSessionEndOrSaveLocally(sessionData);
 
     }
 
@@ -106,7 +105,7 @@ public class SessionManager {
         try {
             SessionData endSession = new SessionData();
             endSession.setId(UUID.randomUUID());
-            endSession.setSessionId(currentSessionId);
+            endSession.setSessionId(sessionId);
             endSession.setTimestamp(DateUtils.getUtcNow());
             endSession.setSessionType(SessionType.END);
 
@@ -190,7 +189,7 @@ public class SessionManager {
         SessionData sessionData = FileUtils.getSavedSingleObject(SessionData.class);
 
         if(sessionData != null && sessionData.getSessionId() != null
-           && !TextUtils.isDigitsOnly(sessionData.getSessionId())
+           && !isUIntNumber(sessionData.getSessionId())
            && mStorageService.isSessionOpen()) {
             mStorageService.putSessionData(sessionData);
             FileUtils.deleteSingleObject(SessionData.class);
@@ -200,7 +199,7 @@ public class SessionManager {
 
     public static void sendUnpairedSessions(Runnable onComplete) {
 
-        List<SessionData> unpairedSessions = mStorageService.getSessionsEnd();
+        List<SessionData> unpairedSessions = mStorageService.getSessionEnd();
 
         if (unpairedSessions.isEmpty()) {
             Log.d(TAG, "No unpaired sessions to send");
@@ -262,8 +261,8 @@ public class SessionManager {
         response.then(result -> {
             if (result.errorType == ApiErrorType.None) {
                 Log.d(TAG, "Start session sent successfully, deleting " + sessionData.getId());
-                currentSessionId = result.data.getSessionId();
-                mStorageService.updateLogsAndEventsId(sessionData.getId().toString(), currentSessionId);
+                sessionId = result.data.getSessionId();
+                mStorageService.updateLogsAndEventsId(sessionData.getId().toString(), sessionId);
                 mStorageService.deleteSessionById(sessionData.getId());
                 Crashes.sendBatchesLogs();
                 Analytics.sendBatchesEvents();
@@ -330,12 +329,12 @@ public class SessionManager {
 
     private static void saveLocallyStartSession(Date dateUtc) {
         SessionData sessionData = new SessionData();
-        sessionData.setId(UUID.fromString(currentSessionId));
+        sessionData.setId(UUID.fromString(sessionId));
         sessionData.setSessionType(SessionType.START);
         sessionData.setTimestamp(dateUtc);
 
-        if(TextUtils.isDigitsOnly(currentSessionId)) {
-            sessionData.setSessionId(currentSessionId);
+        if(isUIntNumber(sessionId)) {
+            sessionData.setSessionId(sessionId);
         }else {
             sessionData.setSessionId(null);
         }
@@ -345,7 +344,7 @@ public class SessionManager {
 
     private static void closeCurrentSession(SessionData sessionData) {
 
-        if(!TextUtils.isDigitsOnly(sessionData.getSessionId())) {
+        if(!isUIntNumber(sessionData.getSessionId())) {
             sessionData.setSessionId(null);
         }
 
@@ -364,6 +363,20 @@ public class SessionManager {
         });
 
         isSessionActivate = false;
+    }
+
+    private static void sendSessionEndOrSaveLocally(SessionData sessionData) {
+        sessionData.setSessionId(isUIntNumber(sessionId) ? sessionId : null);
+
+        mStorageService.putSessionData(sessionData);
+
+        sendSession(sessionData);
+
+        if(!Analytics.isManualSessionEnabled()) {
+            sessionId = null;
+            startSession();
+        }
+
     }
 
     private static AppAmbitTaskFuture<ApiResult<StartSessionResponse>> sendStartSessionEndpoint(Date utcNow) {
@@ -427,12 +440,8 @@ public class SessionManager {
         }
     }
 
-    public static String getCurrentSessionId() {
-        return currentSessionId;
-    }
-
-    public static void setCurrentSessionId(String sessionId) {
-        currentSessionId = sessionId;
+    public static String getSessionId() {
+        return sessionId;
     }
 
 }

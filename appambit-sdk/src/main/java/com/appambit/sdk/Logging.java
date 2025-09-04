@@ -55,7 +55,7 @@ class Logging {
         if (exception != null && exception.getSessionId() != null && !exception.getSessionId().isEmpty()) {
             log.setSessionId(exception.getSessionId());
         } else {
-            log.setSessionId(SessionManager.getCurrentSessionId());
+            log.setSessionId(SessionManager.getSessionId());
         }
 
         log.setAppVersion(pInfo.versionName + " (" + pInfo.versionCode + ")");

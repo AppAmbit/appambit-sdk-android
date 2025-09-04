@@ -52,7 +52,7 @@ public interface Storable extends Closeable {
     SessionData getLastStartSession();
     void updateLogsAndEventsId(String localId, String remoteId);
 
-    List<SessionData> getSessionsEnd();
+    List<SessionData> getSessionEnd();
 
     void deleteLogList(List<LogEntity> logs);
 

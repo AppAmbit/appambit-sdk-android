@@ -19,7 +19,6 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.appambit.sdk.enums.ApiErrorType;
-import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.services.ConsumerService;
 import com.appambit.sdk.services.TokenService;
 import com.appambit.sdk.services.interfaces.ApiService;

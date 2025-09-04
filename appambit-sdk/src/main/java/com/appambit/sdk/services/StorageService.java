@@ -1,13 +1,13 @@
 package com.appambit.sdk.services;
 
 import static com.appambit.sdk.services.storage.contract.AppSecretContract.*;
+import static com.appambit.sdk.utils.StringValidation.isUIntNumber;
 
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
-import android.text.TextUtils;
 import android.util.Log;
 
 import com.appambit.sdk.AppAmbit;
@@ -575,7 +575,7 @@ public class StorageService implements Storable {
         return sessionDataList;
     }
 
-    public List<SessionData> getSessionsEnd() {
+    public List<SessionData> getSessionEnd() {
         String sqlUnpairedSessions =
             "SELECT " +
                 SessionContract.Columns.ID                 + ", " +
@@ -724,7 +724,7 @@ public class StorageService implements Storable {
                     log.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
 
                     String sessionId = c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.SESSION_ID));
-                    if (sessionId == null || TextUtils.isDigitsOnly(sessionId)) {
+                    if (sessionId == null || isUIntNumber(sessionId)) {
                         logs.add(log);
                     }
 
@@ -758,7 +758,7 @@ public class StorageService implements Storable {
                     event.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
                     event.setDataJson(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.DATA_JSON)));
                     event.setName(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.NAME)));
-                    if(TextUtils.isDigitsOnly(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.SESSION_ID)))) {
+                    if(isUIntNumber(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.SESSION_ID)))) {
                         events.add(event);
                     }
                 } while (c.moveToNext());

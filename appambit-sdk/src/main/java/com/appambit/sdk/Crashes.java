@@ -1,8 +1,9 @@
 package com.appambit.sdk;
 
+import static com.appambit.sdk.utils.StringValidation.isUIntNumber;
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
-import android.text.TextUtils;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -115,7 +116,7 @@ public class Crashes {
                 }
 
                 if (exceptionInfos.size() == 1) {
-                    if(!TextUtils.isDigitsOnly(exceptionInfos.get(0).getSessionId())) {
+                    if(!isUIntNumber(exceptionInfos.get(0).getSessionId())) {
                         storeBatchCrashesLog(context, exceptionInfos);
                         Log.d(TAG, "Storing crash log as batch due to invalid session ID");
                         deleteCrashes(context);

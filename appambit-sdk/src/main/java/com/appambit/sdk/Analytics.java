@@ -117,7 +117,7 @@ public final class Analytics {
                 if (response == null || response.errorType != ApiErrorType.None) {
                     EventEntity toSaveEvent = new EventEntity();
                     toSaveEvent.setId(UUID.randomUUID());
-                    toSaveEvent.setSessionId(SessionManager.getCurrentSessionId());
+                    toSaveEvent.setSessionId(SessionManager.getSessionId());
                     toSaveEvent.setName(eventRequest.getName());
                     toSaveEvent.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
                     toSaveEvent.setData(eventRequest.getData());

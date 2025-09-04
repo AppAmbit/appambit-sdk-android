@@ -16,14 +16,13 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.appambit.sdk.Analytics;
-import com.appambit.sdk.ServiceLocator;
-import com.appambit.sdk.SessionManager;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.enums.SessionType;
-import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
+import com.appambit.testapp.utils.StorageServiceTest;
+import com.appambit.testapp.utils.storage.StorableTest;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -43,10 +42,16 @@ public class AnalyticsFragment extends Fragment {
     Button btnStartSession, btnEndSession, btnGenerate30DaysTestSessions;
     Button btnClearToken, btnTokenRenew;
     Button btnEventWProperty, btnDefaultClickedEventWProperty, btnMax300LengthEvent, btnMax20PropertiesEvent, btn3DailyEvents, btn220BatchEvents, btnSecondActivity;
-    static Storable StorableApp = ServiceLocator.getStorageService();
+    static StorableTest storableApp;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_analytics, container, false);
+
+        try {
+            storableApp = new StorageServiceTest(requireContext());
+        }catch (Exception e) {
+            Log.e(TAG, "Error initializing storage", e);
+        }
 
         btnStartSession = view.findViewById(R.id.btnStartSession);
         btnStartSession.setOnClickListener(v ->  {
@@ -100,14 +105,14 @@ public class AnalyticsFragment extends Fragment {
 
             SessionData sessionData = new SessionData();
             UUID sessionId = UUID.randomUUID();
-            SessionManager.setCurrentSessionId(sessionId.toString());
+
             sessionData.setId(sessionId);
             sessionData.setSessionType(SessionType.START);
             Date sessionDate = DateUtils.getDateDaysAgo(30 - index);
             sessionData.setTimestamp(sessionDate);
 
             try {
-                StorableApp.putSessionData(sessionData);
+                storableApp.putSessionData(sessionData);
             } catch (Exception e) {
                 Log.e(TAG, "Error inserting start session", e);
                 continue;
@@ -117,7 +122,7 @@ public class AnalyticsFragment extends Fragment {
                 int finalIndex = index;
                 Random random = new Random();
                 long randomOffset = random.nextInt(60 * 60 * 1000);
-                StorableApp.putSessionData(new SessionData() {
+                storableApp.putSessionData(new SessionData() {
                     {
                         setId(UUID.randomUUID());
                         setSessionType(SessionType.END);
@@ -204,33 +209,37 @@ public class AnalyticsFragment extends Fragment {
 
             SessionData sessionData = new SessionData();
             UUID sessionId = UUID.randomUUID();
-            SessionManager.setCurrentSessionId(sessionId.toString());
+
             sessionData.setId(sessionId);
             sessionData.setSessionType(SessionType.START);
-            Date errorDate = DateUtils.getDateDaysAgo(30 - index);
-            sessionData.setTimestamp(errorDate);
+            Date eventDate = DateUtils.getDateDaysAgo(30 - index);
+            sessionData.setTimestamp(eventDate);
 
             try {
-                StorableApp.putSessionData(sessionData);
+                storableApp.putSessionData(sessionData);
             } catch (Exception e) {
                 Log.e(TAG, "Error inserting start session", e);
                 continue;
             }
 
-            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            cal.add(Calendar.DAY_OF_MONTH, -index);
-            Date date = cal.getTime();
-
             Map<String, String> properties = new HashMap<>();
             properties.put("30 Daily events", "Event");
 
-            Analytics.trackEvent("30 Daily events", properties, date);
+            Analytics.trackEvent("30 Daily events", properties, eventDate);
+
+            try {
+                Thread.sleep(100);
+            }catch (Exception e) {
+                Log.e(TAG, "Error during log creation: " + e.getMessage());
+            }
+
+            storableApp.updateEventSessionId(sessionId.toString());
 
             try {
                 int finalIndex = index;
                 Random random = new Random();
                 long randomOffset = random.nextInt(60 * 60 * 1000);
-                StorableApp.putSessionData(new SessionData() {
+                storableApp.putSessionData(new SessionData() {
                     {
                         setId(UUID.randomUUID());
                         setSessionType(SessionType.END);
@@ -251,15 +260,17 @@ public class AnalyticsFragment extends Fragment {
             return;
         }
 
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
         SessionData sessionData = new SessionData();
         UUID sessionId = UUID.randomUUID();
-        SessionManager.setCurrentSessionId(sessionId.toString());
+
         sessionData.setId(sessionId);
         sessionData.setSessionType(SessionType.START);
         sessionData.setTimestamp(DateUtils.getUtcNow());
 
         try {
-            StorableApp.putSessionData(sessionData);
+            storableApp.putSessionData(sessionData);
         } catch (Exception e) {
             Log.e(TAG, "Error inserting start session", e);
         }
@@ -271,11 +282,19 @@ public class AnalyticsFragment extends Fragment {
         }
 
         try {
+            Thread.sleep(1000);
+        }catch (Exception e) {
+            Log.e(TAG, "Error during log creation: " + e.getMessage());
+        }
+
+        executor.execute(() -> storableApp.updateAllEventsWithSessionId(sessionId.toString()));
+
+        try {
             Random random = new Random();
             long randomOffset = random.nextInt(60 * 60 * 1000);
-            StorableApp.putSessionData(new SessionData() {
+            storableApp.putSessionData(new SessionData() {
                 {
-                    setId(UUID.randomUUID());
+                    setId(sessionId);
                     setSessionType(SessionType.END);
                     setTimestamp(new Date(DateUtils.getUtcNow().getTime() + randomOffset));
                 }
