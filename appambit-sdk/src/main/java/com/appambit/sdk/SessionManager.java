@@ -220,8 +220,6 @@ public class SessionManager {
             if (result.errorType == ApiErrorType.None) {
                 Log.d(TAG, "Unpaired session sent successfully, deleting " + unpairedSessions.getId());
                 mStorageService.deleteSessionById(unpairedSessions.getId());
-                Crashes.sendBatchesLogs();
-                Analytics.sendBatchesEvents();
             } else {
                 Log.d(TAG, "Failed to send unpaired session, will retry later");
             }
