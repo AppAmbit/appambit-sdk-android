@@ -5,8 +5,10 @@ import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -35,9 +37,13 @@ public final class AppAmbit {
     private static boolean isRefreshingToken = false;
     private static final List<Runnable> tokenWaiters = new ArrayList<>();
 
-    private static void safeRun(@Nullable Runnable r) {
+    static void safeRun(@Nullable Runnable r) {
         if (r == null) return;
-        try { r.run(); } catch (Throwable t) { Log.e(TAG, "Callback threw", t); }
+        try {
+            r.run();
+        } catch (Throwable t) {
+            Log.e(TAG, "Callback threw", t);
+        }
     }
 
     private static void finishTokenOperation(boolean success) {
@@ -50,25 +56,26 @@ public final class AppAmbit {
         if (success) {
             for (Runnable r : callbacks) safeRun(r);
         } else {
-            Log.e(TAG, "Token operation failed; callbacks dropped");
+            Log.d(TAG, "Token operation failed; callbacks dropped");
         }
     }
 
     private static String mAppKey;
     private static boolean isInitialized = false;
     private static boolean hasStartedSession = false;
+    private static boolean isReadyForSendingBatches = false;
     private static int startedActivities = 0;
     private static int resumedActivities = 0;
     private static boolean foreground = false;
     private static boolean isWaitingPause = false;
     private static final long ACTIVITY_DELAY = 700;
 
-    public static void init(Context context, String appKey) {
+    public static void start(Context context, String appKey) {
         mAppKey = appKey;
         if (!isInitialized) {
             CrashHandler.initialize(context);
-            onStartApp(context);
             registerLifecycleObserver(context);
+            onStartApp(context);
             isInitialized = true;
             Log.d(TAG, "onCreate (App Level)");
         }
@@ -131,14 +138,21 @@ public final class AppAmbit {
                 }
             }
 
-            @Override public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {}
-            @Override public void onActivityDestroyed(@NonNull Activity activity) {
+            @Override
+            public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
+            }
+
+            @Override
+            public void onActivityDestroyed(@NonNull Activity activity) {
                 if (startedActivities == 0 && resumedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onDestroy (App Level)");
                     onEnd();
                 }
             }
-            @Override public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {}
+
+            @Override
+            public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
+            }
         });
     }
 
@@ -146,7 +160,7 @@ public final class AppAmbit {
         ServiceLocator.initialize(context);
         FileUtils.initialize(context);
         Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService(), ServiceLocator.getApiService());
-        SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
+        SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
     }
@@ -156,20 +170,35 @@ public final class AppAmbit {
         registerNetworkCallback(context);
         initializeConsumer();
         hasStartedSession = true;
+        final Runnable batchesTasks = () -> {
+            Analytics.sendBatchesEvents();
+            Crashes.sendBatchesLogs();
+        };
         Crashes.loadCrashFileIfExists(context);
-        Analytics.sendBatchesEvents();
-        Crashes.sendBatchesLogs();
-        SessionManager.sendBatchSessions();
+        SessionManager.sendBatchSessions(batchesTasks);
     }
 
     private static void initializeConsumer() {
-        getNewToken(() -> {
+
+        if (!Analytics.isManualSessionEnabled()) {
+            SessionManager.saveSessionEndToDatabaseIfExist();
+        }
+
+        Runnable initializeTasks = () -> {
             if (Analytics.isManualSessionEnabled()) {
+                Log.d(TAG, "Manual session management is enabled");
                 return;
             }
-            SessionManager.sendEndSessionIfExists();
-            SessionManager.startSession();
-        });
+            Runnable initializeSession = () -> {
+                SessionManager.sendEndSessionFromFile();
+                SessionManager.startSession();
+            };
+            SessionManager.sendEndSessionFromDatabase(initializeSession);
+        };
+        if (!tokenIsValid()) {
+            getNewToken(null);
+        }
+        initializeTasks.run();
     }
 
     private static void onSleep() {
@@ -185,12 +214,13 @@ public final class AppAmbit {
     }
 
     private static void onResumeApp() {
-        if (Analytics.isManualSessionEnabled()) {
+        if (Analytics.isManualSessionEnabled() || !isReadyForSendingBatches) {
+            isReadyForSendingBatches = true;
             return;
         }
 
         Runnable resumeTasks = () -> {
-            if (!Analytics.isManualSessionEnabled() && hasStartedSession) {
+            if (!Analytics.isManualSessionEnabled() && isInitialized) {
                 SessionManager.removeSavedEndSession();
             }
             Crashes.sendBatchesLogs();
@@ -199,7 +229,7 @@ public final class AppAmbit {
 
         if (!tokenIsValid()) {
             getNewToken(resumeTasks);
-        } else {
+        }else {
             resumeTasks.run();
         }
     }
@@ -213,8 +243,12 @@ public final class AppAmbit {
                 .build();
 
         connectivityManager.registerNetworkCallback(request, new ConnectivityManager.NetworkCallback() {
-            @Override public void onAvailable(@NonNull Network network) {
+            @Override
+            public void onAvailable(@NonNull Network network) {
                 super.onAvailable(network);
+                if (!isReadyForSendingBatches) {
+                    return;
+                }
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
                     if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
@@ -222,20 +256,26 @@ public final class AppAmbit {
                     }
                     try {
                         InitializeServices(context);
-                        final Runnable connectionTasks = () -> {
-                            Crashes.loadCrashFileIfExists(context);
+                        final Runnable batchTasks = () -> {
                             Crashes.sendBatchesLogs();
                             Analytics.sendBatchesEvents();
-                            SessionManager.sendBatchSessions();
                         };
-                        getNewToken(connectionTasks);
+                        final Runnable connectionTasks = () -> {
+                            Crashes.loadCrashFileIfExists(context);
+                            SessionManager.sendEndSessionFromDatabase(null);
+                            SessionManager.sendStartSessionIfExist();
+                            SessionManager.sendBatchSessions(batchTasks);
+                        };
+                        getNewToken(null);
+                        connectionTasks.run();
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }
                 }, 3000);
             }
 
-            @Override public void onLost(@NonNull Network network) {
+            @Override
+            public void onLost(@NonNull Network network) {
                 super.onLost(network);
                 Log.d(TAG, "Internet connection lost");
             }

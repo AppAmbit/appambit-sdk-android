@@ -1,5 +1,7 @@
 package com.appambit.sdk;
 
+import static com.appambit.sdk.utils.StringValidation.isUIntNumber;
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.util.Log;
@@ -114,6 +116,12 @@ public class Crashes {
                 }
 
                 if (exceptionInfos.size() == 1) {
+                    if(!isUIntNumber(exceptionInfos.get(0).getSessionId())) {
+                        storeBatchCrashesLog(context, exceptionInfos);
+                        Log.d(TAG, "Storing crash log as batch due to invalid session ID");
+                        deleteCrashes(context);
+                        return;
+                    }
                     logCrash(context, exceptionInfos.get(0));
                     Log.d(TAG, "Sending one crash");
                     deleteCrashes(context);
@@ -142,6 +150,9 @@ public class Crashes {
                     logEntity.setCreatedAt(DateUtils.getUtcNow());
                 } else {
                     logEntity.setCreatedAt(crash.getCreatedAt());
+                }
+                if(logEntity.getSessionId() == null) {
+                    logEntity.setSessionId(crash.getSessionId());
                 }
                 if (mStorable == null) {
                     return;

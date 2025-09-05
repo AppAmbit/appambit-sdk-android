@@ -84,7 +84,7 @@ public class JsonConvertUtils {
         }
         return jsonArray;
     }
-    private static JSONArray arrayToJson(Object array) throws JSONException {
+    public static JSONArray arrayToJson(Object array) throws JSONException {
         JSONArray jsonArray = new JSONArray();
         int length = Array.getLength(array);
         for (int i = 0; i < length; i++) {

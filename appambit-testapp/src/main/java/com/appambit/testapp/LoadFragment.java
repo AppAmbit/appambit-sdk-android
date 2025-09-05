@@ -59,7 +59,7 @@ public class LoadFragment extends Fragment {
                         tvEventsLabel.setText("Sending event: " + (index[0] + 1) + " of 500");
                         index[0]++;
                         if(hasInternetConnection(requireContext())) {
-                            handler.postDelayed(this, 500);
+                            handler.postDelayed(this, 1000);
                         }else {
                             handler.postDelayed(this, 5);
                         }
@@ -88,7 +88,7 @@ public class LoadFragment extends Fragment {
                         tvLogsLabel.setText("Sending log: " + (index[0] + 1) + " of 500");
                         index[0]++;
                         if(hasInternetConnection(requireContext())) {
-                            handler.postDelayed(this, 500);
+                            handler.postDelayed(this, 1000);
                         }else {
                             handler.postDelayed(this, 5);
                         }

@@ -1,8 +1,10 @@
 package com.appambit.sdk.utils;
 
 import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -34,12 +36,36 @@ public class DateUtils {
     @Nullable
     public static Date fromIsoUtc(String dateStr) {
         try {
-            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SS'Z'", Locale.US);
             isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
             return isoFormat.parse(dateStr);
         } catch (Exception e) {
             Log.e(TAG, "Failed to parse ISO date: " + dateStr, e);
             return null;
+        }
+    }
+
+    @NonNull
+    public static String toIsoUtcWithMillis(Date date) {
+        try {
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.US);
+            isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+            return isoFormat.format(date);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to format date to ISO with millis: " + date, e);
+            return "";
+        }
+    }
+
+    @NonNull
+    public static String toIsoUtcNoMillis(Date date) {
+        try {
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+            isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+            return isoFormat.format(date);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to format date to ISO without millis: " + date, e);
+            return "";
         }
     }
 }

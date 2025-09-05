@@ -19,15 +19,10 @@ import com.appambit.sdk.Analytics;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.enums.SessionType;
 import com.appambit.sdk.utils.DateUtils;
-import com.appambit.sdk.utils.JsonConvertUtils;
 import com.appambit.sdk.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
-import com.google.android.material.snackbar.Snackbar;
-
-import org.json.JSONException;
-
-import java.io.File;
-import java.io.FileWriter;
+import com.appambit.testapp.utils.StorageServiceTest;
+import com.appambit.testapp.utils.storage.StorableTest;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -47,9 +42,16 @@ public class AnalyticsFragment extends Fragment {
     Button btnStartSession, btnEndSession, btnGenerate30DaysTestSessions;
     Button btnClearToken, btnTokenRenew;
     Button btnEventWProperty, btnDefaultClickedEventWProperty, btnMax300LengthEvent, btnMax20PropertiesEvent, btn3DailyEvents, btn220BatchEvents, btnSecondActivity;
+    static StorableTest storableApp;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_analytics, container, false);
+
+        try {
+            storableApp = new StorageServiceTest(requireContext());
+        }catch (Exception e) {
+            Log.e(TAG, "Error initializing storage", e);
+        }
 
         btnStartSession = view.findViewById(R.id.btnStartSession);
         btnStartSession.setOnClickListener(v ->  {
@@ -70,11 +72,7 @@ public class AnalyticsFragment extends Fragment {
         });
 
         btnGenerate30DaysTestSessions = view.findViewById(R.id.btnGenerate30DaysTestSessions);
-        btnGenerate30DaysTestSessions.setOnClickListener(v -> {
-            onGenerate30DaysTestSessions(requireContext());
-            Snackbar.make(view, "generated sessions, close and reopen the application", Snackbar.LENGTH_LONG).show();
-
-        });
+        btnGenerate30DaysTestSessions.setOnClickListener(v -> onGenerate30DaysTestSessions(requireContext()));
 
         btnEventWProperty = view.findViewById(R.id.btnEventWProperty);
         btnEventWProperty.setOnClickListener(v ->  buttonOnClicked(requireContext()));
@@ -98,59 +96,43 @@ public class AnalyticsFragment extends Fragment {
     }
 
     public static void onGenerate30DaysTestSessions(Context context) {
-        File outputDirectory = context.getFilesDir();
-        String offlineSessionsFile = "OfflineSessions.json";
-
-        Random random = new Random();
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        calendar.add(Calendar.DAY_OF_YEAR, -30);
-        Date startDate = calendar.getTime();
-
-        List<SessionData> offlineSessions = new ArrayList<>();
-
-        for (int index = 1; index <= 30; index++) {
-            Calendar sessionStartCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            sessionStartCal.setTime(startDate);
-            sessionStartCal.add(Calendar.DAY_OF_YEAR, index);
-            sessionStartCal.set(Calendar.HOUR_OF_DAY, random.nextInt(23));
-            sessionStartCal.set(Calendar.MINUTE, random.nextInt(59));
-            sessionStartCal.set(Calendar.SECOND, 0);
-            sessionStartCal.set(Calendar.MILLISECOND, 0);
-
-            Date dateStartSession = sessionStartCal.getTime();
-
-            SessionData sessionData = new SessionData();
-            sessionData.setId(UUID.randomUUID());
-            sessionData.setSessionId(null);
-            sessionData.setTimestamp(dateStartSession);
-            sessionData.setSessionType(SessionType.START);
-
-            offlineSessions.add(sessionData);
-
-            int durationMinutes = random.nextInt(24 * 60) + 1;
-            Calendar sessionEndCal = (Calendar) sessionStartCal.clone();
-            sessionEndCal.add(Calendar.MINUTE, durationMinutes);
-            Date dateEndSession = sessionEndCal.getTime();
-
-            sessionData = new SessionData();
-            sessionData.setId(UUID.randomUUID());
-            sessionData.setSessionId(null);
-            sessionData.setTimestamp(dateEndSession);
-            sessionData.setSessionType(SessionType.END);
-
-            offlineSessions.add(sessionData);
+        if (hasInternetConnection(context)) {
+            AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
+            return;
         }
 
-        try {
-            var result = JsonConvertUtils.toJson(offlineSessions);
-            File file = new File(outputDirectory, offlineSessionsFile);
-            FileWriter writer = new FileWriter(file);
-            writer.write(result);
-            writer.close();
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }catch (Exception e) {
-            Log.e(TAG, e.toString());
+        for (int index = 1; index <= 30; index++) {
+
+            SessionData sessionData = new SessionData();
+            UUID sessionId = UUID.randomUUID();
+
+            sessionData.setId(sessionId);
+            sessionData.setSessionType(SessionType.START);
+            Date sessionDate = DateUtils.getDateDaysAgo(30 - index);
+            sessionData.setTimestamp(sessionDate);
+
+            try {
+                storableApp.putSessionData(sessionData);
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting start session", e);
+                continue;
+            }
+
+            try {
+                int finalIndex = index;
+                Random random = new Random();
+                long randomOffset = random.nextInt(60 * 60 * 1000);
+                storableApp.putSessionData(new SessionData() {
+                    {
+                        setId(UUID.randomUUID());
+                        setSessionType(SessionType.END);
+                        setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting end session", e);
+            }
+
         }
         AlertsUtils.showAlert(context, "Info", "Turn off and Turn on internet to send the sessions.");
     }
@@ -222,15 +204,52 @@ public class AnalyticsFragment extends Fragment {
             AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
             return;
         }
+
         for (int index = 0; index < 30; index++) {
-            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            cal.add(Calendar.DAY_OF_MONTH, -index);
-            Date date = cal.getTime();
+
+            SessionData sessionData = new SessionData();
+            UUID sessionId = UUID.randomUUID();
+
+            sessionData.setId(sessionId);
+            sessionData.setSessionType(SessionType.START);
+            Date eventDate = DateUtils.getDateDaysAgo(30 - index);
+            sessionData.setTimestamp(eventDate);
+
+            try {
+                storableApp.putSessionData(sessionData);
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting start session", e);
+                continue;
+            }
 
             Map<String, String> properties = new HashMap<>();
             properties.put("30 Daily events", "Event");
 
-            Analytics.trackEvent("30 Daily events", properties, date);
+            Analytics.trackEvent("30 Daily events", properties, eventDate);
+
+            try {
+                Thread.sleep(100);
+            }catch (Exception e) {
+                Log.e(TAG, "Error during log creation: " + e.getMessage());
+            }
+
+            storableApp.updateEventSessionId(sessionId.toString());
+
+            try {
+                int finalIndex = index;
+                Random random = new Random();
+                long randomOffset = random.nextInt(60 * 60 * 1000);
+                storableApp.putSessionData(new SessionData() {
+                    {
+                        setId(UUID.randomUUID());
+                        setSessionType(SessionType.END);
+                        setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error inserting end session", e);
+            }
+
         }
         AlertsUtils.showAlert(context, "Info", "30 events generated, turn on internet to send them");
     }
@@ -240,18 +259,19 @@ public class AnalyticsFragment extends Fragment {
             AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
             return;
         }
+
         Map<String, String> properties = new HashMap<>();
         for (int index = 1; index <= 220; index++) {
             properties.put("property1", "value1" );
             Analytics.trackEvent("Events 220", properties, null);
         }
+
         AlertsUtils.showAlert(context, "Info", "220 events generated, turn on internet to send them");
     }
 
     private  static void onClearToken() {
         Analytics.clearToken();
     }
-
 
     public void onTokenRefreshTest(Context context) {
         ExecutorService executor = Executors.newFixedThreadPool(2);

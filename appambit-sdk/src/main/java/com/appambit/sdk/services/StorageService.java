@@ -1,22 +1,29 @@
 package com.appambit.sdk.services;
 
 import static com.appambit.sdk.services.storage.contract.AppSecretContract.*;
+import static com.appambit.sdk.utils.StringValidation.isUIntNumber;
 
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.appambit.sdk.AppAmbit;
 import com.appambit.sdk.enums.LogType;
+import com.appambit.sdk.enums.SessionType;
 import com.appambit.sdk.models.analytics.EventEntity;
+import com.appambit.sdk.models.analytics.SessionBatch;
+import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.LogEntity;
 import com.appambit.sdk.services.storage.DataStore;
 import com.appambit.sdk.services.storage.contract.AppSecretContract;
 import com.appambit.sdk.services.storage.contract.EventEntityContract;
 import com.appambit.sdk.services.storage.contract.LogEntityContract;
 import com.appambit.sdk.services.interfaces.Storable;
+import com.appambit.sdk.services.storage.contract.SessionContract;
+import com.appambit.sdk.utils.DateUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,7 +69,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.DEVICE_ID},
+                    new String[]{AppSecretContract.Columns.DEVICE_ID},
                     null, null,
                     null, null,
                     null,
@@ -112,7 +119,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.APP_ID},
+                    new String[]{AppSecretContract.Columns.APP_ID},
                     null, null,
                     null, null,
                     null,
@@ -163,7 +170,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.USER_ID},
+                    new String[]{AppSecretContract.Columns.USER_ID},
                     null, null,
                     null, null,
                     null,
@@ -215,7 +222,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.USER_EMAIL},
+                    new String[]{AppSecretContract.Columns.USER_EMAIL},
                     null, null,
                     null, null,
                     null,
@@ -226,7 +233,7 @@ public class StorageService implements Storable {
                         c.getColumnIndexOrThrow(AppSecretContract.Columns.USER_EMAIL)
                 );
             }
-        }finally {
+        } finally {
             if (c != null) {
                 c.close();
             }
@@ -267,7 +274,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.CONSUMER_ID},
+                    new String[]{AppSecretContract.Columns.CONSUMER_ID},
                     null, null,
                     null, null,
                     null,
@@ -302,7 +309,7 @@ public class StorageService implements Storable {
                 cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
                 db.insert(AppSecretContract.TABLE_NAME, null, cv);
             }
-        }finally {
+        } finally {
             if (cursor != null) {
                 cursor.close();
             }
@@ -317,7 +324,7 @@ public class StorageService implements Storable {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.query(
                     AppSecretContract.TABLE_NAME,
-                    new String[]{ AppSecretContract.Columns.SESSION_ID},
+                    new String[]{AppSecretContract.Columns.SESSION_ID},
                     null, null,
                     null, null,
                     null,
@@ -343,6 +350,7 @@ public class StorageService implements Storable {
             ContentValues cv = new ContentValues();
 
             cv.put(LogEntityContract.Columns.ID, logEntity.getId().toString());
+            cv.put(LogEntityContract.Columns.SESSION_ID, logEntity.getSessionId());
             cv.put(LogEntityContract.Columns.CREATED_AT, logEntity.getCreatedAt().getTime());
             cv.put(LogEntityContract.Columns.APP_VERSION, logEntity.getAppVersion());
             cv.put(LogEntityContract.Columns.CLASS_FQN, logEntity.getClassFQN());
@@ -360,7 +368,7 @@ public class StorageService implements Storable {
                     cv
             );
             Log.d(AppAmbit.class.getSimpleName(), "LOG CREATE - " + logEntity.getId());
-        }catch (Exception e) {
+        } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error inserting log event", e);
         }
     }
@@ -372,6 +380,7 @@ public class StorageService implements Storable {
             ContentValues cv = new ContentValues();
 
             cv.put(EventEntityContract.Columns.ID, eventEntity.getId().toString());
+            cv.put(EventEntityContract.Columns.SESSION_ID, eventEntity.getSessionId());
             cv.put(EventEntityContract.Columns.NAME, eventEntity.getName());
             cv.put(EventEntityContract.Columns.DATA_JSON, eventEntity.getDataJson());
             cv.put(EventEntityContract.Columns.CREATED_AT, eventEntity.getCreatedAt().getTime());
@@ -382,8 +391,119 @@ public class StorageService implements Storable {
                     cv
             );
             Log.d(AppAmbit.class.getSimpleName(), "EVENT CREATE - " + eventEntity.getId());
-        }catch (Exception e) {
+        } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error inserting event entity", e);
+        }
+    }
+
+    @Override
+    public void putSessionData(SessionData sessionData) {
+        Cursor c = null;
+        try {
+            switch (sessionData.getSessionType()) {
+                case START:
+                    SQLiteDatabase db = dataStore.getReadableDatabase();
+
+                    String sqlCheckSession =
+                        "SELECT " + SessionContract.Columns.ID +
+                        " FROM " + SessionContract.TABLE_NAME +
+                        " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
+                        " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
+                        " LIMIT 1";
+
+                    c = db.rawQuery(sqlCheckSession, null);
+
+                    String openId = "";
+                    if(c.moveToNext()) {
+                        openId = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID));
+                    }
+
+                    c.close();
+                    c = null;
+
+                    if(openId != null) {
+                        String updateSql = "UPDATE " + SessionContract.TABLE_NAME +
+                                " SET " + SessionContract.Columns.END_SESSION_DATE + " = ? " +
+                                " WHERE " + SessionContract.Columns.ID + " = ?";
+                        c = db.rawQuery(updateSql, new String[]{DateUtils.toIsoUtcWithMillis(sessionData.getTimestamp()), openId});
+
+                        if(c.getCount() > 0) {
+                            Log.d(AppAmbit.class.getSimpleName(), "SESSION START UPDATE - " + sessionData.getId());
+                        }
+                    }
+
+                    ContentValues cv = new ContentValues();
+
+                    cv.put(SessionContract.Columns.ID, sessionData.getId().toString());
+                    cv.put(SessionContract.Columns.SESSION_ID, sessionData.getSessionId());
+                    cv.put(SessionContract.Columns.START_SESSION_DATE, DateUtils.toIsoUtcWithMillis(sessionData.getTimestamp()));
+                    cv.putNull(SessionContract.Columns.END_SESSION_DATE);
+
+                    db.insert(
+                            SessionContract.TABLE_NAME,
+                            null,
+                            cv
+                    );
+                    Log.d(AppAmbit.class.getSimpleName(), "SESSION START CREATE - " + sessionData.getId());
+                    break;
+                case END:
+                    String selectSql = "SELECT " + SessionContract.Columns.ID +
+                            " FROM " + SessionContract.TABLE_NAME +
+                            " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL " +
+                            " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC " +
+                            " LIMIT 1";
+                    SQLiteDatabase db2 = dataStore.getReadableDatabase();
+                    c = db2.rawQuery(selectSql, null);
+
+                    String querySessionId = "";
+                    if (c.moveToFirst()) {
+                        querySessionId = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID));
+                    }
+
+                    c.close();
+                    c = null;
+
+                    if (!querySessionId.isEmpty()) {
+                        String updateSql = "UPDATE " + SessionContract.TABLE_NAME +
+                                " SET " + SessionContract.Columns.END_SESSION_DATE + " = ? " +
+                                " WHERE " + SessionContract.Columns.ID + " = ?";
+                        c = db2.rawQuery(updateSql, new String[]{DateUtils.toIsoUtcWithMillis(sessionData.getTimestamp()), querySessionId});
+
+                        if (c.getCount() > 0) {
+                            Log.d(AppAmbit.class.getSimpleName(), "SESSION END UPDATE - " + sessionData.getSessionId());
+                        } else {
+                            Log.d(AppAmbit.class.getSimpleName(), "No session found to update for session ID");
+                        }
+
+                    } else {
+                        ContentValues cv2 = new ContentValues();
+                        cv2.put(SessionContract.Columns.ID, sessionData.getId().toString());
+                        cv2.put(SessionContract.Columns.SESSION_ID, sessionData.getSessionId());
+                        cv2.putNull(SessionContract.Columns.START_SESSION_DATE);
+                        cv2.put(SessionContract.Columns.END_SESSION_DATE, DateUtils.toIsoUtcWithMillis(sessionData.getTimestamp()));
+
+                        try {
+                            db2.insert(
+                                    SessionContract.TABLE_NAME,
+                                    null,
+                                    cv2
+                            );
+                        }catch (SQLiteConstraintException e) {
+                            Log.d(AppAmbit.class.getSimpleName(), "Session duplicate avoided - " + sessionData.getSessionId());
+                        }catch (Exception e) {
+                            Log.d(AppAmbit.class.getSimpleName(), "Error inserting end session", e);
+                        }
+
+                        Log.d(AppAmbit.class.getSimpleName(), "SESSION END CREATE - " + sessionData.getSessionId());
+                    }
+                    break;
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error inserting log session", e);
+        } finally {
+            if (c != null) {
+                c.close();
+            }
         }
     }
 
@@ -411,9 +531,137 @@ public class StorageService implements Storable {
                     where.toString(),
                     args
             );
-        }catch (Exception e) {
+        } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error deleting log list", e);
         }
+    }
+
+    public List<SessionBatch> getOldest100Session() {
+        List<SessionBatch> sessionDataList = new ArrayList<>();
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+
+        String selectSessionsSql =
+            "SELECT " +
+                SessionContract.Columns.ID                 + ", " +
+                SessionContract.Columns.SESSION_ID         + ", " +
+                SessionContract.Columns.START_SESSION_DATE + ", " +
+                SessionContract.Columns.END_SESSION_DATE   + " "  +
+            "FROM " + SessionContract.TABLE_NAME + " " +
+            "WHERE " + SessionContract.Columns.START_SESSION_DATE + " IS NOT NULL " +
+            "AND " + SessionContract.Columns.END_SESSION_DATE   + " IS NOT NULL " +
+            "ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC " +
+            "LIMIT 100";
+        Cursor c = null;
+
+        try {
+            c = db.rawQuery(selectSessionsSql, null);
+            if (c.moveToFirst()) {
+                do {
+                    SessionBatch sessionBatch = new SessionBatch();
+                    sessionBatch.setId(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID)));
+                    sessionBatch.setSessionId(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.SESSION_ID)));
+                    sessionBatch.setStartedAt(DateUtils.fromIsoUtc(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.START_SESSION_DATE))));
+                    sessionBatch.setEndedAt(DateUtils.fromIsoUtc(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.END_SESSION_DATE))));
+                    sessionDataList.add(sessionBatch);
+                } while (c.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error fetching oldest 100 sessions", e);
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return sessionDataList;
+    }
+
+    public SessionData getUnpairedSessionEnd() {
+        String sqlUnpairedSessions =
+            "SELECT " +
+                SessionContract.Columns.ID                 + ", " +
+                SessionContract.Columns.SESSION_ID         + ", " +
+                SessionContract.Columns.START_SESSION_DATE + ", " +
+                SessionContract.Columns.END_SESSION_DATE   + " "  +
+            "FROM " + SessionContract.TABLE_NAME + " " +
+            "WHERE " + SessionContract.Columns.START_SESSION_DATE + " IS NULL " +
+            "AND " + SessionContract.Columns.END_SESSION_DATE   + " IS NOT NULL " +
+            "ORDER BY " + SessionContract.Columns.END_SESSION_DATE + " ASC" +
+            " LIMIT 1";
+
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.rawQuery(sqlUnpairedSessions, null);
+            if (c.moveToFirst()) {
+                String endedAt = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.END_SESSION_DATE));
+                SessionData sessionData = new SessionData();
+                sessionData.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID))));
+                sessionData.setSessionId(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.SESSION_ID)));
+                sessionData.setSessionType(SessionType.END);
+                sessionData.setTimestamp(DateUtils.fromIsoUtc(endedAt));
+                return sessionData;
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error fetching unpaired sessions", e);
+        }finally {
+            if(c != null) {
+                c.close();
+            }
+        }
+        return null;
+    }
+
+    public SessionData getUnpairedSessionStart() {
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+        Cursor c = null;
+        try {
+            String sql = "SELECT " + SessionContract.Columns.ID + ", " +
+                    SessionContract.Columns.START_SESSION_DATE +
+                    " FROM " + SessionContract.TABLE_NAME +
+                    " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
+                    " AND " + SessionContract.Columns.START_SESSION_DATE + " IS NOT NULL" +
+                    " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
+                    " LIMIT 1";
+
+            c = db.rawQuery(sql, null);
+
+            if (c.moveToFirst()) {
+                SessionData sessionData = new SessionData();
+                sessionData.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID))));
+                sessionData.setTimestamp(DateUtils.fromIsoUtc(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.START_SESSION_DATE))));
+                sessionData.setSessionType(SessionType.START);
+                return sessionData;
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error fetching last start session ID", e);
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return null;
+    }
+
+    public void updateLogsAndEventsId(String localId, String remoteId) {
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+
+        String updateLogsSql = "UPDATE " + LogEntityContract.TABLE_NAME + " SET " +
+                LogEntityContract.Columns.SESSION_ID + " = ? WHERE " +
+                LogEntityContract.Columns.SESSION_ID + " = ?";
+
+        String updateEventsSql = "UPDATE " + EventEntityContract.TABLE_NAME + " SET " +
+                EventEntityContract.Columns.SESSION_ID + " = ? WHERE " +
+                EventEntityContract.Columns.SESSION_ID + " = ?";
+
+        try {
+            db.execSQL(updateLogsSql, new String[]{remoteId, localId});
+            db.execSQL(updateEventsSql, new String[]{remoteId, localId});
+        }catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error updating logs and events with new session ID", e);
+            return;
+        }
+
+        Log.d(AppAmbit.class.getSimpleName(), "Updated logs and events with new session ID: " + remoteId);
     }
 
     @Override
@@ -431,6 +679,7 @@ public class StorageService implements Storable {
                 do {
                     LogEntity log = new LogEntity();
                     log.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.ID))));
+                    log.setSessionId(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.SESSION_ID)));
                     log.setAppVersion(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.APP_VERSION)));
                     log.setClassFQN(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.CLASS_FQN)));
                     log.setFileName(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.FILE_NAME)));
@@ -441,11 +690,16 @@ public class StorageService implements Storable {
                     log.setType(LogType.fromValue(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.TYPE))));
                     log.setFile(c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.FILE)));
                     log.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
-                    logs.add(log);
+
+                    String sessionId = c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.SESSION_ID));
+                    if (sessionId == null || isUIntNumber(sessionId)) {
+                        logs.add(log);
+                    }
+
                 } while (c.moveToNext());
             }
         } finally {
-            if(c != null) {
+            if (c != null) {
                 c.close();
             }
         }
@@ -468,13 +722,16 @@ public class StorageService implements Storable {
                 do {
                     EventEntity event = new EventEntity();
                     event.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.ID))));
+                    event.setSessionId(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.SESSION_ID)));
                     event.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
                     event.setDataJson(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.DATA_JSON)));
                     event.setName(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.NAME)));
-                    events.add(event);
+                    if(isUIntNumber(c.getString(c.getColumnIndexOrThrow(EventEntityContract.Columns.SESSION_ID)))) {
+                        events.add(event);
+                    }
                 } while (c.moveToNext());
             }
-        }finally {
+        } finally {
             if (c != null) {
                 c.close();
             }
@@ -482,8 +739,6 @@ public class StorageService implements Storable {
 
         return events;
     }
-
-
 
     @Override
     public void deleteEventList(List<EventEntity> events) {
@@ -511,6 +766,49 @@ public class StorageService implements Storable {
             );
         } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error deleting event list", e);
+        }
+    }
+
+    public void deleteSessionList(List<SessionBatch> sessions) {
+        if (sessions == null || sessions.isEmpty()) return;
+
+        StringBuilder where = new StringBuilder();
+        where.append(SessionContract.Columns.ID)
+                .append(" IN (");
+        String[] args = new String[sessions.size()];
+        for (int i = 0; i < sessions.size(); i++) {
+            args[i] = sessions.get(i).getId();
+            where.append("?");
+            if (i < sessions.size() - 1) {
+                where.append(",");
+            }
+        }
+        where.append(")");
+
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            db.delete(
+                    SessionContract.TABLE_NAME,
+                    where.toString(),
+                    args
+            );
+            Log.d(AppAmbit.class.getSimpleName(), "Deleted sessions size: " + sessions.size());
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error deleting session list", e);
+        }
+    }
+
+    public void deleteSessionById(UUID sessionId) {
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+
+        String sqlDeleteSession = "DELETE FROM " + SessionContract.TABLE_NAME +
+                " WHERE " + SessionContract.Columns.ID + " = ?";
+
+        try {
+            db.execSQL(sqlDeleteSession, new String[]{sessionId.toString()});
+            Log.d(AppAmbit.class.getSimpleName(), "Deleted session by id: " + sessionId);
+        }catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error deleting session by id", e);
         }
     }
 

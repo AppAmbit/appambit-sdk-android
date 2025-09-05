@@ -8,6 +8,7 @@ import com.appambit.sdk.AppConstants;
 import com.appambit.sdk.services.storage.contract.AppSecretContract;
 import com.appambit.sdk.services.storage.contract.EventEntityContract;
 import com.appambit.sdk.services.storage.contract.LogEntityContract;
+import com.appambit.sdk.services.storage.contract.SessionContract;
 
 public class DataStore extends SQLiteOpenHelper {
     public DataStore(Context context) {
@@ -20,6 +21,7 @@ public class DataStore extends SQLiteOpenHelper {
         sqLiteDatabase.execSQL(AppSecretContract.CREATE_TABLE);
         sqLiteDatabase.execSQL(LogEntityContract.CREATE_TABLE);
         sqLiteDatabase.execSQL(EventEntityContract.CREATE_TABLE);
+        sqLiteDatabase.execSQL(SessionContract.CREATE_TABLE);
     }
 
     @Override

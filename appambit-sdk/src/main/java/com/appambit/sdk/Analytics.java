@@ -53,9 +53,6 @@ public final class Analytics {
 
     public static void sendBatchesEvents() {
         mExecutorService.execute(() -> {
-            if(!SessionManager.isSessionActivate()) {
-                return;
-            }
             List<EventEntity> events = mStorable.getOldest100Events();
 
             if (events.isEmpty()) {
@@ -70,7 +67,7 @@ public final class Analytics {
                     return;
                 }
 
-            }catch (Exception e) {
+            } catch (Exception e) {
                 Log.d(TAG, "Error sending event batches - Api" + e.getMessage());
             }
 
@@ -78,7 +75,7 @@ public final class Analytics {
             AppAmbitTaskFuture<Void> deleteEvents = deleteEvents(events);
             deleteEvents.then(v -> deleteEvents.complete(null));
 
-            deleteEvents.onError(erroDelete -> Log.d(TAG, "Error to delete event batch"));
+            deleteEvents.onError(errorDelete -> Log.d(TAG, "Error to delete event batch"));
         });
 
     }
@@ -98,7 +95,7 @@ public final class Analytics {
     }
 
     private static void SendOrSaveEvent(String eventTitle, Map<String, String> data, Date createdAt) {
-        if(!SessionManager.isSessionActivate) {
+        if (!SessionManager.isSessionActivate) {
             return;
         }
         data = processData(data);
@@ -110,27 +107,34 @@ public final class Analytics {
         eventRequest.setName(eventTitle);
         eventRequest.setData(data);
 
-        AppAmbitTaskFuture<ApiResult<EventResponse>> response = sendEventEndpoint(eventRequest);
+        AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
 
-        response.then(result -> {
-            Log.d(TAG, "Event ApirErrorType: " + result.errorType.name());
-            if (result.errorType != ApiErrorType.None) {
-                EventEntity toSaveEvent = new EventEntity();
-                toSaveEvent.setId(UUID.randomUUID());
-                toSaveEvent.setName(eventRequest.getName());
-                toSaveEvent.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
-                toSaveEvent.setData(eventRequest.getData());
+        mExecutorService.execute(() -> {
+            try {
 
-                AppAmbitTaskFuture<Void> saveFuture = saveEventLocally(toSaveEvent);
+                ApiResult<EventResponse> response = mApiService.executeRequest(new EventEndpoint(eventRequest), EventResponse.class);
 
-                saveFuture.then(v -> saveFuture.complete(null));
-                saveFuture.onError(saveFuture::fail);
+                if (response == null || response.errorType != ApiErrorType.None) {
+                    EventEntity toSaveEvent = new EventEntity();
+                    toSaveEvent.setId(UUID.randomUUID());
+                    toSaveEvent.setSessionId(SessionManager.getSessionId());
+                    toSaveEvent.setName(eventRequest.getName());
+                    toSaveEvent.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
+                    toSaveEvent.setData(eventRequest.getData());
 
+                    AppAmbitTaskFuture<Void> saveFuture = saveEventLocally(toSaveEvent);
+
+                    saveFuture.then(v -> saveFuture.complete(null));
+                    saveFuture.onError(saveFuture::fail);
+                }
+                appAmbitTaskFuture.then(result -> {
+                    Log.d(TAG, "Event sent: " + eventRequest.getName());
+                });
+            }catch (Exception e) {
+                appAmbitTaskFuture.onError(error -> {
+                    Log.d(TAG, "Error sending event - Api: " + e.getMessage());
+                });
             }
-        });
-
-        response.onError(e -> {
-            Log.d(TAG, "onError: Error to sent events: \n" + e.getMessage());
         });
     }
 
@@ -188,13 +192,13 @@ public final class Analytics {
 
     private static AppAmbitTaskFuture<Void> deleteEvents(List<EventEntity> events) {
         AppAmbitTaskFuture<Void> future = new AppAmbitTaskFuture<>();
-            try {
-                ServiceLocator.getStorageService()
-                        .deleteEventList(events);
-                future.complete(null);
-            } catch (Throwable t) {
-                future.fail(t);
-            }
+        try {
+            ServiceLocator.getStorageService()
+                    .deleteEventList(events);
+            future.complete(null);
+        } catch (Throwable t) {
+            future.fail(t);
+        }
         return future;
     }
 
@@ -215,7 +219,7 @@ public final class Analytics {
         mStorable.putUserEmail(userEmail);
     }
 
-    public static void clearToken()  {
+    public static void clearToken() {
         ServiceLocator.getApiService().setToken("");
     }
 }

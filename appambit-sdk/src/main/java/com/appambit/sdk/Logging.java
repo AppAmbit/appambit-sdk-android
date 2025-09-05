@@ -2,6 +2,7 @@ package com.appambit.sdk;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
+
 import androidx.annotation.NonNull;
 
 import com.appambit.sdk.enums.ApiErrorType;
@@ -16,6 +17,7 @@ import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.PackageInfoHelper;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +39,9 @@ class Logging {
     public static void logEvent(Context context, String message, LogType logType, ExceptionInfo exception,
                                 Map<String, String> properties, String classFqn, String fileName,
                                 int lineNumber, Date createdAt) {
+        if (!SessionManager.isSessionActivate) {
+            return;
+        }
 
         String stackTrace = (exception != null && exception.getStackTrace() != null && !exception.getStackTrace().isEmpty())
                 ? exception.getStackTrace()
@@ -47,6 +52,12 @@ class Logging {
         LogEntity log = new LogEntity();
         assert pInfo != null;
         log.setId(UUID.randomUUID());
+        if (exception != null && exception.getSessionId() != null && !exception.getSessionId().isEmpty()) {
+            log.setSessionId(exception.getSessionId());
+        } else {
+            log.setSessionId(SessionManager.getSessionId());
+        }
+
         log.setAppVersion(pInfo.versionName + " (" + pInfo.versionCode + ")");
         log.setClassFQN((exception != null && exception.getClassFullName() != null) ? exception.getClassFullName()
                 : (classFqn != null ? classFqn : AppConstants.UNKNOWN_CLASS));
@@ -67,19 +78,20 @@ class Logging {
 
     private static void sendOrSaveLogEventAsync(LogEntity log) {
         AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
-        var logEndpoint = new LogEndpoint(log);
+        mExecutor.execute(() -> {
+            var logEndpoint = new LogEndpoint(log);
 
-        try {
-            ApiResult<LogResponse> logResponse = mApiService.executeRequest(logEndpoint, LogResponse.class);
+            try {
+                ApiResult<LogResponse> logResponse = mApiService.executeRequest(logEndpoint, LogResponse.class);
 
-            if (logResponse == null || logResponse.errorType != ApiErrorType.None) {
-                storeLogInDb(log);
-                appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Log event stored in database: " + log.getMessage()));
+                if (logResponse == null || logResponse.errorType != ApiErrorType.None) {
+                    storeLogInDb(log);
+                    appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Log event stored in database: " + log.getMessage()));
+                }
+            } catch (Exception ex) {
+                appAmbitTaskFuture.onError(error -> android.util.Log.d(TAG, "Error sending log event - Api: " + ex.getMessage()));
             }
-        }
-        catch (Exception ex) {
-            appAmbitTaskFuture.then(result -> android.util.Log.d(TAG, "Error sending log event: " + ex.getMessage()));
-        }
+        });
     }
 
     private static void storeLogInDb(@NonNull LogEntity log) {
