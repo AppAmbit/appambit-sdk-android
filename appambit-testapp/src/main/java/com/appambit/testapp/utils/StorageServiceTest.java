@@ -139,34 +139,6 @@ public class StorageServiceTest implements StorableTest {
 
     public void updateLogSessionId(String sessionId) {
         SQLiteDatabase db = dataStoreTest.getWritableDatabase();
-        Cursor c = null;
-//        String openSessionId;
-//
-//        String sqlOpenSession = "SELECT " + SessionContract.Columns.ID +
-//                " FROM " + SessionContract.TABLE_NAME +
-//                " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
-//                " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
-//                " LIMIT 1";
-//
-//        try {
-//            c = db.rawQuery(sqlOpenSession, null);
-//            if (c.moveToFirst()) {
-//                openSessionId = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID));
-//            } else {
-//                Log.d(AppAmbit.class.getSimpleName(), "No open session found to update log session ID");
-//                return;
-//            }
-//        } catch (Exception e) {
-//            Log.e(AppAmbit.class.getSimpleName(), "Error querying open session", e);
-//            return;
-//        } finally {
-//            if (c != null) c.close();
-//        }
-//
-//        if (openSessionId == null) {
-//            Log.d(AppAmbit.class.getSimpleName(), "No sessionId found");
-//            return;
-//        }
 
         String updateSql =
             "UPDATE " + LogEntityContract.TABLE_NAME +
@@ -213,27 +185,6 @@ public class StorageServiceTest implements StorableTest {
                 Log.d(AppAmbit.class.getSimpleName(), "LOG UPDATE OK → last event linked to session " + sessionId);
             } else {
                 Log.d(AppAmbit.class.getSimpleName(), "No event updated (table empty?)");
-            }
-        } catch (Exception e) {
-            Log.e(AppAmbit.class.getSimpleName(), "Error updating session ID", e);
-        }
-    }
-
-    public void updateAllEventsWithSessionId(String sessionId) {
-        SQLiteDatabase db = dataStoreTest.getWritableDatabase();
-
-        String updateSql =
-            "UPDATE " + EventEntityContract.TABLE_NAME +
-            " SET " + EventEntityContract.Columns.SESSION_ID + " = ? ";
-
-        try {
-            db.execSQL(updateSql, new Object[]{sessionId});
-
-            long affected = DatabaseUtils.longForQuery(db, "SELECT changes()", null);
-            if (affected > 0) {
-                Log.d(AppAmbit.class.getSimpleName(), "LOG UPDATE OK → " + affected + " logs linked to session " + sessionId);
-            } else {
-                Log.d(AppAmbit.class.getSimpleName(), "No log updated (table empty?)");
             }
         } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error updating session ID", e);

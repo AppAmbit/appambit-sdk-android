@@ -47,12 +47,10 @@ public interface Storable extends Closeable {
 
     void deleteSessionById(UUID sessionId);
 
-    boolean isSessionOpen();
-
-    SessionData getLastStartSession();
+    SessionData getUnpairedSessionStart();
     void updateLogsAndEventsId(String localId, String remoteId);
 
-    List<SessionData> getSessionEnd();
+    SessionData getUnpairedSessionEnd();
 
     void deleteLogList(List<LogEntity> logs);
 

@@ -190,10 +190,10 @@ public final class AppAmbit {
                 return;
             }
             Runnable initializeSession = () -> {
-                SessionManager.sendEndSessionIfExists();
+                SessionManager.sendEndSessionFromFile();
                 SessionManager.startSession();
             };
-            SessionManager.sendUnpairedSessions(initializeSession);
+            SessionManager.sendEndSessionFromDatabase(initializeSession);
         };
         if (!tokenIsValid()) {
             getNewToken(null);
@@ -262,7 +262,8 @@ public final class AppAmbit {
                         };
                         final Runnable connectionTasks = () -> {
                             Crashes.loadCrashFileIfExists(context);
-                            SessionManager.sendSessionEndIfExist();
+                            SessionManager.sendEndSessionFromDatabase(null);
+                            SessionManager.sendStartSessionIfExist();
                             SessionManager.sendBatchSessions(batchTasks);
                         };
                         getNewToken(null);

@@ -77,20 +77,24 @@ public class SessionManager {
 
     public static void endSession() {
         if (!isSessionActivate) {
+            Log.d(TAG, "No active session to end");
             return;
         }
 
-        SessionData sessionData = new SessionData();
-        sessionData.setId(UUID.randomUUID());
-        sessionData.setSessionType(SessionType.END);
-        sessionData.setTimestamp(DateUtils.getUtcNow());
-        sessionData.setSessionId(sessionId);
+        isSessionActivate = false;
+        sessionId = null;
 
-        sendSessionEndOrSaveLocally(sessionData);
+        SessionData endSession = new SessionData();
+        endSession.setId(UUID.randomUUID());
+        endSession.setSessionType(SessionType.END);
+        endSession.setTimestamp(DateUtils.getUtcNow());
+        endSession.setSessionId(sessionId);
+
+        sendSessionEndOrSaveLocally(endSession);
 
     }
 
-    public static void sendEndSessionIfExists() {
+    public static void sendEndSessionFromFile() {
 
         SessionData sessionData = FileUtils.getSavedSingleObject(SessionData.class);
 
@@ -105,7 +109,7 @@ public class SessionManager {
         try {
             SessionData endSession = new SessionData();
             endSession.setId(UUID.randomUUID());
-            endSession.setSessionId(sessionId);
+            endSession.setSessionId(isUIntNumber(sessionId) ? sessionId : "");
             endSession.setTimestamp(DateUtils.getUtcNow());
             endSession.setSessionType(SessionType.END);
 
@@ -188,69 +192,80 @@ public class SessionManager {
     public static void saveSessionEndToDatabaseIfExist() {
         SessionData sessionData = FileUtils.getSavedSingleObject(SessionData.class);
 
+        SessionData session = mStorageService.getUnpairedSessionStart();
+
         if(sessionData != null && sessionData.getSessionId() != null
-           && !isUIntNumber(sessionData.getSessionId())
-           && mStorageService.isSessionOpen()) {
+            && !isUIntNumber(sessionData.getSessionId()) && session != null) {
             mStorageService.putSessionData(sessionData);
             FileUtils.deleteSingleObject(SessionData.class);
             Log.d(TAG, "Saved end session from file to database");
         }
     }
 
-    public static void sendUnpairedSessions(Runnable onComplete) {
+    public static void sendEndSessionFromDatabase(Runnable onComplete) {
 
-        List<SessionData> unpairedSessions = mStorageService.getSessionEnd();
+        SessionData unpairedSessions = mStorageService.getUnpairedSessionEnd();
 
-        if (unpairedSessions.isEmpty()) {
+        if (unpairedSessions == null) {
             Log.d(TAG, "No unpaired sessions to send");
             if (onComplete != null) safeRun(onComplete);
             return;
         }
 
-        for(SessionData sessionData : unpairedSessions) {
-            sendSession(sessionData);
-        }
+        AppAmbitTaskFuture<ApiResult<EndSessionResponse>> response = sendEndSessionEndpoint(unpairedSessions);
+
+        response.then(result -> {
+            if (result.errorType == ApiErrorType.None) {
+                Log.d(TAG, "Unpaired session sent successfully, deleting " + unpairedSessions.getId());
+                mStorageService.deleteSessionById(unpairedSessions.getId());
+                Crashes.sendBatchesLogs();
+                Analytics.sendBatchesEvents();
+            } else {
+                Log.d(TAG, "Failed to send unpaired session, will retry later");
+            }
+            if (onComplete != null) safeRun(onComplete);
+        });
+
         Log.d(TAG, "All unpaired sessions sent successfully");
         if (onComplete != null) safeRun(onComplete);
     }
 
     private static void sendSession(SessionData sessionData) {
 
-        if(sessionData.getSessionType() == SessionType.END) {
-            AppAmbitTaskFuture<ApiResult<EndSessionResponse>> response = sendEndSessionEndpoint(sessionData);
+        if(sessionData.getSessionType() == SessionType.START) {
+
+            AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(sessionData.getTimestamp());
 
             response.then(result -> {
-                if (result.errorType == ApiErrorType.None) {
-                    Log.d(TAG, "Unpaired session sent successfully, deleting " + sessionData.getSessionId());
-                    mStorageService.deleteSessionById(sessionData.getId());
+                if (result.errorType != ApiErrorType.None) {
+                    mStorageService.putSessionData(sessionData);
                 }
+                Log.d(TAG, "Unpaired session sent successfully");
             });
 
             response.onError(error -> {
                 Log.d(TAG, "Error to Call End Session");
             });
+
         }else {
-            AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(sessionData.getTimestamp());
+            AppAmbitTaskFuture<ApiResult<EndSessionResponse>> response = sendEndSessionEndpoint(sessionData);
 
             response.then(result -> {
-                if (result.errorType == ApiErrorType.None) {
-                    Log.d(TAG, "Unpaired session sent successfully, deleting " + sessionData.getSessionId());
-                    mStorageService.deleteSessionById(sessionData.getId());
+                if (result.errorType != ApiErrorType.None) {
+                    mStorageService.putSessionData(sessionData);
                 }
+                Log.d(TAG, "Unpaired session sent successfully");
             });
 
             response.onError(error -> {
                 Log.d(TAG, "Error to Call End Session");
             });
         }
-
     }
 
-    public static void sendSessionEndIfExist() {
+    public static void sendStartSessionIfExist() {
 
-        sendUnpairedSessions(null);
-
-        SessionData sessionData = mStorageService.getLastStartSession();
+        SessionData sessionData = mStorageService.getUnpairedSessionStart();
 
         if(sessionData == null) {
             return;
@@ -344,10 +359,6 @@ public class SessionManager {
 
     private static void closeCurrentSession(SessionData sessionData) {
 
-        if(!isUIntNumber(sessionData.getSessionId())) {
-            sessionData.setSessionId(null);
-        }
-
         AppAmbitTaskFuture<ApiResult<EndSessionResponse>> response = sendEndSessionEndpoint(sessionData);
 
         response.then(result -> {
@@ -362,21 +373,11 @@ public class SessionManager {
             Log.d(TAG, "Error to Call End Session");
         });
 
-        isSessionActivate = false;
     }
 
     private static void sendSessionEndOrSaveLocally(SessionData sessionData) {
         sessionData.setSessionId(isUIntNumber(sessionId) ? sessionId : null);
-
-        mStorageService.putSessionData(sessionData);
-
         sendSession(sessionData);
-
-        if(!Analytics.isManualSessionEnabled()) {
-            sessionId = null;
-            startSession();
-        }
-
     }
 
     private static AppAmbitTaskFuture<ApiResult<StartSessionResponse>> sendStartSessionEndpoint(Date utcNow) {

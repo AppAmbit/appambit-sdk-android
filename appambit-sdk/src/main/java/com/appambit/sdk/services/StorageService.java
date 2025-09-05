@@ -575,7 +575,7 @@ public class StorageService implements Storable {
         return sessionDataList;
     }
 
-    public List<SessionData> getSessionEnd() {
+    public SessionData getUnpairedSessionEnd() {
         String sqlUnpairedSessions =
             "SELECT " +
                 SessionContract.Columns.ID                 + ", " +
@@ -585,33 +585,21 @@ public class StorageService implements Storable {
             "FROM " + SessionContract.TABLE_NAME + " " +
             "WHERE " + SessionContract.Columns.START_SESSION_DATE + " IS NULL " +
             "AND " + SessionContract.Columns.END_SESSION_DATE   + " IS NOT NULL " +
-            "ORDER BY " + SessionContract.Columns.END_SESSION_DATE + " ASC";
+            "ORDER BY " + SessionContract.Columns.END_SESSION_DATE + " ASC" +
+            " LIMIT 1";
 
-        List<SessionData> results = new ArrayList<>();
         Cursor c = null;
         try {
             SQLiteDatabase db = dataStore.getReadableDatabase();
             c = db.rawQuery(sqlUnpairedSessions, null);
             if (c.moveToFirst()) {
-                do {
-                    SessionData sessionData = new SessionData();
-                    String startedAt = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.START_SESSION_DATE));
-                    String endedAt = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.END_SESSION_DATE));
-
-                    sessionData.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID))));
-                    sessionData.setSessionId(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.SESSION_ID)));
-
-                    if(startedAt != null) {
-                        sessionData.setSessionType(SessionType.START);
-                        sessionData.setTimestamp(DateUtils.fromIsoUtc(startedAt));
-                        results.add(sessionData);
-                    }else if(endedAt != null) {
-                        sessionData.setSessionType(SessionType.END);
-                        sessionData.setTimestamp(DateUtils.fromIsoUtc(endedAt));
-                        results.add(sessionData);
-                    }
-
-                }while (c.moveToNext());
+                String endedAt = c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.END_SESSION_DATE));
+                SessionData sessionData = new SessionData();
+                sessionData.setId(UUID.fromString(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.ID))));
+                sessionData.setSessionId(c.getString(c.getColumnIndexOrThrow(SessionContract.Columns.SESSION_ID)));
+                sessionData.setSessionType(SessionType.END);
+                sessionData.setTimestamp(DateUtils.fromIsoUtc(endedAt));
+                return sessionData;
             }
         } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error fetching unpaired sessions", e);
@@ -620,30 +608,10 @@ public class StorageService implements Storable {
                 c.close();
             }
         }
-        return results;
+        return null;
     }
 
-    public boolean isSessionOpen() {
-        SQLiteDatabase db = dataStore.getReadableDatabase();
-        Cursor c = null;
-        try {
-            String sql = "SELECT id FROM " + SessionContract.TABLE_NAME +
-                    " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
-                    " AND " + SessionContract.Columns.START_SESSION_DATE + " IS NOT NULL" +
-                    " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
-                    " LIMIT 1";
-
-            c = db.rawQuery(sql, null);
-
-            return c.moveToFirst();
-        } finally {
-            if (c != null) {
-                c.close();
-            }
-        }
-    }
-
-    public SessionData getLastStartSession() {
+    public SessionData getUnpairedSessionStart() {
         SQLiteDatabase db = dataStore.getReadableDatabase();
         Cursor c = null;
         try {

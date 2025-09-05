@@ -260,55 +260,18 @@ public class AnalyticsFragment extends Fragment {
             return;
         }
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-
-        SessionData sessionData = new SessionData();
-        UUID sessionId = UUID.randomUUID();
-
-        sessionData.setId(sessionId);
-        sessionData.setSessionType(SessionType.START);
-        sessionData.setTimestamp(DateUtils.getUtcNow());
-
-        try {
-            storableApp.putSessionData(sessionData);
-        } catch (Exception e) {
-            Log.e(TAG, "Error inserting start session", e);
-        }
-
         Map<String, String> properties = new HashMap<>();
         for (int index = 1; index <= 220; index++) {
             properties.put("property1", "value1" );
             Analytics.trackEvent("Events 220", properties, null);
         }
 
-        try {
-            Thread.sleep(1000);
-        }catch (Exception e) {
-            Log.e(TAG, "Error during log creation: " + e.getMessage());
-        }
-
-        executor.execute(() -> storableApp.updateAllEventsWithSessionId(sessionId.toString()));
-
-        try {
-            Random random = new Random();
-            long randomOffset = random.nextInt(60 * 60 * 1000);
-            storableApp.putSessionData(new SessionData() {
-                {
-                    setId(sessionId);
-                    setSessionType(SessionType.END);
-                    setTimestamp(new Date(DateUtils.getUtcNow().getTime() + randomOffset));
-                }
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "Error inserting end session", e);
-        }
         AlertsUtils.showAlert(context, "Info", "220 events generated, turn on internet to send them");
     }
 
     private  static void onClearToken() {
         Analytics.clearToken();
     }
-
 
     public void onTokenRefreshTest(Context context) {
         ExecutorService executor = Executors.newFixedThreadPool(2);
