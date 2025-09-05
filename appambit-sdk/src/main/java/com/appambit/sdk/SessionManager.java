@@ -192,14 +192,16 @@ public class SessionManager {
     public static void saveSessionEndToDatabaseIfExist() {
         SessionData sessionData = FileUtils.getSavedSingleObject(SessionData.class);
 
-        SessionData session = mStorageService.getUnpairedSessionStart();
+        SessionData isOpen = mStorageService.getUnpairedSessionStart();
 
-        if(sessionData != null && sessionData.getSessionId() != null
-            && !isUIntNumber(sessionData.getSessionId()) && session != null) {
-            mStorageService.putSessionData(sessionData);
-            FileUtils.deleteSingleObject(SessionData.class);
-            Log.d(TAG, "Saved end session from file to database");
+        if(sessionData == null || isOpen == null) {
+            return;
         }
+
+        mStorageService.putSessionData(sessionData);
+        FileUtils.deleteSingleObject(SessionData.class);
+        Log.d(TAG, "Saved end session from file to database");
+
     }
 
     public static void sendEndSessionFromDatabase(Runnable onComplete) {
