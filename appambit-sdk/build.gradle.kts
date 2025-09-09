@@ -2,13 +2,14 @@ plugins {
     alias(libs.plugins.android.library)
 }
 
+apply ("../gradle/publish-package.gradle")
+
 android {
-    namespace = "com.appambit.sdk"
+    namespace = "com.appambit.appambit"
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 21
-
+        minSdk = (project.property("MIN_SDK_VERSION") as String).toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }

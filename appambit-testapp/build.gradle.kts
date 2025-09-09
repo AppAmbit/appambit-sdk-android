@@ -46,7 +46,7 @@ android {
 }
 
 dependencies {
-
+    //implementation("com.appambit.appambit:appambit:1.0.0")
     implementation(project(":appambit-sdk"))
     implementation(libs.appcompat)
     implementation(libs.material)
