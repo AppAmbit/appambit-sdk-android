@@ -59,12 +59,12 @@ jobs:
         fi
 
     - name: Extract latest changelog entry
-        id: changelog
-        run: |
-          LATEST_CHANGELOG=$(awk '/^## Version /{if (p) exit; p=1} p' CHANGELOG.md | sed '1d')
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$LATEST_CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+      id: changelog
+      run: |
+        LATEST_CHANGELOG=$(awk '/^## Version /{if (p) exit; p=1} p' CHANGELOG.md | sed '1d')
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$LATEST_CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Show changelog
       run: |
