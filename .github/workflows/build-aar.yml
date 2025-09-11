@@ -11,7 +11,6 @@ env:
   OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
   OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
   OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-  GITHUB_USER: ${{ secrets.GITHUB_USER }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 permissions:
@@ -127,5 +126,5 @@ jobs:
       if: steps.version.outputs.is_prerelease == 'false'
       run: ./gradlew :${{ env.PACKAGE_NAME }}:publishReleasePublicationToGitHubPackagesRepository
       env:
-        GITHUB_USER_MAVEN: ${{ secrets.GITHUB_USER }}
+        GITHUB_USER_MAVEN: ${{ github.actor }}
         GITHUB_TOKEN_MAVEN: ${{ secrets.GITHUB_TOKEN }}
