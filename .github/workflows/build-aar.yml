@@ -115,7 +115,7 @@ jobs:
 
     - name: Publish to Maven Central (OSSRH)
       if: steps.version.outputs.is_prerelease == 'false'
-      run: ./gradlew :${{ env.PACKAGE_NAME }}:publishReleasePublicationToOSSRHRepository
+      run: ./gradlew :${{ env.PACKAGE_NAME }}:publishReleasePublicationToMavenCentralRepository
       env:
         OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
