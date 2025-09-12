@@ -173,12 +173,20 @@ public class Crashes {
         appAmbitTaskFuture.onError(error -> Log.e(TAG, "Error while storing crash logs", error));
     }
 
-    public static void LogError(Context context, Exception exception, Map<String, String> properties, String classFqn, String fileName,int lineNumber, Date createdAt) {
+    public static void LogError(Context context, Exception exception, Map<String, String> properties, String classFqn, String fileName, int lineNumber, Date createdAt) {
         Logging.LogEvent(context, "", LogType.ERROR, exception, properties, classFqn, fileName, lineNumber, createdAt);
     }
 
     public static void LogError(Context context, String message, Map<String, String> properties, String classFqn, Exception exception, String fileName, int lineNumber, Date createdAt) {
         Logging.LogEvent(context, message, LogType.ERROR, exception, properties, classFqn, fileName, lineNumber, createdAt);
+    }
+
+    public static void LogError(@NonNull Context context, @NonNull Exception exception) {
+        Logging.LogEvent(context, null, LogType.ERROR, exception, null, null, null, 0, null);
+    }
+
+    public static void LogError(@NonNull Context context, @NonNull Exception exception, String message, Map<String, String> properties) {
+        Logging.LogEvent(context, message, LogType.ERROR, exception, properties, null, null, 0, null);
     }
 
     @NonNull

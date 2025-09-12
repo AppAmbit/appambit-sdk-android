@@ -17,6 +17,7 @@ import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.PackageInfoHelper;
+import com.appambit.sdk.utils.StringUtils;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -65,8 +66,8 @@ class Logging {
                 : (fileName != null ? fileName : AppConstants.UNKNOWN_FILENAME));
         log.setLineNumber((exception != null && exception.getLineNumberFromStackTrace() != 0) ? exception.getLineNumberFromStackTrace()
                 : lineNumber);
-        log.setMessage((exception != null && exception.getMessage() != null) ? exception.getMessage()
-                : (message != null ? message : ""));
+        log.setMessage(!StringUtils.isNullOrBlank(message) ? message :
+                (exception != null && exception.getMessage() != null) ? exception.getMessage() : AppConstants.UNKNOWN_CLASS);
         log.setStackTrace(stackTrace);
         log.setContext(properties != null ? properties : new HashMap<>());
         log.setType(logType);
