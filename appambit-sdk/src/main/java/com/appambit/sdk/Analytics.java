@@ -4,6 +4,8 @@ import static com.appambit.sdk.AppConstants.TRACK_EVENT_NAME_MAX_LIMIT;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.analytics.Event;
 import com.appambit.sdk.models.analytics.EventEntity;
@@ -47,8 +49,12 @@ public final class Analytics {
         SessionManager.endSession();
     }
 
-    public static void trackEvent(String eventTitle, Map<String, String> data, Date createdAt) {
+    public static void trackEvent(@NonNull String eventTitle, Map<String, String> data, Date createdAt) {
         SendOrSaveEvent(eventTitle, data, createdAt);
+    }
+
+    public static void trackEvent(@NonNull String eventTitle, Map<String, String> data) {
+        SendOrSaveEvent(eventTitle, data, null);
     }
 
     public static void sendBatchesEvents() {
