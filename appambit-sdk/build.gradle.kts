@@ -5,7 +5,7 @@ plugins {
 apply ("../gradle/publish-package.gradle")
 
 android {
-    namespace = "com.appambit.appambit"
+    namespace = "com.appambit.sdk"
     compileSdk = 35
 
     defaultConfig {

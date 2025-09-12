@@ -15,7 +15,7 @@ ext {
     SITE_URL = "https://github.com/AppAmbit/appambit-sdk-android"
     GIT_URL = "https://github.com/AppAmbit/appambit-sdk-android.git"
 
-    POM_DESCRIPTION = "This is the official Android SDK for AppAmbit, collecting data about sessions, crashes, logs and events."
+    POM_DESCRIPTION = "AppAmbit SDK lets you capture sessions, logs, crashes, and custom events in your iOS apps. It supports offline persistence and batches data to AppAmbit backend services with minimal setup."
     POM_URL = SITE_URL
 
     LICENCE_NAME = "The MIT License (MIT)"
@@ -95,15 +95,6 @@ afterEvaluate {
                 credentials {
                     username = System.getenv("OSSRH_USERNAME")
                     password = System.getenv("OSSRH_PASSWORD")
-                }
-            }
-
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/AppAmbit/appambit-sdk-android")
-                credentials {
-                    username = System.getenv("GITHUB_USER_MAVEN")
-                    password = System.getenv("GITHUB_TOKEN_MAVEN")
                 }
             }
         }

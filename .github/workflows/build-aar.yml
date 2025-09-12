@@ -11,7 +11,6 @@ env:
   OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
   OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
   OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 permissions:
   contents: write
@@ -51,7 +50,7 @@ jobs:
         echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
         echo "new_tag=v$VERSION_NAME" >> $GITHUB_OUTPUT
 
-        if [[ ! "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [[ "$VERSION_NAME" == *"-"* ]]; then
           echo "is_prerelease=true" >> $GITHUB_OUTPUT
         else
           echo "is_prerelease=false" >> $GITHUB_OUTPUT
@@ -121,10 +120,3 @@ jobs:
         OSS_SIGNING_KEY_ID: ${{ secrets.OSS_SIGNING_KEY_ID }}
         OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
         OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
-
-    - name: Publish to GitHub Packages
-      if: steps.version.outputs.is_prerelease == 'false'
-      run: ./gradlew :${{ env.PACKAGE_NAME }}:publishReleasePublicationToGitHubPackagesRepository
-      env:
-        GITHUB_USER_MAVEN: ${{ github.actor }}
-        GITHUB_TOKEN_MAVEN: ${{ secrets.GITHUB_TOKEN }}
