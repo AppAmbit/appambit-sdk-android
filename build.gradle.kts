@@ -18,7 +18,7 @@ nexusPublishing {
             username = System.getenv("OSSRH_PASSWORD")
             password = System.getenv("OSSRH_PASSWORD")
 
-            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local"))
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
         }
     }
 }
