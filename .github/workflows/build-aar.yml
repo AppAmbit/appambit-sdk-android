@@ -110,14 +110,8 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         files: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}.aar
         body: ${{ steps.changelog.outputs.changelog }}
-        is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+        prerelease: ${{ steps.version.outputs.is_prerelease }}
 
     - name: Publish to Maven Central (OSSRH)
       if: steps.version.outputs.is_prerelease == 'false'
       run: ./gradlew :${{ env.PACKAGE_NAME }}:publishReleasePublicationToMavenCentralRepository
-      env:
-        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-        OSS_SIGNING_KEY_ID: ${{ secrets.OSS_SIGNING_KEY_ID }}
-        OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
-        OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}

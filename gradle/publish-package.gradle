@@ -29,16 +29,11 @@ ext {
 }
 
 signing {
-    if (System.getenv("OSS_SIGNING_KEY") != null) {
         useInMemoryPgpKeys(
-                System.getenv("OSS_SIGNING_KEY_ID"),
-                System.getenv("OSS_SIGNING_KEY"),
-                System.getenv("OSS_SIGNING_PASSWORD")
+            System.getenv("OSS_SIGNING_KEY"),
+            System.getenv("OSS_SIGNING_PASSWORD")
         )
         sign publishing.publications
-    } else {
-        logger.lifecycle(">> Skipping signing, no OSS_SIGNING_KEY found.")
-    }
 }
 
 task androidSourcesJar(type: Jar) {
