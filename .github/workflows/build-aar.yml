@@ -19,6 +19,7 @@ jobs:
   build:
     name: Build Android Library with Version
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
     - name: Checkout repository
