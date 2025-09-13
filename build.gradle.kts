@@ -2,23 +2,4 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
-    id ("io.github.gradle-nexus.publish-plugin") version ("1.1.0")
-}
-
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-nexusPublishing {
-    repositories {
-        sonatype {
-            username = System.getenv("OSSRH_PASSWORD")
-            password = System.getenv("OSSRH_PASSWORD")
-
-            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
-        }
-    }
 }

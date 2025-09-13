@@ -51,7 +51,6 @@ afterEvaluate {
                 version VERSION_NAME
 
                 artifact androidSourcesJar
-                artifact("$buildDir/outputs/aar/${project.name}-release.aar")
 
                 pom {
                     name = ARTIFACT_ID

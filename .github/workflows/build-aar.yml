@@ -112,6 +112,6 @@ jobs:
         body: ${{ steps.changelog.outputs.changelog }}
         prerelease: ${{ steps.version.outputs.is_prerelease }}
 
-    - name: Publish to Maven Central (Nexus)
+    - name: Publish to Maven Central (MavenCentral via Sonatype)
       if: steps.version.outputs.is_prerelease == 'false'
-      run: ./gradlew :${{ env.PACKAGE_NAME }}:publishToSonatype closeAndReleaseSonatypeStagingRepository
+      run: ./gradlew :${{ env.PACKAGE_NAME }}:publishAllPublicationsToMavenRepository
