@@ -87,6 +87,12 @@ jobs:
         echo "Last changes:"
         echo "${{ steps.changelog.outputs.changelog }}"
 
+    - name: Clean project
+      run: ./gradlew clean
+
+    - name: Build project
+      run: ./gradlew build
+
     - name: Build with Gradle
       run: ./gradlew :${{ env.PACKAGE_NAME }}:assembleRelease
 
