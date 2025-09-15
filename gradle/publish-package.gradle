@@ -36,18 +36,10 @@ signing {
     sign publishing.publications
 }
 
-task androidJavadocs(type: Javadoc) {
-    failOnError false
-    source = android.sourceSets.main.java.srcDirs
-    classpath += files("${android.sdkDirectory}/platforms/${android.compileSdkVersion}/android.jar")
-    exclude '**/R.java', '**/R.class', '**/BuildConfig.*'
+task emptyJavadocsJar(type: Jar) {
+    archiveClassifier.set("javadoc")
+    from("$buildDir/empty")
 }
-
-task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
-    archiveClassifier.set('javadoc')
-    from androidJavadocs.destinationDir
-}
-
 
 task androidSourcesJar(type: Jar) {
     archiveClassifier.set('sources')
@@ -66,7 +58,7 @@ afterEvaluate {
                 artifact("$buildDir/outputs/aar/${project.name}-release.aar")
 
                 artifact androidSourcesJar
-                artifact androidJavadocsJar
+                artifact emptyJavadocsJar
 
                 pom {
                     name = ARTIFACT_ID
