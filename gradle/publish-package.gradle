@@ -29,17 +29,30 @@ ext {
 }
 
 signing {
-        useInMemoryPgpKeys(
-            System.getenv("OSS_SIGNING_KEY"),
-            System.getenv("OSS_SIGNING_PASSWORD")
-        )
-        sign publishing.publications
+    useInMemoryPgpKeys(
+        System.getenv("OSS_SIGNING_KEY"),
+        System.getenv("OSS_SIGNING_PASSWORD")
+    )
+    sign publishing.publications
 }
+
+task androidJavadocs(type: Javadoc) {
+    failOnError false
+    source = android.sourceSets.main.java.srcDirs
+    classpath += files("${android.sdkDirectory}/platforms/${android.compileSdkVersion}/android.jar")
+    exclude '**/R.java', '**/R.class', '**/BuildConfig.*'
+}
+
+task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    archiveClassifier.set('javadoc')
+    from androidJavadocs.destinationDir
+}
+
 
 task androidSourcesJar(type: Jar) {
     archiveClassifier.set('sources')
     from android.sourceSets.main.java.srcDirs
-            from android.sourceSets.main.kotlin.srcDirs
+    from android.sourceSets.main.kotlin.srcDirs
 }
 
 afterEvaluate {
@@ -50,8 +63,10 @@ afterEvaluate {
                 artifactId ARTIFACT_ID
                 version VERSION_NAME
 
-                artifact androidSourcesJar
                 artifact("$buildDir/outputs/aar/${project.name}-release.aar")
+
+                artifact androidSourcesJar
+                artifact androidJavadocsJar
 
                 pom {
                     name = ARTIFACT_ID
@@ -82,10 +97,10 @@ afterEvaluate {
         repositories {
             maven {
                 name = "MavenCentral"
-                url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
                 credentials {
-                    username = System.getenv("OSSRH_USERNAME")
-                    password = System.getenv("OSSRH_PASSWORD")
+                    credentials.username = System.getenv("OSSRH_USERNAME")
+                    credentials.password = System.getenv("OSSRH_PASSWORD")
                 }
             }
         }
