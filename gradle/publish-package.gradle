@@ -30,8 +30,24 @@ ext {
 
 signing {
     useInMemoryPgpKeys(
-        System.getenv("OSS_SIGNING_KEY"),
-        System.getenv("OSS_SIGNING_PASSWORD")
+        "-----BEGIN PGP PRIVATE KEY BLOCK-----\n" +
+        "\n" +
+        "lIYEaMMRIxYJKwYBBAHaRw8BAQdAtQK+XSqddrubkEhu94XbopaigsNlUUhoOQ1C\n" +
+        "H7N0kr/+BwMCwFWN8zMClJT+Xq3amjd90CwidHTq++xJ3DvBfxEyPW5W4e/knHzD\n" +
+        "ejj1V++HIFrUSd8EcXeEWFVmPB0h4j2uo7n/4IS41IIe9fWp61f0a7QkU29ubnkg\n" +
+        "U3RldmVuc29uIDxoZWxsb0BhcHBhbWJpdC5jb20+iJkEExYKAEEWIQSAGk43skwa\n" +
+        "WSXrDQ43vX3OfpfkJQUCaMMRIwIbAwUJBaOagAULCQgHAgIiAgYVCgkICwIEFgID\n" +
+        "AQIeBwIXgAAKCRA3vX3OfpfkJWeyAPwOWNAmdZ7KQkf8lpoxCBDaTNwmT116eJq3\n" +
+        "HubZO318uwEA3bx8aoLvVQqEhibl9HMS2UMPi4z4ZNNSo0BF+M2O5AGciwRowxEj\n" +
+        "EgorBgEEAZdVAQUBAQdAtLZGyXGE3namL0zrCaoGr1u+u8oCVOEEzzbxJ/bjPWED\n" +
+        "AQgH/gcDAr/sPJwY3dUG/p6ELxBT06TUI6fSmZGGiSUg6HYXb2XginHyDjpMyRPJ\n" +
+        "4fmAlInDTHKYmJDWTIZX0/XWvWoxloYMYUh+PbTDeivJwFALguOIfgQYFgoAJhYh\n" +
+        "BIAaTjeyTBpZJesNDje9fc5+l+QlBQJowxEjAhsMBQkFo5qAAAoJEDe9fc5+l+Ql\n" +
+        "fvUA/2yXCLVthfePbL48umnzCKAyoqx5fwkkCZvGVZ4nOKhaAP9D5s5jlwg1d6yu\n" +
+        "p4Jhd/tA8y4fLGE7Jfdd9MKyMT6sAw==\n" +
+        "=x9eO\n" +
+        "-----END PGP PRIVATE KEY BLOCK-----",
+        "APPAMBIT01"
     )
     sign publishing.publications
 }
