@@ -1,0 +1,108 @@
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+apply plugin: 'com.android.library'
+
+ext {
+    // Constant variables
+    MIN_SDK_VERSION = project.property("MIN_SDK_VERSION")
+    VERSION_NAME = project.property("VERSION_NAME")
+    VERSION_CODE = project.property("VERSION_CODE")
+
+    // Maven variables
+    GROUP_ID = "com.appambit"
+    ARTIFACT_ID = "appambit"
+
+    SITE_URL = "https://github.com/AppAmbit/appambit-sdk-android"
+    GIT_URL = "https://github.com/AppAmbit/appambit-sdk-android.git"
+
+    POM_DESCRIPTION = "AppAmbit SDK lets you capture sessions, logs, crashes, and custom events in your iOS apps. It supports offline persistence and batches data to AppAmbit backend services with minimal setup."
+    POM_URL = SITE_URL
+
+    LICENCE_NAME = "The MIT License (MIT)"
+    LICENCE_SITE = "https://opensource.org/licenses/MIT"
+    LICENCE_CODE = "MIT"
+
+    DEVELOPER_ID = "AppAmbit"
+    DEVELOPER_NAME = "AppAmbit"
+    DEVELOPER_EMAIL = "hello@appambit.com"
+
+}
+
+signing {
+    useInMemoryPgpKeys(
+        System.getenv("OSS_SIGNING_KEY"),
+        System.getenv("OSS_SIGNING_PASSWORD")
+    )
+    sign publishing.publications
+}
+
+task androidJavadocs(type: Javadoc) {
+    failOnError false
+    source = android.sourceSets.main.java.srcDirs
+    classpath += files("${android.sdkDirectory}/platforms/${android.compileSdkVersion}/android.jar")
+    exclude '**/R.java', '**/R.class', '**/BuildConfig.*'
+}
+
+task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    archiveClassifier.set('javadoc')
+    from androidJavadocs.destinationDir
+}
+
+
+task androidSourcesJar(type: Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
+    from android.sourceSets.main.kotlin.srcDirs
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId GROUP_ID
+                artifactId ARTIFACT_ID
+                version VERSION_NAME
+
+                artifact("$buildDir/outputs/aar/${project.name}-release.aar")
+
+                artifact androidSourcesJar
+                artifact androidJavadocsJar
+
+                pom {
+                    name = ARTIFACT_ID
+                    description = POM_DESCRIPTION
+                    url = POM_URL
+                    licenses {
+                        license {
+                            name = LICENCE_NAME
+                            url = LICENCE_SITE
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = DEVELOPER_ID
+                            name = DEVELOPER_NAME
+                            email = DEVELOPER_EMAIL
+                        }
+                    }
+                    scm {
+                        connection = GIT_URL
+                        developerConnection = GIT_URL
+                        url = SITE_URL
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                name = "MavenCentral"
+                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                credentials {
+                    credentials.username = System.getenv("OSSRH_USERNAME")
+                    credentials.password = System.getenv("OSSRH_PASSWORD")
+                }
+            }
+        }
+    }
+}
