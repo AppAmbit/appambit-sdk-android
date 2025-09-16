@@ -88,6 +88,10 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew :${{ env.PACKAGE_NAME }}:assembleRelease
 
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.OSS_SIGNING_KEY }}" | gpg --batch --import
+
       - name: Rename AAR with version
         run: |
           mkdir -p artifacts
@@ -112,7 +116,7 @@ jobs:
 
       - name: Publish to Maven Central (MavenCentral via Sonatype)
         if: steps.version.outputs.is_prerelease == 'false'
-        run: ./gradlew :${{ env.PACKAGE_NAME }}:publishReleasePublicationToMavenRepository --debug --stacktrace
+        run: ./gradlew :${{ env.PACKAGE_NAME }}:publishAllPublicationsToMavenRepository --info --stacktrace
         env:
           OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
           OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
