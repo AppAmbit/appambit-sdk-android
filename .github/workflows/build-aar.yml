@@ -6,11 +6,6 @@ on:
 env:
   PACKAGE_NAME: appambit-sdk
   BUILD_PATH: build/outputs/aar/appambit-sdk-release.aar
-  OSS_SIGNING_KEY_ID: ${{ secrets.OSS_SIGNING_KEY_ID }}
-  OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
-  OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
-  OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-  OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
 
 permissions:
   contents: write
@@ -118,3 +113,8 @@ jobs:
       - name: Publish to Maven Central (MavenCentral via Sonatype)
         if: steps.version.outputs.is_prerelease == 'false'
         run: ./gradlew :${{ env.PACKAGE_NAME }}:publishAllPublicationsToMavenRepository --info --stacktrace
+        env:
+          OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
+          OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
