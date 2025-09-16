@@ -112,7 +112,7 @@ jobs:
 
       - name: Publish to Maven Central (MavenCentral via Sonatype)
         if: steps.version.outputs.is_prerelease == 'false'
-        run: ./gradlew :${{ env.PACKAGE_NAME }}:publishAllPublicationsToMavenRepository --debug --stacktrace
+        run: ./gradlew :${{ env.PACKAGE_NAME }}:publishReleasePublicationToMavenRepository --debug --stacktrace
         env:
           OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
           OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
