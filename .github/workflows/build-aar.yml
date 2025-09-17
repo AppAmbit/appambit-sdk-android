@@ -113,25 +113,9 @@ jobs:
           body: ${{ steps.changelog.outputs.changelog }}
           prerelease: ${{ steps.version.outputs.is_prerelease }}
 
-      - name: Debug secrets length
-        run: |
-          echo "User length: ${#OSSRH_USERNAME}"
-          echo "Pass length: ${#OSSRH_PASSWORD}"
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-
-      - name: Publish to Maven Local
-        run: ./gradlew :${{ env.PACKAGE_NAME }}:publishToMavenLocal --info --stacktrace
-        env:
-          OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
-          OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-
       - name: Publish to Maven Central (MavenCentral via Sonatype)
         if: steps.version.outputs.is_prerelease == 'false'
-        run: ./gradlew :${{ env.PACKAGE_NAME }}:publish --info --stacktrace
+        run: ./gradlew :${{ env.PACKAGE_NAME }}:publishAllPublicationsToMavenCentralRepository --debug --stacktrace
         env:
           OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
           OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
