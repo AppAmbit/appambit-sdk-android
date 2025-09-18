@@ -7,6 +7,7 @@ plugins {
 
 nexusPublishing {
     repositories {
+        packageGroup = "com.appambit"
         sonatype {
             username = System.getenv("OSSRH_USERNAME")
             password = System.getenv("OSSRH_PASSWORD")
