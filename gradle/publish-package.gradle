@@ -1,6 +1,5 @@
 apply plugin: 'maven-publish'
 apply plugin: 'signing'
-apply plugin: 'com.android.library'
 
 ext {
     // Constant variables
@@ -82,16 +81,6 @@ afterEvaluate {
                         developerConnection = GIT_URL
                         url = SITE_URL
                     }
-                }
-            }
-        }
-        repositories {
-            maven {
-                name = "MavenCentral"
-                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-                credentials {
-                    credentials.username = System.getenv("OSSRH_USERNAME")
-                    credentials.password = System.getenv("OSSRH_PASSWORD")
                 }
             }
         }
