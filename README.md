@@ -1,7 +1,7 @@
 # AppAmbit Android SDK
 
 **Track. Debug. Distribute.**
-**AppAmbit: track, debug, and distribute your apps in one dashboard.**
+**AppAmbit: track, debug, and distribute your apps from one dashboard.**
 
 The AppAmbit Android SDK adds lightweight analytics, event tracking, logs, crash reporting, and release distribution hooks to your Android apps. It is designed for simple setup, low overhead, and production-ready defaults.
 
