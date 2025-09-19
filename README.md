@@ -47,21 +47,24 @@ The AppAmbit Android SDK adds lightweight analytics, event tracking, logs, crash
 
 ---
 
+
 ## Install
 
-### Gradle (Maven Central)
+Add the AppAmbit Android SDK to your app’s `build.gradle`.
+
+**Kotlin DSL**
+
+```kotlin
+dependencies {
+    implementation("com.appambit:appambit:1.0.0")
+}
+```
+
+**Groovy**
 
 ```gradle
-// Project-level build.gradle
-allprojects {
-    repositories {
-        mavenCentral()
-    }
-}
-
-// App-level build.gradle
 dependencies {
-    implementation 'com.appambit:sdk:0.0.1'
+    implementation 'com.appambit:appambit:1.0.0'
 }
 ```
 
@@ -69,18 +72,17 @@ dependencies {
 
 ## Quickstart
 
-Initialize the SDK in your `Application` class with your **API key** and **base URL**.
+Initialize the SDK with your **API key**.
 
 ### Kotlin
 
 ```kotlin
-class MyApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        AppAmbit.init(
-            context = this,
-            apiKey = "YOUR_API_KEY"
-        )
+import com.appambit.sdk.AppAmbit
+
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        AppAmbit.start(this, "<YOUR-APIKEY>")
     }
 }
 ```
@@ -88,65 +90,36 @@ class MyApp : Application() {
 ### Java
 
 ```java
-public class MyApp extends Application {
+import com.appambit.sdk.AppAmbit;
+
+public class MainActivity extends AppCompatActivity {
     @Override
-    public void onCreate() {
-        super.onCreate();
-        AppAmbit.init(
-            this,
-            "YOUR_API_KEY"
-        );
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        AppAmbit.start(getApplicationContext(), "<YOUR-APIKEY>");
     }
 }
 ```
 
 ---
 
+## Android App Requirements
+
+Add these permissions to your `AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.INTERNET" />
+```
+
+---
+
 ## Usage
 
-### Track an Event
-
-**Kotlin:**
-
-```kotlin
-AppAmbit.logEvent("AppStarted")
-```
-
-**Java:**
-
-```java
-AppAmbit.logEvent("AppStarted");
-```
-
----
-
-### Log an Error
-
-**Kotlin:**
-
-```kotlin
-try {
-    riskyOperation()
-} catch (e: Exception) {
-    AppAmbit.logError(e)
-}
-```
-
-**Java:**
-
-```java
-try {
-    riskyOperation();
-} catch (Exception e) {
-    AppAmbit.logError(e);
-}
-```
-
----
-
-### Crash Reporting
-
-Uncaught crashes are automatically captured and sent on next launch.
+* **Identify Users**: attach traits and metadata to your sessions
+* **Track Events**: send structured events with custom properties
+* **Logs**: add structured log messages for debugging
+* **Crash Reporting**: uncaught crashes are automatically captured
 
 ---
 
@@ -213,6 +186,6 @@ Open source under the terms described in the [LICENSE](./LICENSE) file.
 ## Links
 
 * **Docs**: [docs.appambit.com](https://docs.appambit.com)
-* **Dashboard**: AppAmbit workspace link
+* **Dashboard**: [appambit.com](https://appambit.com)
 * **Examples**: Sample Android test app `AppAmbitTestApp` included in repo
 
