@@ -14,7 +14,7 @@ ext {
     SITE_URL = "https://github.com/AppAmbit/appambit-sdk-android"
     GIT_URL = "https://github.com/AppAmbit/appambit-sdk-android.git"
 
-    POM_DESCRIPTION = "AppAmbit SDK lets you capture sessions, logs, crashes, and custom events in your iOS apps. It supports offline persistence and batches data to AppAmbit backend services with minimal setup."
+    POM_DESCRIPTION = "Lightweight SDK for analytics, events, logging, crashes, and offline support. Simple setup, minimal overhead."
     POM_URL = SITE_URL
 
     LICENCE_NAME = "The MIT License (MIT)"
