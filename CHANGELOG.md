@@ -1,5 +1,11 @@
 ___
 
+## Version 0.0.7
+
+### AppAmbit Distribute
+
+* AppAmbit release description updated.
+
 ## Version 0.0.6
 
 ### AppAmbit Distribute
