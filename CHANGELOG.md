@@ -1,5 +1,11 @@
 ___
 
+## Version 0.0.6
+
+### AppAmbit Distribute
+
+* AppAmbit release to new production url
+
 ## Version 0.0.5
 
 First publish fully automatized with CICD.
