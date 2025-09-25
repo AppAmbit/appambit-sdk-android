@@ -17,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.appambit.sdk.Analytics
 import com.appambit.sdk.AppAmbit
 
 class MainActivity : ComponentActivity() {
@@ -25,6 +26,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            //Analytics.enableManualSession()
             AppAmbit.start(this, "7bdf5c7d-1414-47c6-878d-6ebc25e6265e")
             BottomBar()
         }
