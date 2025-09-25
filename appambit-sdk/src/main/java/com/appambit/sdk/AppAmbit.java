@@ -246,9 +246,6 @@ public final class AppAmbit {
             @Override
             public void onAvailable(@NonNull Network network) {
                 super.onAvailable(network);
-                if (!isReadyForSendingBatches) {
-                    return;
-                }
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
                     if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
