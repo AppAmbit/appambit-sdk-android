@@ -30,10 +30,10 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 
 * Session analytics with automatic lifecycle tracking
 * Event tracking with custom properties
-* Structured logs with levels and tags
-* Crash capture with stack traces
-* Network-safe batching, retry, and offline queue
-* Configurable endpoints for staging and production
+* Error logging for quick diagnostics 
+* Crash capture with stack traces and threads
+* Offline support with batching, retry, and queue
+* Create mutliple app profiles for staging and production
 * Small footprint, Kotlin-first API (Java supported)
 
 ---
@@ -116,17 +116,50 @@ Add these permissions to your `AndroidManifest.xml`:
 
 ## Usage
 
-* **Identify Users**: attach traits and metadata to your sessions
-* **Track Events**: send structured events with custom properties
+* **Session activity** – automatically tracks user session starts, stops, and durations
+* **Track events** – send structured events with custom properties
+### Kotlin
+
+```kotlin
+val properties: Map<String, String> = mapOf(
+    "Count" to "41",
+)
+Analytics.trackEvent("ButtonClicked", properties)
+```
+### Java
+
+```java
+Map<String, String> properties = new HashMap<>();
+properties.put("Count", "41");
+Analytics.trackEvent("ButtonClicked", properties);
+```
 * **Logs**: add structured log messages for debugging
-* **Crash Reporting**: uncaught crashes are automatically captured
+### Kotlin
+
+```kotlin
+val properties: Map<String, String> = mapOf(
+    "Count" to "41",
+)
+Analytics.trackEvent("ButtonClicked", properties)
+```
+### Java
+
+```java
+try {
+    ...
+} catch (Exception exception) {
+    Map<String, String> properties = new HashMap<>();
+    properties.put("user_id", "1");
+    Crashes.LogError(context, exception, null, properties);
+}
+```
+* **Crash Reporting**: uncaught crashes are automatically captured and uploaded on next launch
 
 ---
 
 ## Release Distribution
 
-* Optionally enable build update checks for tester workflows
-* Safe to omit for production apps that only use telemetry
+* Push the artifact to your AppAmbit dashboard for distribution via email and direct installation.
 
 ---
 
@@ -187,5 +220,6 @@ Open source under the terms described in the [LICENSE](./LICENSE) file.
 
 * **Docs**: [docs.appambit.com](https://docs.appambit.com)
 * **Dashboard**: [appambit.com](https://appambit.com)
-* **Examples**: Sample Android test app `AppAmbitTestApp` included in repo
+* **Discord**: [discord.gg](https://discord.gg/nmbdbCZmQX)
+* **Examples**: Sample Android test app included in repo.
 
