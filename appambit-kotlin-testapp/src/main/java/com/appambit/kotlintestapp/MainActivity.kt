@@ -17,6 +17,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.appambit.kotlintestapp.Analytics as AnalyticsScreen
+import com.appambit.kotlintestapp.Crashes as CrashesScreen
 import com.appambit.sdk.Analytics
 import com.appambit.sdk.AppAmbit
 
@@ -68,10 +70,10 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable("Crashes") {
-                    Crashes()
+                    CrashesScreen()
                 }
                 composable("Analytics") {
-                    Analytics()
+                    AnalyticsScreen()
                 }
             }
         }
