@@ -55,7 +55,7 @@ public class LoadFragment extends Fragment {
                 @Override
                 public void run() {
                     if (index[0] < 500) {
-                        Analytics.trackEvent(etLoadCustomMessage.getText().toString(), eventProperties, null);
+                        Analytics.trackEvent(etLoadCustomMessage.getText().toString(), eventProperties);
                         tvEventsLabel.setText("Sending event: " + (index[0] + 1) + " of 500");
                         index[0]++;
                         if(hasInternetConnection(requireContext())) {
@@ -81,10 +81,7 @@ public class LoadFragment extends Fragment {
                 @Override
                 public void run() {
                     if (index[0] < 500) {
-                        Crashes.LogError(
-                                requireContext(),
-                                etLoadCustomMessage.getText().toString(),
-                                null, null, null, null, 0, null);
+                        Crashes.logError(etLoadCustomMessage.getText().toString());
                         tvLogsLabel.setText("Sending log: " + (index[0] + 1) + " of 500");
                         index[0]++;
                         if(hasInternetConnection(requireContext())) {
