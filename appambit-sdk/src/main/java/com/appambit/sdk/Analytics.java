@@ -18,8 +18,6 @@ import com.appambit.sdk.services.endpoints.EventEndpoint;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
-
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,12 +47,8 @@ public final class Analytics {
         SessionManager.endSession();
     }
 
-    public static void trackEvent(@NonNull String eventTitle, Map<String, String> data, Date createdAt) {
-        SendOrSaveEvent(eventTitle, data, createdAt);
-    }
-
     public static void trackEvent(@NonNull String eventTitle, Map<String, String> data) {
-        SendOrSaveEvent(eventTitle, data, null);
+        SendOrSaveEvent(eventTitle, data);
     }
 
     public static void sendBatchesEvents() {
@@ -89,7 +83,7 @@ public final class Analytics {
     public static void generateTestEvent() {
         Map<String, String> map = new HashMap<>();
         map.put("Event", "Custom Event");
-        SendOrSaveEvent("Test Event", map, null);
+        SendOrSaveEvent("Test Event", map);
     }
 
     public static void enableManualSession() {
@@ -100,7 +94,7 @@ public final class Analytics {
         return isManualSessionEnabled;
     }
 
-    private static void SendOrSaveEvent(String eventTitle, Map<String, String> data, Date createdAt) {
+    private static void SendOrSaveEvent(String eventTitle, Map<String, String> data) {
         if (!SessionManager.isSessionActivate) {
             return;
         }
@@ -125,7 +119,7 @@ public final class Analytics {
                     toSaveEvent.setId(UUID.randomUUID());
                     toSaveEvent.setSessionId(SessionManager.getSessionId());
                     toSaveEvent.setName(eventRequest.getName());
-                    toSaveEvent.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
+                    toSaveEvent.setCreatedAt(DateUtils.getUtcNow());
                     toSaveEvent.setData(eventRequest.getData());
 
                     AppAmbitTaskFuture<Void> saveFuture = saveEventLocally(toSaveEvent);
@@ -161,23 +155,6 @@ public final class Analytics {
             String truncatedValue = truncate(entry.getValue(), AppConstants.TRACK_EVENT_PROPERTY_MAX_CHARACTERS);
             result.put(truncatedKey, truncatedValue);
         }
-
-        return result;
-    }
-
-    private static AppAmbitTaskFuture<ApiResult<EventResponse>> sendEventEndpoint(Event event) {
-        AppAmbitTaskFuture<ApiResult<EventResponse>> result = new AppAmbitTaskFuture<>();
-
-        mExecutorService.execute(() -> {
-            try {
-                ApiResult<EventResponse> apiResponse = mApiService
-                        .executeRequest(new EventEndpoint(event), EventResponse.class);
-
-                result.complete(apiResponse);
-            } catch (Exception e) {
-                result.fail(e);
-            }
-        });
 
         return result;
     }

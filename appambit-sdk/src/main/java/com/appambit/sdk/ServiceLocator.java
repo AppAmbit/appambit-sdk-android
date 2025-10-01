@@ -52,4 +52,11 @@ public class ServiceLocator {
     public static ApiService getApiService() { return apiService; }
 
     public static AppInfoService getAppInfoService() { return appInfoService; }
+
+    public static Context getContext() {
+        if (INSTANCE == null) {
+            throw new IllegalStateException("ServiceLocator is not initialized, call initialize(..) method first.");
+        }
+        return INSTANCE.applicationContext;
+    }
 }
