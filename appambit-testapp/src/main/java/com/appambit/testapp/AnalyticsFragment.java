@@ -1,7 +1,5 @@
 package com.appambit.testapp;
 
-import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
-
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -16,42 +14,25 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.appambit.sdk.Analytics;
-import com.appambit.sdk.models.analytics.SessionData;
-import com.appambit.sdk.enums.SessionType;
-import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.Crashes;
 import com.appambit.testapp.utils.AlertsUtils;
-import com.appambit.testapp.utils.StorageServiceTest;
-import com.appambit.testapp.utils.storage.StorableTest;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.TimeZone;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 
 public class AnalyticsFragment extends Fragment {
     private static final String TAG = AnalyticsFragment.class.getSimpleName();
     Button btnStartSession, btnEndSession, btnGenerate30DaysTestSessions;
     Button btnClearToken, btnTokenRenew;
     Button btnEventWProperty, btnDefaultClickedEventWProperty, btnMax300LengthEvent, btnMax20PropertiesEvent, btn3DailyEvents, btn220BatchEvents, btnSecondActivity;
-    static StorableTest storableApp;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
        View view = inflater.inflate(R.layout.fragment_analytics, container, false);
-
-        try {
-            storableApp = new StorageServiceTest(requireContext());
-        }catch (Exception e) {
-            Log.e(TAG, "Error initializing storage", e);
-        }
 
         btnStartSession = view.findViewById(R.id.btnStartSession);
         btnStartSession.setOnClickListener(v ->  {
@@ -72,7 +53,7 @@ public class AnalyticsFragment extends Fragment {
         });
 
         btnGenerate30DaysTestSessions = view.findViewById(R.id.btnGenerate30DaysTestSessions);
-        btnGenerate30DaysTestSessions.setOnClickListener(v -> onGenerate30DaysTestSessions(requireContext()));
+        btnGenerate30DaysTestSessions.setOnClickListener(v -> onGenerate30DaysTestSessions());
 
         btnEventWProperty = view.findViewById(R.id.btnEventWProperty);
         btnEventWProperty.setOnClickListener(v ->  buttonOnClicked(requireContext()));
@@ -83,9 +64,9 @@ public class AnalyticsFragment extends Fragment {
         btnMax20PropertiesEvent = view.findViewById(R.id.btnMax20PropertiesEvent);
         btnMax20PropertiesEvent.setOnClickListener(v ->  buttonOnClickedTestMaxPropertiesEvent(requireContext()));
         btn3DailyEvents = view.findViewById(R.id.btn3DailyEvents);
-        btn3DailyEvents.setOnClickListener(v ->  onSend30DailyEvents(requireContext()));
+        btn3DailyEvents.setOnClickListener(v ->  onSend30DailyEvents());
         btn220BatchEvents = view.findViewById(R.id.btn220BatchEvents);
-        btn220BatchEvents.setOnClickListener(v ->  onGenerateBatchEvents(requireContext()));
+        btn220BatchEvents.setOnClickListener(v ->  onGenerateBatchEvents());
         btnClearToken = view.findViewById(R.id.btnClearToken);
         btnClearToken.setOnClickListener(v-> onClearToken());
         btnTokenRenew = view.findViewById(R.id.btnTokenRenew);
@@ -95,53 +76,15 @@ public class AnalyticsFragment extends Fragment {
        return view;
     }
 
-    public static void onGenerate30DaysTestSessions(Context context) {
-        if (hasInternetConnection(context)) {
-            AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
-            return;
-        }
+    public static void onGenerate30DaysTestSessions() {
 
-        for (int index = 1; index <= 30; index++) {
-
-            SessionData sessionData = new SessionData();
-            UUID sessionId = UUID.randomUUID();
-
-            sessionData.setId(sessionId);
-            sessionData.setSessionType(SessionType.START);
-            Date sessionDate = DateUtils.getDateDaysAgo(30 - index);
-            sessionData.setTimestamp(sessionDate);
-
-            try {
-                storableApp.putSessionData(sessionData);
-            } catch (Exception e) {
-                Log.e(TAG, "Error inserting start session", e);
-                continue;
-            }
-
-            try {
-                int finalIndex = index;
-                Random random = new Random();
-                long randomOffset = random.nextInt(60 * 60 * 1000);
-                storableApp.putSessionData(new SessionData() {
-                    {
-                        setId(UUID.randomUUID());
-                        setSessionType(SessionType.END);
-                        setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
-                    }
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Error inserting end session", e);
-            }
-
-        }
-        AlertsUtils.showAlert(context, "Info", "Turn off and Turn on internet to send the sessions.");
     }
 
     private static void buttonOnClicked(Context context) {
         try {
             Map<String, String> map = new HashMap<>();
             map.put("Count", "41");
-            Analytics.trackEvent("ButtonClicked", map, null);
+            Analytics.trackEvent("ButtonClicked", map);
             Toast.makeText(context, "OnClick event generated", Toast.LENGTH_SHORT).show();
         }catch (Exception e) {
             Log.e(TAG, "Error during log creation: " + e.getMessage());
@@ -161,7 +104,7 @@ public class AnalyticsFragment extends Fragment {
         properties.put(characters300, characters300);
         properties.put(characters302, characters302);
 
-        Analytics.trackEvent(characters300, properties, null);
+        Analytics.trackEvent(characters300, properties);
         Toast.makeText(context, "1 event generated", Toast.LENGTH_SHORT).show();
 
     }
@@ -194,79 +137,17 @@ public class AnalyticsFragment extends Fragment {
         properties.put( "24", "24");
         properties.put( "25", "25");//25
 
-        Analytics.trackEvent("TestMaxProperties", properties, null);
+        Analytics.trackEvent("TestMaxProperties", properties);
         Toast.makeText(context, "1 event generated", Toast.LENGTH_SHORT).show();
 
     }
 
-    private static void onSend30DailyEvents(Context context) {
-        if (hasInternetConnection(context)) {
-            AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
-            return;
-        }
+    private static void onSend30DailyEvents() {
 
-        for (int index = 0; index < 30; index++) {
-
-            SessionData sessionData = new SessionData();
-            UUID sessionId = UUID.randomUUID();
-
-            sessionData.setId(sessionId);
-            sessionData.setSessionType(SessionType.START);
-            Date eventDate = DateUtils.getDateDaysAgo(30 - index);
-            sessionData.setTimestamp(eventDate);
-
-            try {
-                storableApp.putSessionData(sessionData);
-            } catch (Exception e) {
-                Log.e(TAG, "Error inserting start session", e);
-                continue;
-            }
-
-            Map<String, String> properties = new HashMap<>();
-            properties.put("30 Daily events", "Event");
-
-            Analytics.trackEvent("30 Daily events", properties, eventDate);
-
-            try {
-                Thread.sleep(100);
-            }catch (Exception e) {
-                Log.e(TAG, "Error during log creation: " + e.getMessage());
-            }
-
-            storableApp.updateEventSessionId(sessionId.toString());
-
-            try {
-                int finalIndex = index;
-                Random random = new Random();
-                long randomOffset = random.nextInt(60 * 60 * 1000);
-                storableApp.putSessionData(new SessionData() {
-                    {
-                        setId(UUID.randomUUID());
-                        setSessionType(SessionType.END);
-                        setTimestamp(new Date(DateUtils.getDateDaysAgo(30 - finalIndex).getTime() + randomOffset));
-                    }
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Error inserting end session", e);
-            }
-
-        }
-        AlertsUtils.showAlert(context, "Info", "30 events generated, turn on internet to send them");
     }
 
-    private static void onGenerateBatchEvents(Context context) {
-        if (hasInternetConnection(context)) {
-            AlertsUtils.showAlert(context, "Info", "Turn off internet and try again");
-            return;
-        }
+    private static void onGenerateBatchEvents() {
 
-        Map<String, String> properties = new HashMap<>();
-        for (int index = 1; index <= 220; index++) {
-            properties.put("property1", "value1" );
-            Analytics.trackEvent("Events 220", properties, null);
-        }
-
-        AlertsUtils.showAlert(context, "Info", "220 events generated, turn on internet to send them");
     }
 
     private  static void onClearToken() {
@@ -282,7 +163,7 @@ public class AnalyticsFragment extends Fragment {
         List<Future<?>> logTasks = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             logTasks.add(executor.submit(() -> {
-                Crashes.LogError(context, "Sending 5 errors after an invalid token", properties, this.getClass().getName(), null, null, 0, DateUtils.getUtcNow());
+                Crashes.logError("Sending 5 errors after an invalid token", properties);
             }));
         }
 
@@ -295,7 +176,7 @@ public class AnalyticsFragment extends Fragment {
             eventTasks.add(executor.submit(() -> {
                 Map<String, String> eventData = new HashMap<>();
                 eventData.put("Test Token", "5 events sent");
-                Analytics.trackEvent("Sending 5 events after an invalid token", eventData, null);
+                Analytics.trackEvent("Sending 5 events after an invalid token", eventData);
             }));
         }
 

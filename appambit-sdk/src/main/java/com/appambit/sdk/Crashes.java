@@ -27,7 +27,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +121,7 @@ public class Crashes {
                         deleteCrashes(context);
                         return;
                     }
-                    logCrash(context, exceptionInfos.get(0));
+                    logCrash(exceptionInfos.get(0));
                     Log.d(TAG, "Sending one crash");
                     deleteCrashes(context);
                 } else if (exceptionInfos.size() > 1) {
@@ -142,7 +141,7 @@ public class Crashes {
         AppAmbitTaskFuture<Void> appAmbitTaskFuture = new AppAmbitTaskFuture<>();
         for(ExceptionInfo crash : crashList) {
             try {
-                LogEntity logEntity = mapExceptionInfoToLogEntity(context, crash);
+                LogEntity logEntity = mapExceptionInfoToLogEntity(crash);
                 if (logEntity.getId() == null) {
                     logEntity.setId(UUID.randomUUID());
                 }
@@ -173,26 +172,26 @@ public class Crashes {
         appAmbitTaskFuture.onError(error -> Log.e(TAG, "Error while storing crash logs", error));
     }
 
-    public static void LogError(Context context, Exception exception, Map<String, String> properties, String classFqn, String fileName, int lineNumber, Date createdAt) {
-        Logging.LogEvent(context, "", LogType.ERROR, exception, properties, classFqn, fileName, lineNumber, createdAt);
+    public static void logError(String message) {
+        Logging.LogEvent(message, LogType.ERROR, null, null, null, null, 0);
     }
 
-    public static void LogError(Context context, String message, Map<String, String> properties, String classFqn, Exception exception, String fileName, int lineNumber, Date createdAt) {
-        Logging.LogEvent(context, message, LogType.ERROR, exception, properties, classFqn, fileName, lineNumber, createdAt);
+    public static void logError(String message, Map<String, String> properties) {
+        Logging.LogEvent(message, LogType.ERROR, null, properties, null, null, 0);
     }
 
-    public static void LogError(@NonNull Context context, @NonNull Exception exception) {
-        Logging.LogEvent(context, null, LogType.ERROR, exception, null, null, null, 0, null);
+    public static void logError(Exception exception, Map<String, String> properties) {
+        Logging.LogEvent(null, LogType.ERROR, exception, properties, null, null, 0);
     }
 
-    public static void LogError(@NonNull Context context, @NonNull Exception exception, String message, Map<String, String> properties) {
-        Logging.LogEvent(context, message, LogType.ERROR, exception, properties, null, null, 0, null);
+    public static void logError(Exception exception) {
+        Logging.LogEvent(null, LogType.ERROR, exception, null, null, null, 0);
     }
 
     @NonNull
-    private static LogEntity mapExceptionInfoToLogEntity(Context context, ExceptionInfo exception) {
+    private static LogEntity mapExceptionInfoToLogEntity(ExceptionInfo exception) {
         LogEntity entity = new LogEntity();
-        PackageInfo pInfo = PackageInfoHelper.getPackageInfo(context);
+        PackageInfo pInfo = PackageInfoHelper.getPackageInfo(ServiceLocator.getContext());
         assert pInfo != null;
         entity.setAppVersion(pInfo.versionName + " (" + pInfo.versionCode + ")");
         entity.setClassFQN(exception != null && exception.getClassFullName() != null ? exception.getClassFullName() : AppConstants.UNKNOWN_CLASS);
@@ -213,11 +212,10 @@ public class Crashes {
         return entity;
     }
 
-    private static void logCrash(Context context, @NonNull ExceptionInfo exception)
-    {
+    private static void logCrash(@NonNull ExceptionInfo exception) {
         var message = exception.getMessage();
-        Logging.logEvent(context, message, LogType.CRASH, exception, null, exception.getClassFullName(),
-                exception.getFileNameFromStackTrace(), (int) exception.getLineNumberFromStackTrace(), exception.getCreatedAt());
+        Logging.logEvent(message, LogType.CRASH, exception, null, exception.getClassFullName(),
+                exception.getFileNameFromStackTrace(), (int) exception.getLineNumberFromStackTrace());
     }
 
     public static void deleteCrashes(@NonNull Context context) {
@@ -260,8 +258,8 @@ public class Crashes {
         }
     }
 
-    public static boolean didCrashInLastSession(Context context) {
-        return CrashHandler.didCrashInLastSession(context);
+    public static boolean didCrashInLastSession() {
+        return CrashHandler.didCrashInLastSession();
     }
 
     public static void generateTestCrash() {

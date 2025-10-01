@@ -1,6 +1,5 @@
 package com.appambit.sdk;
 
-import android.content.Context;
 import android.content.pm.PackageInfo;
 
 import androidx.annotation.NonNull;
@@ -18,28 +17,24 @@ import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.PackageInfoHelper;
 import com.appambit.sdk.utils.StringUtils;
-
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 class Logging {
-
     private static final ApiService mApiService = ServiceLocator.getApiService();
     private static final ExecutorService mExecutor = ServiceLocator.getExecutorService();
     private static final String TAG = Logging.class.getSimpleName();
     static Storable mStorable = ServiceLocator.getStorageService();
 
-    public static void LogEvent(Context context, String message, LogType logType, Exception exception, Map<String, String> properties, String classFqn, String fileName, int lineNumber, Date createdAt) {
-        ExceptionInfo exceptionInfo = (exception != null) ? ExceptionInfo.fromException(context, exception) : null;
-        logEvent(context, message, logType, exceptionInfo, properties, classFqn, fileName, lineNumber, createdAt);
+    public static void LogEvent(String message, LogType logType, Exception exception, Map<String, String> properties, String classFqn, String fileName, int lineNumber) {
+        ExceptionInfo exceptionInfo = (exception != null) ? ExceptionInfo.fromException(ServiceLocator.getContext(), exception) : null;
+        logEvent(message, logType, exceptionInfo, properties, classFqn, fileName, lineNumber);
     }
 
-    public static void logEvent(Context context, String message, LogType logType, ExceptionInfo exception,
-                                Map<String, String> properties, String classFqn, String fileName,
-                                int lineNumber, Date createdAt) {
+    public static void logEvent(String message, LogType logType, ExceptionInfo exception,
+                                Map<String, String> properties, String classFqn, String fileName, int lineNumber) {
         if (!SessionManager.isSessionActivate) {
             return;
         }
@@ -49,7 +44,7 @@ class Logging {
                 : AppConstants.NO_STACK_TRACE_AVAILABLE;
 
         String file = (exception != null) ? exception.getCrashLogFile() : null;
-        PackageInfo pInfo = PackageInfoHelper.getPackageInfo(context);
+        PackageInfo pInfo = PackageInfoHelper.getPackageInfo(ServiceLocator.getContext());
         LogEntity log = new LogEntity();
         assert pInfo != null;
         log.setId(UUID.randomUUID());
@@ -72,7 +67,7 @@ class Logging {
         log.setContext(properties != null ? properties : new HashMap<>());
         log.setType(logType);
         log.setFile((logType == LogType.CRASH && exception != null) ? file : null);
-        log.setCreatedAt(createdAt != null ? createdAt : DateUtils.getUtcNow());
+        log.setCreatedAt(DateUtils.getUtcNow());
 
         sendOrSaveLogEventAsync(log);
     }

@@ -104,8 +104,8 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
         }
     }
 
-    public static boolean didCrashInLastSession(@NonNull Context context) {
-        File flagFile = new File(context.getFilesDir(), DID_APP_CRASH);
+    public static boolean didCrashInLastSession() {
+        File flagFile = new File(ServiceLocator.getContext().getFilesDir(), DID_APP_CRASH);
         return flagFile.exists();
     }
 
