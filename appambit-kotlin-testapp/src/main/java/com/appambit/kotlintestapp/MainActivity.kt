@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             //Analytics.enableManualSession()
-            AppAmbit.start(this, "7bdf5c7d-1414-47c6-878d-6ebc25e6265e")
+            AppAmbit.start(this, "<YOUR-APPKEY>")
             BottomBar()
         }
     }
