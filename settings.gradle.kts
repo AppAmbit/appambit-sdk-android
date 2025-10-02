@@ -25,3 +25,4 @@ rootProject.name = "AppAmbit Testing App"
 include(":appambit-testapp")
 include(":appambit-sdk")
 
+include(":appambit-kotlin-testapp")
