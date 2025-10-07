@@ -19,13 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.appambit.kotlintestapp.utils.StorageServiceTest
 import com.appambit.kotlintestapp.utils.dialogUtils
 import com.appambit.sdk.Analytics
 import com.appambit.sdk.Crashes
-import com.appambit.sdk.enums.SessionType
-import com.appambit.sdk.models.analytics.SessionData
-import com.appambit.sdk.utils.DateUtils
 import com.appambit.sdk.utils.InternetConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,18 +29,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Date
-import java.util.Random
-import java.util.UUID
 
-lateinit var storableApp2: StorageServiceTest
 private val TAG = MainActivity::class.java.simpleName
 
 @Composable
 fun Analytics() {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    storableApp2 = StorageServiceTest(context)
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -81,7 +72,7 @@ fun Analytics() {
 
             Button(
                 onClick = {
-                    onGenerateLast30DailySessions(context)
+                    onGenerateLast30DailySessions()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -158,7 +149,7 @@ fun Analytics() {
 
             Button(
                 onClick = {
-                    onSend30DailyEvents(context)
+                    onSend30DailyEvents()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -209,46 +200,8 @@ fun onEndSession() {
     }
 }
 
-fun onGenerateLast30DailySessions(context: Context) {
-    if (InternetConnection.hasInternetConnection(context)) {
-        dialogUtils(context, "Info", "Turn off internet and try again")
-        return
-    }
+fun onGenerateLast30DailySessions() {
 
-    for (index in 1..30) {
-        val sessionData = SessionData()
-        val sessionId = UUID.randomUUID()
-
-        sessionData.id = sessionId
-        sessionData.sessionType = SessionType.START
-        val sessionDate = DateUtils.getDateDaysAgo(30 - index)
-        sessionData.timestamp = sessionDate
-
-        try {
-            storableApp2.putSessionData(sessionData)
-        } catch (e: java.lang.Exception) {
-            Log.e(TAG, "Error inserting start session", e)
-            continue
-        }
-
-        try {
-            val finalIndex = index
-            val random = Random()
-            val randomOffset = random.nextInt(60 * 60 * 1000).toLong()
-            storableApp2.putSessionData(object : SessionData() {
-                init {
-                    id = UUID.randomUUID()
-                    sessionType = SessionType.END
-                    timestamp = Date(
-                        DateUtils.getDateDaysAgo(30 - finalIndex).time + randomOffset
-                    )
-                }
-            })
-        } catch (e: java.lang.Exception) {
-            Log.e(TAG, "Error inserting end session", e)
-        }
-    }
-    dialogUtils(context, "Info", "Turn off and Turn on internet to send the sessions.")
 }
 
 fun onInvalidateToken() {
@@ -264,15 +217,9 @@ fun onTokenRefresh(context: Context) {
 
         val logJobs = List(5) {
             async {
-                Crashes.LogError(
-                    context,
+                Crashes.logError(
                     "Sending 5 errors after an invalid token",
-                    properties,
-                    context::class.java.name,
-                    null,
-                    null,
-                    0,
-                    DateUtils.getUtcNow()
+                    properties
                 )
             }
         }
@@ -287,7 +234,6 @@ fun onTokenRefresh(context: Context) {
                 Analytics.trackEvent(
                     "Sending 5 events after an invalid token",
                     eventData,
-                    null
                 )
             }
         }
@@ -325,7 +271,7 @@ fun onSendMax300LengthEvent(context: Context) {
     properties.put(characters300, characters300)
     properties.put(characters302, characters302)
 
-    Analytics.trackEvent(characters300, properties, null)
+    Analytics.trackEvent(characters300, properties)
     Toast.makeText(context, "1 event generated", Toast.LENGTH_SHORT).show()
 }
 
@@ -357,63 +303,12 @@ fun onSend20MaxPropertiesEvent(context: Context) {
     properties.put("24", "24")
     properties.put("25", "25") //25
 
-    Analytics.trackEvent("TestMaxProperties", properties, null)
+    Analytics.trackEvent("TestMaxProperties", properties)
     Toast.makeText(context, "1 event generated", Toast.LENGTH_SHORT).show()
 }
 
-fun onSend30DailyEvents(context: Context) {
-    if (InternetConnection.hasInternetConnection(context)) {
-        dialogUtils(context, "Info", "Turn off internet and try again")
-        return
-    }
+fun onSend30DailyEvents() {
 
-    for (index in 0..29) {
-        val sessionData = SessionData()
-        val sessionId = UUID.randomUUID()
-
-        sessionData.id = sessionId
-        sessionData.sessionType = SessionType.START
-        val eventDate = DateUtils.getDateDaysAgo(30 - index)
-        sessionData.timestamp = eventDate
-
-        try {
-            storableApp2.putSessionData(sessionData)
-        } catch (e: java.lang.Exception) {
-            Log.e(TAG, "Error inserting start session", e)
-            continue
-        }
-
-        val properties: MutableMap<String?, String?> = java.util.HashMap<String?, String?>()
-        properties.put("30 Daily events", "Event")
-
-        Analytics.trackEvent("30 Daily events", properties, eventDate)
-
-        try {
-            Thread.sleep(100)
-        } catch (e: java.lang.Exception) {
-            Log.e(TAG, "Error during log creation: " + e.message)
-        }
-
-        storableApp2.updateEventSessionId(sessionId.toString())
-
-        try {
-            val finalIndex = index
-            val random = Random()
-            val randomOffset = random.nextInt(60 * 60 * 1000).toLong()
-            storableApp2.putSessionData(object : SessionData() {
-                init {
-                    id = UUID.randomUUID()
-                    sessionType = SessionType.END
-                    timestamp = Date(
-                        DateUtils.getDateDaysAgo(30 - finalIndex).time + randomOffset
-                    )
-                }
-            })
-        } catch (e: java.lang.Exception) {
-            Log.e(TAG, "Error inserting end session", e)
-        }
-    }
-    dialogUtils(context, "Info", "30 events generated, turn on internet to send them")
 }
 
 fun onSend220BatchEvents(context: Context) {
@@ -426,7 +321,7 @@ fun onSend220BatchEvents(context: Context) {
 
     repeat(220) {
         properties.put("property1", "value1")
-        Analytics.trackEvent("Events 220", properties, null)
+        Analytics.trackEvent("Events 220", properties)
     }
 
     dialogUtils(context, "Info", "220 events generated, turn on internet to send them")
