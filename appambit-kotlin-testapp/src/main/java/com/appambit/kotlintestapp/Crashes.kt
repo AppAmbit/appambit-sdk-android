@@ -177,6 +177,7 @@ fun Crashes() {
             }
 
             Button(
+                enabled = false,
                 onClick = {
                     onGenerate30DailyErrors()
                 },
@@ -188,6 +189,7 @@ fun Crashes() {
             }
 
             Button(
+                enabled = false,
                 onClick = {
                     onGenerate30DailyCrashes()
                 },

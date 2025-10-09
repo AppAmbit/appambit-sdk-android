@@ -71,6 +71,7 @@ fun Analytics() {
             }
 
             Button(
+                enabled = false,
                 onClick = {
                     onGenerateLast30DailySessions()
                 },
@@ -148,6 +149,7 @@ fun Analytics() {
             }
 
             Button(
+                enabled = false,
                 onClick = {
                     onSend30DailyEvents()
                 },
