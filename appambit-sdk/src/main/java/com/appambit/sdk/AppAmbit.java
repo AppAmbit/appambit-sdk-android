@@ -68,6 +68,7 @@ public final class AppAmbit {
     private static int resumedActivities = 0;
     private static boolean foreground = false;
     private static boolean isWaitingPause = false;
+    private static boolean firstConnectivityEvent = true;
     private static final long ACTIVITY_DELAY = 700;
 
     public static void start(Context context, String appKey) {
@@ -248,7 +249,8 @@ public final class AppAmbit {
                 super.onAvailable(network);
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
-                    if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
+                    if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled() || firstConnectivityEvent) {
+                        firstConnectivityEvent = false;
                         return;
                     }
                     try {
