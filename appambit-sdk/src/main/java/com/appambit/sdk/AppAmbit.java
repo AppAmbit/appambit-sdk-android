@@ -117,11 +117,20 @@ public final class AppAmbit {
                     Log.d(TAG, "onResume (App in foreground)");
                     onResumeApp();
                 }
+
+                try {
+                    BreadcrumbManager.AddAsync("On Resume");
+                    BreadcrumbManager.AddAsync(activity.getClass().getSimpleName() + " On appear");
+                } catch (Throwable ignored) {}
             }
 
             @Override
             public void onActivityPaused(@NonNull Activity activity) {
                 resumedActivities = Math.max(0, resumedActivities - 1);
+
+                try {
+                    BreadcrumbManager.AddAsync(activity.getClass().getSimpleName() + " On Disappear");
+                } catch (Throwable ignored) {}
 
                 if (resumedActivities == 0) {
                     isWaitingPause = true;
@@ -141,6 +150,9 @@ public final class AppAmbit {
 
             @Override
             public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
+                try {
+                    BreadcrumbManager.AddAsync("On Start");
+                } catch (Throwable ignored) {}
             }
 
             @Override
@@ -148,6 +160,9 @@ public final class AppAmbit {
                 if (startedActivities == 0 && resumedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onDestroy (App Level)");
                     onEnd();
+                    try {
+                        BreadcrumbManager.SaveToFile("On destroy");
+                    } catch (Throwable ignored) {}
                 }
             }
 
@@ -164,6 +179,7 @@ public final class AppAmbit {
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
+        BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
     }
 
     private static void onStartApp(Context context) {
@@ -174,9 +190,14 @@ public final class AppAmbit {
         final Runnable batchesTasks = () -> {
             Analytics.sendBatchesEvents();
             Crashes.sendBatchesLogs();
+            BreadcrumbManager.SendPending();
         };
         Crashes.loadCrashFileIfExists(context);
         SessionManager.sendBatchSessions(batchesTasks);
+        try {
+            BreadcrumbManager.SendFromFile();
+            BreadcrumbManager.AddAsync("On Start");
+        } catch (Throwable ignored) {}
     }
 
     private static void initializeConsumer() {
@@ -206,12 +227,18 @@ public final class AppAmbit {
         if (!Analytics.isManualSessionEnabled()) {
             SessionManager.saveEndSession();
         }
+        try {
+            BreadcrumbManager.SaveToFile("On Pause");
+        } catch (Throwable ignored) {}
     }
 
     private static void onEnd() {
         if (!Analytics.isManualSessionEnabled()) {
             SessionManager.saveEndSession();
         }
+        try {
+            BreadcrumbManager.SaveToFile("On destroy");
+        } catch (Throwable ignored) {}
     }
 
     private static void onResumeApp() {
@@ -226,11 +253,13 @@ public final class AppAmbit {
             }
             Crashes.sendBatchesLogs();
             Analytics.sendBatchesEvents();
+            BreadcrumbManager.SendFromFile();
+            BreadcrumbManager.SendPending();
         };
 
         if (!tokenIsValid()) {
             getNewToken(resumeTasks);
-        }else {
+        } else {
             resumeTasks.run();
         }
     }
@@ -258,6 +287,7 @@ public final class AppAmbit {
                         final Runnable batchTasks = () -> {
                             Crashes.sendBatchesLogs();
                             Analytics.sendBatchesEvents();
+                            BreadcrumbManager.SendPending();
                         };
                         final Runnable connectionTasks = () -> {
                             Crashes.loadCrashFileIfExists(context);
@@ -267,6 +297,9 @@ public final class AppAmbit {
                         };
                         getNewToken(null);
                         connectionTasks.run();
+                        try {
+                            BreadcrumbManager.AddAsync("online");
+                        } catch (Throwable ignored) {}
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }
@@ -277,6 +310,9 @@ public final class AppAmbit {
             public void onLost(@NonNull Network network) {
                 super.onLost(network);
                 Log.d(TAG, "Internet connection lost");
+                try {
+                    BreadcrumbManager.AddAsync("offline");
+                } catch (Throwable ignored) {}
             }
         });
     }
