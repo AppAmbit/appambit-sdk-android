@@ -130,7 +130,7 @@ public final class Analytics {
                 appAmbitTaskFuture.then(result -> {
                     Log.d(TAG, "Event sent: " + eventRequest.getName());
                 });
-            }catch (Exception e) {
+            } catch (Exception e) {
                 appAmbitTaskFuture.onError(error -> {
                     Log.d(TAG, "Error sending event - Api: " + e.getMessage());
                 });
@@ -147,17 +147,36 @@ public final class Analytics {
                 break;
             }
 
-            String truncatedKey = truncate(entry.getKey(), AppConstants.TRACK_EVENT_PROPERTY_MAX_CHARACTERS);
+            String rawValue = entry.getValue();
+            if (rawValue == null) {
+                continue;
+            }
+            String trimmedValue = rawValue.trim();
+            if (trimmedValue.isEmpty()) {
+                continue;
+            }
+
+            String rawKey = entry.getKey();
+            if (rawKey == null) {
+                continue;
+            }
+
+            String truncatedKey = truncate(rawKey, AppConstants.TRACK_EVENT_PROPERTY_MAX_CHARACTERS);
+            if (truncatedKey == null || truncatedKey.trim().isEmpty()) {
+                continue;
+            }
+
             if (result.containsKey(truncatedKey)) {
                 continue;
             }
 
-            String truncatedValue = truncate(entry.getValue(), AppConstants.TRACK_EVENT_PROPERTY_MAX_CHARACTERS);
+            String truncatedValue = truncate(trimmedValue, AppConstants.TRACK_EVENT_PROPERTY_MAX_CHARACTERS);
             result.put(truncatedKey, truncatedValue);
         }
 
         return result;
     }
+
 
     private static AppAmbitTaskFuture<Void> saveEventLocally(EventEntity entity) {
         AppAmbitTaskFuture<Void> future = new AppAmbitTaskFuture<>();
