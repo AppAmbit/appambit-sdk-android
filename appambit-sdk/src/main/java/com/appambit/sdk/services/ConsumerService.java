@@ -34,7 +34,7 @@ public class ConsumerService {
 
         try {
             if (mStorageService == null || mAppInfoService == null) {
-                return new RegisterEndpoint(new Consumer("", "", "", "", null, "", "", ""));
+                return new RegisterEndpoint(new Consumer("", "", "", "", "", null, "", "", ""));
             }
 
             deviceId = mStorageService.getDeviceId();
@@ -60,6 +60,7 @@ public class ConsumerService {
                     ensureValue(appId, ""),
                     ensureValue(deviceId, ""),
                     mAppInfoService != null ? ensureValue(mAppInfoService.getDeviceModel(), "") : "",
+                    mAppInfoService != null ? ensureValue(mAppInfoService.getAppVersion(), "") : "",
                     ensureValue(userId, ""),
                     userEmail,
                     mAppInfoService != null ? ensureValue(mAppInfoService.getOs(), "") : "",
