@@ -16,12 +16,12 @@ import java.util.Locale;
 
 public class CrashHandler implements Thread.UncaughtExceptionHandler {
 
-    private final Context context;
+    private static Context context = null;
     private final Thread.UncaughtExceptionHandler defaultHandler;
     private static final String TAG = CrashHandler.class.getSimpleName();
 
     public CrashHandler(@NonNull Context context) {
-        this.context = context.getApplicationContext();
+        CrashHandler.context = context.getApplicationContext();
         this.defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
     }
 
@@ -105,7 +105,7 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
     }
 
     public static boolean didCrashInLastSession() {
-        File flagFile = new File(ServiceLocator.getContext().getFilesDir(), DID_APP_CRASH);
+        File flagFile = new File(context.getFilesDir(), DID_APP_CRASH);
         return flagFile.exists();
     }
 
