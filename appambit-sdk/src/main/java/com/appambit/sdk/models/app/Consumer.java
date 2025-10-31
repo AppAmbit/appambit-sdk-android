@@ -4,10 +4,13 @@ import com.appambit.sdk.utils.JsonKey;
 
 public class Consumer {
 
-    public Consumer(String appKey, String deviceId, String deviceModel, String userId, String userEmail, String os, String country, String language) {
+    public Consumer(String appKey, String deviceId, String deviceModel, String appVersion, String userId,
+                    String userEmail,
+                    String os, String country, String language) {
         this.appKey = appKey;
         this.deviceId = deviceId;
         this.deviceModel = deviceModel;
+        this.appVersion = appVersion;
         this.userId = userId;
         this.userEmail = userEmail;
         this.os = os;
@@ -31,6 +34,18 @@ public class Consumer {
     private String country;
     @JsonKey("language")
     private String language;
+
+    @JsonKey("app_version")
+    private String appVersion;
+
+    public String getAppVersion() {
+        return appVersion;
+    }
+
+    public void setAppVersion(String appVersion) {
+        this.appVersion = appVersion;
+    }
+
 
     // Getters and Setters
     public String getAppKey() {
