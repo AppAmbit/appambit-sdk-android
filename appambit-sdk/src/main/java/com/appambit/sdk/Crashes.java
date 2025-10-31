@@ -36,12 +36,20 @@ import java.util.concurrent.Semaphore;
 
 public class Crashes {
 
-    static Storable mStorable = ServiceLocator.getStorageService();
-    static ExecutorService mExecutorService = ServiceLocator.getExecutorService();
-    static ApiService apiService = ServiceLocator.getApiService();
+    private static Storable mStorable;
+    private static ExecutorService mExecutorService;
+    private static ApiService apiService;
     private static final Semaphore ensureFileLocked = new Semaphore(1);
 
     private static final String TAG = Crashes.class.getSimpleName();
+
+    public static void Initialize() {
+        mStorable = ServiceLocator.getStorageService();
+        mExecutorService = ServiceLocator.getExecutorService();
+        apiService = ServiceLocator.getApiService();
+
+        Logging.Initialize();
+    }
 
     public static void sendBatchesLogs() {
         mExecutorService.execute(() -> {
@@ -259,7 +267,11 @@ public class Crashes {
     }
 
     public static boolean didCrashInLastSession() {
-        return CrashHandler.didCrashInLastSession();
+        try {
+            return CrashHandler.didCrashInLastSession();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static void generateTestCrash() {

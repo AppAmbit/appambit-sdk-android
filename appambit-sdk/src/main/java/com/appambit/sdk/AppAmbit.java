@@ -175,6 +175,7 @@ public final class AppAmbit {
             Analytics.sendBatchesEvents();
             Crashes.sendBatchesLogs();
         };
+        Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
         SessionManager.sendBatchSessions(batchesTasks);
     }
