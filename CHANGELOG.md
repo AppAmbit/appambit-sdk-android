@@ -1,4 +1,17 @@
 ___
+## Version 0.0.9
+
+### AppAmbit
+
+* **[Fix]** Fixed bug in detecting user app version
+* **[Fix]** didCrashInLastSession Context
+* **[Fix]** didCrashInLastSession Function
+
+## Version 0.0.8
+
+### AppAmbit
+
+* **[Chore]** AppAmbit release description updated.
 
 ## Version 0.0.7
 

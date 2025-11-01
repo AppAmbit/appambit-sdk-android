@@ -192,6 +192,7 @@ public final class AppAmbit {
             Crashes.sendBatchesLogs();
             BreadcrumbManager.SendPending();
         };
+        Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
         SessionManager.sendBatchSessions(batchesTasks);
         try {
