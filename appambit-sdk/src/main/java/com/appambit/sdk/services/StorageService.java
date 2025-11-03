@@ -644,7 +644,7 @@ public class StorageService implements Storable {
         return null;
     }
 
-    public void updateLogsAndEventsId(String localId, String remoteId) {
+    public void updateSessionIdsForAllTrackingData(String localId, String remoteId) {
         SQLiteDatabase db = dataStore.getReadableDatabase();
 
         String updateLogsSql = "UPDATE " + LogEntityContract.TABLE_NAME + " SET " +
@@ -865,9 +865,7 @@ public class StorageService implements Storable {
             ContentValues cv = new ContentValues();
             cv.put(BreadcrumbContract.Columns.ID, breadcrumb.getId().toString());
             cv.put(BreadcrumbContract.Columns.SESSION_ID, breadcrumb.getSessionId());
-            if (breadcrumb instanceof BreadcrumEntity) {
-                cv.put(BreadcrumbContract.Columns.NAME, ((BreadcrumEntity) breadcrumb).getName());
-            }
+            cv.put(BreadcrumbContract.Columns.NAME, breadcrumb.getName());
             cv.put(BreadcrumbContract.Columns.CREATED_AT, breadcrumb.getCreatedAt().getTime());
             db.insert(BreadcrumbContract.TABLE_NAME, null, cv);
             Log.d(AppAmbit.class.getSimpleName(), "BREADCRUMB CREATE - " + breadcrumb.getId());
@@ -896,7 +894,47 @@ public class StorageService implements Storable {
     }
 
     @Override
+    public List<BreadcrumEntity> getOldest100Breadcrumbs() {
+        List<BreadcrumEntity> items = new ArrayList<>();
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+
+        String sql = "SELECT * FROM " + BreadcrumbContract.TABLE_NAME + " " +
+                "ORDER BY " + BreadcrumbContract.Columns.CREATED_AT + " ASC " +
+                "LIMIT 100";
+
+        Cursor c = null;
+        try {
+            c = db.rawQuery(sql, null);
+            if (c.moveToFirst()) {
+                do {
+                    BreadcrumEntity b = new BreadcrumEntity();
+
+                    String idStr    = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.ID));
+                    String sessionId= c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.SESSION_ID));
+                    String name     = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.NAME));
+                    long createdAt  = c.getLong(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.CREATED_AT));
+
+                    b.setId(UUID.fromString(idStr));
+                    b.setSessionId(sessionId);
+                    b.setName(name);
+                    b.setCreatedAt(new Date(createdAt));
+
+                    if (isUIntNumber(sessionId)) {
+                        items.add(b);
+                    }
+                } while (c.moveToNext());
+            }
+        } finally {
+            if (c != null) c.close();
+        }
+
+        return items;
+    }
+
+
+    @Override
     public void close() throws IOException {
 
     }
+
 }

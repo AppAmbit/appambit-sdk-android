@@ -1,19 +1,24 @@
 package com.appambit.sdk;
 
 import android.util.Log;
+
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.breadcrumbs.BreadcrumEntity;
+import com.appambit.sdk.models.breadcrumbs.BreadcrumbMappings;
+import com.appambit.sdk.models.responses.ApiResult;
+import com.appambit.sdk.models.responses.BatchResponse;
 import com.appambit.sdk.services.endpoints.BreadcrumbEndpoint;
+import com.appambit.sdk.services.endpoints.BreadcrumbsBatchEndpoint;
 import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.FileUtils;
-import java.util.ArrayList;
-import java.util.Date;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+
 import static com.appambit.sdk.utils.FileUtils.deleteSingleObject;
 import static com.appambit.sdk.utils.StringValidation.isUIntNumber;
 
@@ -22,6 +27,7 @@ public class BreadcrumbManager {
     private static ApiService mApiService;
     private static Storable mStorageService;
     private static ExecutorService mExecutorService;
+
     private static final Object SEND_LOCK = new Object();
     private static boolean isSending = false;
 
@@ -33,12 +39,16 @@ public class BreadcrumbManager {
 
     public static void AddAsync(String name) {
         if (mApiService == null || mExecutorService == null || mStorageService == null) return;
+
         BreadcrumEntity entity = createEntity(name);
+
         AppAmbitTaskFuture<Void> send = sendBreadcrumbEndpoint(entity);
-        send.then(result -> {
-            if (result == null) mStorageService.addBreadcrumb(entity);
+        send.then(r -> {
+            Log.d(TAG, "Send breadcrumbs");
         });
-        send.onError(error -> mStorageService.addBreadcrumb(entity));
+        send.onError(error -> {
+            Log.d(TAG, "Error to Send breadcrumbs");
+        });
     }
 
     public static void SaveToFile(String name) {
@@ -46,7 +56,7 @@ public class BreadcrumbManager {
             BreadcrumEntity entity = createEntity(name);
             FileUtils.saveToFile(entity);
         } catch (Throwable t) {
-            Log.d(TAG, "SaveToFile error");
+            Log.d(TAG, "SaveToFile error: " + t.getMessage());
         }
     }
 
@@ -54,62 +64,71 @@ public class BreadcrumbManager {
         try {
             BreadcrumEntity entity = FileUtils.getSavedSingleObject(BreadcrumEntity.class);
             if (entity == null) return;
+
             AppAmbitTaskFuture<Void> fut = sendBreadcrumbEndpoint(entity);
-            fut.then(r -> {
-                deleteSingleObject(BreadcrumEntity.class);
+            fut.then(r -> deleteSingleObject(BreadcrumEntity.class));
+            fut.onError(err -> {
+                Log.d(TAG, "SendFromFile error: " + err.getLocalizedMessage());
             });
-            fut.onError(err -> {});
-        } catch (Throwable t) {}
+        } catch (Throwable t) {
+            Log.d(TAG, "SendFromFile error: " + t.getMessage());
+        }
     }
 
     public static void SendPending() {
         if (mApiService == null || mExecutorService == null || mStorageService == null) return;
+
         synchronized (SEND_LOCK) {
             if (isSending) return;
             isSending = true;
         }
+
         mExecutorService.execute(() -> {
             try {
-                List<BreadcrumEntity> pending = mStorageService.getAllBreadcrumbs();
-                if (pending == null || pending.isEmpty()) {
+                List<BreadcrumEntity> items = mStorageService.getOldest100Breadcrumbs();
+                if (items == null || items.isEmpty()) {
                     finishSend();
                     return;
                 }
-                List<BreadcrumEntity> sent = new ArrayList<>();
-                sendSequentially(pending, 0, sent, () -> {
-                    if (!sent.isEmpty()) {
-                        try {
-                            mStorageService.deleteBreadcrumbs(sent);
-                        } catch (Throwable t) {}
+
+                AppAmbitTaskFuture<ApiResult<BatchResponse>> batchFuture = sendBatchEndpoint(items);
+
+                batchFuture.then(result -> {
+                    if (result == null || result.errorType != ApiErrorType.None) {
+                        Log.d(TAG, "Batch not sent (kept for retry). ErrorType=" +
+                                (result != null ? result.errorType : "null"));
+                        finishSend();
+                        return;
+                    }
+
+                    try {
+                        mStorageService.deleteBreadcrumbs(items);
+                        Log.d(TAG, "Finished Breadcrumbs Batch");
+                    } catch (Throwable t) {
+                        Log.d(TAG, "Error deleting sent breadcrumbs: " + t.getMessage());
                     }
                     finishSend();
                 });
+
+                batchFuture.onError(error -> {
+                    Log.d(TAG, "SendPending batch error: " + error.getMessage());
+                    finishSend();
+                });
             } catch (Throwable t) {
+                Log.d(TAG, "SendPending unexpected error: " + t.getMessage());
                 finishSend();
             }
         });
-    }
-
-    private static void sendSequentially(List<BreadcrumEntity> items, int index, List<BreadcrumEntity> sent, Runnable onComplete) {
-        if (index >= items.size()) {
-            onComplete.run();
-            return;
-        }
-        BreadcrumEntity payload = items.get(index);
-        AppAmbitTaskFuture<Void> fut = sendBreadcrumbEndpoint(payload);
-        fut.then(r -> {
-            sent.add(payload);
-            sendSequentially(items, index + 1, sent, onComplete);
-        });
-        fut.onError(err -> sendSequentially(items, index + 1, sent, onComplete));
     }
 
     private static BreadcrumEntity createEntity(String name) {
         BreadcrumEntity e = new BreadcrumEntity();
         e.setId(UUID.randomUUID());
         e.setCreatedAt(DateUtils.getUtcNow());
+
         String sid = SessionManager.getSessionId();
         e.setSessionId(isUIntNumber(sid) ? sid : null);
+
         e.setName(name);
         return e;
     }
@@ -118,8 +137,10 @@ public class BreadcrumbManager {
         AppAmbitTaskFuture<Void> result = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
-                var apiResponse = mApiService.executeRequest(new BreadcrumbEndpoint(entity), Object.class);
-                if (apiResponse.errorType == ApiErrorType.None) {
+                ApiResult<Object> apiResponse =  mApiService.executeRequest(new BreadcrumbEndpoint(entity), Object.class);
+
+                if (apiResponse != null && apiResponse.errorType == ApiErrorType.None) {
+                    mStorageService.addBreadcrumb(entity);
                     result.complete(null);
                 } else {
                     result.fail(new RuntimeException("Breadcrumb send failed"));
@@ -129,6 +150,21 @@ public class BreadcrumbManager {
             }
         });
         return result;
+    }
+
+    private static AppAmbitTaskFuture<ApiResult<BatchResponse>> sendBatchEndpoint(List<BreadcrumEntity> items) {
+        AppAmbitTaskFuture<ApiResult<BatchResponse>> future = new AppAmbitTaskFuture<>();
+        mExecutorService.execute(() -> {
+            try {
+                ApiResult<BatchResponse> apiResponse =
+                        mApiService.executeRequest(new BreadcrumbsBatchEndpoint(BreadcrumbMappings.toDataList(items)),
+                                BatchResponse.class);
+                future.complete(apiResponse);
+            } catch (Exception e) {
+                future.fail(e);
+            }
+        });
+        return future;
     }
 
     private static void finishSend() {

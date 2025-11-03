@@ -4,7 +4,7 @@ import com.appambit.sdk.utils.JsonKey;
 
 public class Breadcrumb  {
 
-    @JsonKey("breadcrumb_name")
+    @JsonKey("name")
     private String name;
 
     public String getName() {

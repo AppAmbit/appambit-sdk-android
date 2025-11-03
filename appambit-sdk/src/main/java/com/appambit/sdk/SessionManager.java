@@ -277,7 +277,7 @@ public class SessionManager {
             if (result.errorType == ApiErrorType.None) {
                 Log.d(TAG, "Start session sent successfully, deleting " + sessionData.getId());
                 sessionId = result.data.getSessionId();
-                mStorageService.updateLogsAndEventsId(sessionData.getId().toString(), sessionId);
+                mStorageService.updateSessionIdsForAllTrackingData(sessionData.getId().toString(), sessionId);
                 mStorageService.deleteSessionById(sessionData.getId());
                 Crashes.sendBatchesLogs();
                 Analytics.sendBatchesEvents();
@@ -312,7 +312,7 @@ public class SessionManager {
 
                 Log.d(TAG, "Match -> localId: " + localId + " remoteId: " + remoteId);
 
-                mStorageService.updateLogsAndEventsId(localId, remoteId);
+                mStorageService.updateSessionIdsForAllTrackingData(localId, remoteId);
             }
         }
         if(!sessions.isEmpty()) {

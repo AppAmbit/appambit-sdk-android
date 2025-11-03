@@ -36,6 +36,16 @@ public final class AppAmbit {
     private static final Object TOKEN_LOCK = new Object();
     private static boolean isRefreshingToken = false;
     private static final List<Runnable> tokenWaiters = new ArrayList<>();
+    private static String mAppKey;
+    private static boolean isInitialized = false;
+    private static boolean hasStartedSession = false;
+    private static boolean isReadyForSendingBatches = false;
+    private static int startedActivities = 0;
+    private static int resumedActivities = 0;
+    private static boolean foreground = false;
+    private static boolean isWaitingPause = false;
+    private static boolean firstConnectivityEvent = true;
+    private static final long ACTIVITY_DELAY = 700;
 
     static void safeRun(@Nullable Runnable r) {
         if (r == null) return;
@@ -59,17 +69,6 @@ public final class AppAmbit {
             Log.d(TAG, "Token operation failed; callbacks dropped");
         }
     }
-
-    private static String mAppKey;
-    private static boolean isInitialized = false;
-    private static boolean hasStartedSession = false;
-    private static boolean isReadyForSendingBatches = false;
-    private static int startedActivities = 0;
-    private static int resumedActivities = 0;
-    private static boolean foreground = false;
-    private static boolean isWaitingPause = false;
-    private static boolean firstConnectivityEvent = true;
-    private static final long ACTIVITY_DELAY = 700;
 
     public static void start(Context context, String appKey) {
         mAppKey = appKey;
@@ -117,20 +116,11 @@ public final class AppAmbit {
                     Log.d(TAG, "onResume (App in foreground)");
                     onResumeApp();
                 }
-
-                try {
-                    BreadcrumbManager.AddAsync("On Resume");
-                    BreadcrumbManager.AddAsync(activity.getClass().getSimpleName() + " On appear");
-                } catch (Throwable ignored) {}
             }
 
             @Override
             public void onActivityPaused(@NonNull Activity activity) {
                 resumedActivities = Math.max(0, resumedActivities - 1);
-
-                try {
-                    BreadcrumbManager.AddAsync(activity.getClass().getSimpleName() + " On Disappear");
-                } catch (Throwable ignored) {}
 
                 if (resumedActivities == 0) {
                     isWaitingPause = true;
@@ -144,25 +134,21 @@ public final class AppAmbit {
 
                 if (startedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onStop (App in background)");
+                    BreadcrumbManager.SaveToFile(BreadcrumbsConstants.onPause);
                     onEnd();
                 }
             }
 
             @Override
             public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
-                try {
-                    BreadcrumbManager.AddAsync("On Start");
-                } catch (Throwable ignored) {}
             }
 
             @Override
             public void onActivityDestroyed(@NonNull Activity activity) {
                 if (startedActivities == 0 && resumedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onDestroy (App Level)");
+                    BreadcrumbManager.SaveToFile(BreadcrumbsConstants.onDestroy);
                     onEnd();
-                    try {
-                        BreadcrumbManager.SaveToFile("On destroy");
-                    } catch (Throwable ignored) {}
                 }
             }
 
@@ -186,7 +172,9 @@ public final class AppAmbit {
         InitializeServices(context);
         registerNetworkCallback(context);
         initializeConsumer();
+        BreadcrumbManager.AddAsync(BreadcrumbsConstants.onStart);
         hasStartedSession = true;
+        BreadcrumbManager.SendFromFile();
         final Runnable batchesTasks = () -> {
             Analytics.sendBatchesEvents();
             Crashes.sendBatchesLogs();
@@ -195,14 +183,9 @@ public final class AppAmbit {
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
         SessionManager.sendBatchSessions(batchesTasks);
-        try {
-            BreadcrumbManager.SendFromFile();
-            BreadcrumbManager.AddAsync("On Start");
-        } catch (Throwable ignored) {}
     }
 
     private static void initializeConsumer() {
-
         if (!Analytics.isManualSessionEnabled()) {
             SessionManager.saveSessionEndToDatabaseIfExist();
         }
@@ -226,20 +209,15 @@ public final class AppAmbit {
 
     private static void onSleep() {
         if (!Analytics.isManualSessionEnabled()) {
+            BreadcrumbManager.SaveToFile(BreadcrumbsConstants.onPause);
             SessionManager.saveEndSession();
         }
-        try {
-            BreadcrumbManager.SaveToFile("On Pause");
-        } catch (Throwable ignored) {}
     }
 
     private static void onEnd() {
         if (!Analytics.isManualSessionEnabled()) {
             SessionManager.saveEndSession();
         }
-        try {
-            BreadcrumbManager.SaveToFile("On destroy");
-        } catch (Throwable ignored) {}
     }
 
     private static void onResumeApp() {
@@ -252,9 +230,10 @@ public final class AppAmbit {
             if (!Analytics.isManualSessionEnabled() && isInitialized) {
                 SessionManager.removeSavedEndSession();
             }
+            BreadcrumbManager.SendFromFile();
+            BreadcrumbManager.AddAsync(BreadcrumbsConstants.onResume);
             Crashes.sendBatchesLogs();
             Analytics.sendBatchesEvents();
-            BreadcrumbManager.SendFromFile();
             BreadcrumbManager.SendPending();
         };
 
@@ -295,12 +274,10 @@ public final class AppAmbit {
                             SessionManager.sendEndSessionFromDatabase(null);
                             SessionManager.sendStartSessionIfExist();
                             SessionManager.sendBatchSessions(batchTasks);
+                            BreadcrumbManager.SendFromFile();
                         };
                         getNewToken(null);
                         connectionTasks.run();
-                        try {
-                            BreadcrumbManager.AddAsync("online");
-                        } catch (Throwable ignored) {}
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }
@@ -311,9 +288,6 @@ public final class AppAmbit {
             public void onLost(@NonNull Network network) {
                 super.onLost(network);
                 Log.d(TAG, "Internet connection lost");
-                try {
-                    BreadcrumbManager.AddAsync("offline");
-                } catch (Throwable ignored) {}
             }
         });
     }

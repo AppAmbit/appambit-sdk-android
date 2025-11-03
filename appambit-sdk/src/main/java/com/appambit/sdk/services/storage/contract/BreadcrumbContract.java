@@ -13,7 +13,7 @@ public class BreadcrumbContract {
         public static final String NAME = "name";
         public static final String CREATED_AT = "createdAt";
         static final String TYPE_TEXT = "TEXT";
-
+        static final String TYPE_INTEGER = "INTEGER";
     }
 
     public static final String CREATE_TABLE =
@@ -21,7 +21,7 @@ public class BreadcrumbContract {
                     + Columns.ID + " " + Columns.TYPE_TEXT + " PRIMARY KEY, "
                     + Columns.SESSION_ID + " " + Columns.TYPE_TEXT + ", "
                     + Columns.NAME + " " + Columns.TYPE_TEXT + ", "
-                    + Columns.CREATED_AT + " " + Columns.TYPE_TEXT
+                    + Columns.CREATED_AT + " " + Columns.TYPE_INTEGER
                     + ");";
 
 }

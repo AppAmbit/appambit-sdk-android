@@ -50,7 +50,7 @@ public interface Storable extends Closeable {
 
     SessionData getUnpairedSessionStart();
 
-    void updateLogsAndEventsId(String localId, String remoteId);
+    void updateSessionIdsForAllTrackingData(String localId, String remoteId);
 
     SessionData getUnpairedSessionEnd();
 
@@ -67,4 +67,6 @@ public interface Storable extends Closeable {
     void addBreadcrumb(BreadcrumEntity breadcrumb);
 
     void deleteBreadcrumbs(List<BreadcrumEntity> breadcrumbs);
+
+    List<BreadcrumEntity> getOldest100Breadcrumbs();
 }
