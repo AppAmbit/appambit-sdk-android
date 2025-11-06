@@ -123,12 +123,12 @@ public class FileUtils {
             File f = new File(path);
             if (f.exists()) {
                 String text = readFile(path);
-                if (text != null && !text.isEmpty()) {
+                if (!text.isEmpty()) {
                     JSONArray arr = new JSONArray(text);
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject obj = arr.getJSONObject(i);
                         T item = JsonConvertUtils.fromJson(clazz, obj);
-                        if (item != null) list.add(item);
+                        list.add(item);
                     }
                 }
             }
@@ -143,13 +143,10 @@ public class FileUtils {
                 }
                 if (!exists) {
                     list.add(entry);
-                    Collections.sort(list, new Comparator<T>() {
-                        @Override
-                        public int compare(T a, T b) {
-                            long ta = extractTimestamp(a);
-                            long tb = extractTimestamp(b);
-                            return ta < tb ? -1 : (ta == tb ? 0 : 1);
-                        }
+                    Collections.sort(list, (a, b) -> {
+                        long ta = extractTimestamp(a);
+                        long tb = extractTimestamp(b);
+                        return Long.compare(ta, tb);
                     });
                     JSONArray out = new JSONArray();
                     for (T it : list) {
@@ -170,9 +167,9 @@ public class FileUtils {
         try {
             String path = prepareFileSettings(fileName);
 
-            if (updatedList == null || updatedList.size() == 0) {
+            if (updatedList == null || updatedList.isEmpty()) {
                 File f = new File(path);
-                if (f.exists()) f.delete();
+                f.delete();
                 return;
             }
 

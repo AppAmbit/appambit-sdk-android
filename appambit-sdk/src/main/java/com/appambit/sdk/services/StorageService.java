@@ -655,9 +655,14 @@ public class StorageService implements Storable {
                 EventEntityContract.Columns.SESSION_ID + " = ? WHERE " +
                 EventEntityContract.Columns.SESSION_ID + " = ?";
 
+        String updateBreadcrumbsSql = "UPDATE " + BreadcrumbContract.TABLE_NAME + " SET " +
+                BreadcrumbContract.Columns.SESSION_ID + " = ? WHERE " +
+                BreadcrumbContract.Columns.SESSION_ID + " = ?";
+
         try {
             db.execSQL(updateLogsSql, new String[]{remoteId, localId});
             db.execSQL(updateEventsSql, new String[]{remoteId, localId});
+            db.execSQL(updateBreadcrumbsSql, new String[]{remoteId, localId});
         }catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error updating logs and events with new session ID", e);
             return;
@@ -919,9 +924,7 @@ public class StorageService implements Storable {
                     b.setName(name);
                     b.setCreatedAt(new Date(createdAt));
 
-                    if (isUIntNumber(sessionId)) {
-                        items.add(b);
-                    }
+                    items.add(b);
                 } while (c.moveToNext());
             }
         } finally {

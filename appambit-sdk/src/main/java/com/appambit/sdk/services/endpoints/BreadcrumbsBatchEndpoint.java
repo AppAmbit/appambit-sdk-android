@@ -9,7 +9,7 @@ import java.util.List;
 
 public class BreadcrumbsBatchEndpoint extends BaseEndpoint implements IEndpoint {
     public BreadcrumbsBatchEndpoint(List<BreadcrumbData> batch) {
-        this.setUrl("/breadcrumbs");
+        this.setUrl("/breadcrumbs/batch");
         this.setMethod(HttpMethodEnum.POST);
         BreadcrumbsPayload bathPayload = new BreadcrumbsPayload();
         bathPayload.setBreadcrumbs(batch);

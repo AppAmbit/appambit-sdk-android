@@ -134,7 +134,6 @@ public final class AppAmbit {
 
                 if (startedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onStop (App in background)");
-                    BreadcrumbManager.SaveToFile(BreadcrumbsConstants.onPause);
                     onEnd();
                 }
             }
@@ -147,8 +146,6 @@ public final class AppAmbit {
             public void onActivityDestroyed(@NonNull Activity activity) {
                 if (startedActivities == 0 && resumedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onDestroy (App Level)");
-                    BreadcrumbManager.SaveToFile(BreadcrumbsConstants.onDestroy);
-                    onEnd();
                 }
             }
 
@@ -172,16 +169,16 @@ public final class AppAmbit {
         InitializeServices(context);
         registerNetworkCallback(context);
         initializeConsumer();
-        BreadcrumbManager.AddAsync(BreadcrumbsConstants.onStart);
+
         hasStartedSession = true;
-        BreadcrumbManager.SendFromFile();
         final Runnable batchesTasks = () -> {
             Analytics.sendBatchesEvents();
             Crashes.sendBatchesLogs();
-            BreadcrumbManager.SendPending();
+            BreadcrumbManager.sendBatchBreadcrumbs();
         };
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
+        BreadcrumbManager.loadBreadcrumbsFromFile();
         SessionManager.sendBatchSessions(batchesTasks);
     }
 
@@ -190,32 +187,43 @@ public final class AppAmbit {
             SessionManager.saveSessionEndToDatabaseIfExist();
         }
 
-        Runnable initializeTasks = () -> {
-            if (Analytics.isManualSessionEnabled()) {
-                Log.d(TAG, "Manual session management is enabled");
-                return;
-            }
+        Runnable initializeTasks = () -> {            if (Analytics.isManualSessionEnabled()) {
+            Log.d(TAG, "Manual session management is enabled");
+            return;
+        }
             Runnable initializeSession = () -> {
                 SessionManager.sendEndSessionFromFile();
-                SessionManager.startSession();
+
+                AppAmbitTaskFuture<String> sessionFuture = SessionManager.startSession();
+
+                sessionFuture.then(sessionId -> {
+                    BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                });
+
+                sessionFuture.onError(error -> {
+                    Log.e(TAG, "Failed to start session before adding breadcrumb.", error);
+                });
             };
             SessionManager.sendEndSessionFromDatabase(initializeSession);
         };
         if (!tokenIsValid()) {
-            getNewToken(null);
+            getNewToken(initializeTasks);
+        } else {
+            initializeTasks.run();
         }
-        initializeTasks.run();
     }
+
 
     private static void onSleep() {
         if (!Analytics.isManualSessionEnabled()) {
-            BreadcrumbManager.SaveToFile(BreadcrumbsConstants.onPause);
+            BreadcrumbManager.saveToFile(BreadcrumbsConstants.onPause);
             SessionManager.saveEndSession();
         }
     }
 
     private static void onEnd() {
         if (!Analytics.isManualSessionEnabled()) {
+            BreadcrumbManager.saveToFile(BreadcrumbsConstants.onPause);
             SessionManager.saveEndSession();
         }
     }
@@ -230,11 +238,11 @@ public final class AppAmbit {
             if (!Analytics.isManualSessionEnabled() && isInitialized) {
                 SessionManager.removeSavedEndSession();
             }
-            BreadcrumbManager.SendFromFile();
-            BreadcrumbManager.AddAsync(BreadcrumbsConstants.onResume);
+
             Crashes.sendBatchesLogs();
             Analytics.sendBatchesEvents();
-            BreadcrumbManager.SendPending();
+            BreadcrumbManager.loadBreadcrumbsFromFile();
+            BreadcrumbManager.sendBatchBreadcrumbs();
         };
 
         if (!tokenIsValid()) {
@@ -242,6 +250,8 @@ public final class AppAmbit {
         } else {
             resumeTasks.run();
         }
+
+        BreadcrumbManager.addAsync(BreadcrumbsConstants.onResume);
     }
 
     private static void registerNetworkCallback(@NonNull Context context) {
@@ -267,14 +277,15 @@ public final class AppAmbit {
                         final Runnable batchTasks = () -> {
                             Crashes.sendBatchesLogs();
                             Analytics.sendBatchesEvents();
-                            BreadcrumbManager.SendPending();
+                            BreadcrumbManager.sendBatchBreadcrumbs();
                         };
                         final Runnable connectionTasks = () -> {
                             Crashes.loadCrashFileIfExists(context);
                             SessionManager.sendEndSessionFromDatabase(null);
                             SessionManager.sendStartSessionIfExist();
                             SessionManager.sendBatchSessions(batchTasks);
-                            BreadcrumbManager.SendFromFile();
+                            BreadcrumbManager.loadBreadcrumbsFromFile();
+                            BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
                         };
                         getNewToken(null);
                         connectionTasks.run();
@@ -287,6 +298,7 @@ public final class AppAmbit {
             @Override
             public void onLost(@NonNull Network network) {
                 super.onLost(network);
+                BreadcrumbManager.saveToFile(BreadcrumbsConstants.offline);
                 Log.d(TAG, "Internet connection lost");
             }
         });
