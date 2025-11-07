@@ -11,7 +11,7 @@ public class EventEntity extends Event {
     @JsonKey("id")
     private UUID id;
 
-    @JsonKey("sessionId")
+    @JsonKey("session_id")
     private String sessionId;
 
     @JsonKey("created_at")

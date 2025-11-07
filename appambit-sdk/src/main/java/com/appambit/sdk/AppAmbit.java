@@ -390,9 +390,11 @@ public final class AppAmbit {
             return;
         }
         if (!className.equals(lastPageClassName)) {
-            BreadcrumbManager.addAsync(BreadcrumbsConstants.onDisappear);
+            String previousDisplay = simpleNameOf(lastPageClassName);
+            String currentDisplay = activity.getClass().getSimpleName();
+            BreadcrumbManager.addAsync(BreadcrumbsConstants.onDisappear + ": " + previousDisplay);
             lastPageClassName = className;
-            BreadcrumbManager.addAsync(BreadcrumbsConstants.onAppear);
+            BreadcrumbManager.addAsync(BreadcrumbsConstants.onAppear + ": " + currentDisplay);
         }
     }
 
@@ -407,5 +409,10 @@ public final class AppAmbit {
         } catch (Throwable t) {
             return false;
         }
+    }
+
+    private static String simpleNameOf(@NonNull String fqcn) {
+        int i = fqcn.lastIndexOf('.');
+        return i >= 0 ? fqcn.substring(i + 1) : fqcn;
     }
 }
