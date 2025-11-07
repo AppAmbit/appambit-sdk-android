@@ -8,7 +8,7 @@ import com.appambit.sdk.models.analytics.EventEntity;
 import com.appambit.sdk.models.analytics.SessionBatch;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.LogEntity;
-import com.appambit.sdk.models.breadcrumbs.BreadcrumEntity;
+import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
 
 public interface Storable extends Closeable {
 
@@ -62,11 +62,11 @@ public interface Storable extends Closeable {
 
     void deleteEventList(List<EventEntity> events);
 
-    List<BreadcrumEntity> getAllBreadcrumbs();
+    List<BreadcrumbEntity> getAllBreadcrumbs();
 
-    void addBreadcrumb(BreadcrumEntity breadcrumb);
+    void addBreadcrumb(BreadcrumbEntity breadcrumb);
 
-    void deleteBreadcrumbs(List<BreadcrumEntity> breadcrumbs);
+    void deleteBreadcrumbs(List<BreadcrumbEntity> breadcrumbs);
 
-    List<BreadcrumEntity> getOldest100Breadcrumbs();
+    List<BreadcrumbEntity> getOldest100Breadcrumbs();
 }

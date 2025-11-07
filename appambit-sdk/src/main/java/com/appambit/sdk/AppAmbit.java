@@ -187,10 +187,11 @@ public final class AppAmbit {
             SessionManager.saveSessionEndToDatabaseIfExist();
         }
 
-        Runnable initializeTasks = () -> {            if (Analytics.isManualSessionEnabled()) {
-            Log.d(TAG, "Manual session management is enabled");
-            return;
-        }
+        Runnable initializeTasks = () -> {
+            if (Analytics.isManualSessionEnabled()) {
+                Log.d(TAG, "Manual session management is enabled");
+                return;
+            }
             Runnable initializeSession = () -> {
                 SessionManager.sendEndSessionFromFile();
 
@@ -207,12 +208,12 @@ public final class AppAmbit {
             SessionManager.sendEndSessionFromDatabase(initializeSession);
         };
         if (!tokenIsValid()) {
-            getNewToken(initializeTasks);
+            getNewToken(null);
+            initializeTasks.run();
         } else {
             initializeTasks.run();
         }
     }
-
 
     private static void onSleep() {
         if (!Analytics.isManualSessionEnabled()) {
@@ -246,7 +247,8 @@ public final class AppAmbit {
         };
 
         if (!tokenIsValid()) {
-            getNewToken(resumeTasks);
+            getNewToken(null);
+            resumeTasks.run();
         } else {
             resumeTasks.run();
         }
@@ -321,6 +323,8 @@ public final class AppAmbit {
         }
 
         if (tokenIsValid()) {
+            Log.d(TAG, "Token already valid; skipping refresh");
+            finishTokenOperation(true);
             return;
         }
 
@@ -356,8 +360,17 @@ public final class AppAmbit {
                 finishTokenOperation(false);
                 return;
             }
-            Log.d(TAG, "Consumer successfully created");
-            finishTokenOperation(true);
+            Log.d(TAG, "Consumer successfully created, requesting token...");
+            final AppAmbitTaskFuture<ApiErrorType> ft = api.GetNewToken();
+            ft.then(res -> {
+                boolean ok = (res == ApiErrorType.None);
+                Log.d(TAG, "GetNewToken after create finished: " + res);
+                finishTokenOperation(ok);
+            });
+            ft.onError(err -> {
+                Log.e(TAG, "GetNewToken after create error", err);
+                finishTokenOperation(false);
+            });
         });
         createFuture.onError(err -> {
             Log.e(TAG, "CreateConsumer error", err);

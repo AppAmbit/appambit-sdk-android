@@ -4,7 +4,7 @@ import android.util.Log;
 
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbData;
-import com.appambit.sdk.models.breadcrumbs.BreadcrumEntity;
+import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbMappings;
 import com.appambit.sdk.models.responses.ApiResult;
 import com.appambit.sdk.models.responses.BatchResponse;
@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-
-import static com.appambit.sdk.BreadcrumbsConstants.nameFile;
 
 public class BreadcrumbManager {
     private static final String TAG = "BreadcrumbManager";
@@ -45,7 +43,7 @@ public class BreadcrumbManager {
     public static void addAsync(String name) {
         if (mApiService == null || mExecutorService == null || mStorageService == null) return;
         if (isDuplicate(name)) return;
-        BreadcrumEntity entity = createEntity(name);
+        BreadcrumbEntity entity = createEntity(name);
         AppAmbitTaskFuture<Void> send = sendBreadcrumbEndpoint(entity);
         send.then(r -> Log.d(TAG, "Send breadcrumbs"));
         send.onError(error -> Log.d(TAG, "Error to Send breadcrumbs"));
@@ -59,7 +57,7 @@ public class BreadcrumbManager {
                 if (isDuplicate(name)) return;
 
                 BreadcrumbData data = BreadcrumbMappings.toData(createEntity(name));
-                FileUtils.getSaveJsonArray(nameFile, data, BreadcrumbData.class);
+                FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, data, BreadcrumbData.class);
             } catch (Throwable t) {
                 Log.d(TAG, "SaveToFile error: " + t.getMessage());
             }
@@ -68,9 +66,10 @@ public class BreadcrumbManager {
 
     }
 
+
     public static void loadBreadcrumbsFromFile() {
         try {
-            List<BreadcrumbData> files = FileUtils.getSaveJsonArray(nameFile, BreadcrumbData.class);
+            List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, BreadcrumbData.class);
             List<BreadcrumbData> notSent = new ArrayList<>();
             if (files.isEmpty()) return;
             for (BreadcrumbData item : files) {
@@ -83,11 +82,12 @@ public class BreadcrumbManager {
                     notSent.add(item);
                 }
             }
-            FileUtils.updateJsonArray(nameFile, notSent);
+            FileUtils.updateJsonArray(BreadcrumbsConstants.fileName, notSent);
         } catch (Throwable t) {
             Log.d(TAG, t.toString());
         }
     }
+
 
     public static void sendBatchBreadcrumbs() {
         if (mApiService == null || mExecutorService == null || mStorageService == null) return;
@@ -97,7 +97,7 @@ public class BreadcrumbManager {
         }
         mExecutorService.execute(() -> {
             try {
-                List<BreadcrumEntity> items = mStorageService.getOldest100Breadcrumbs();
+                List<BreadcrumbEntity> items = mStorageService.getOldest100Breadcrumbs();
                 if (items == null || items.isEmpty()) {
                     finishSend();
                     return;
@@ -128,8 +128,8 @@ public class BreadcrumbManager {
         });
     }
 
-    private static BreadcrumEntity createEntity(String name) {
-        BreadcrumEntity e = new BreadcrumEntity();
+    private static BreadcrumbEntity createEntity(String name) {
+        BreadcrumbEntity e = new BreadcrumbEntity();
         e.setId(UUID.randomUUID());
         e.setCreatedAt(DateUtils.getUtcNow());
         e.setSessionId(SessionManager.getSessionId());
@@ -137,7 +137,7 @@ public class BreadcrumbManager {
         return e;
     }
 
-    private static AppAmbitTaskFuture<Void> sendBreadcrumbEndpoint(BreadcrumEntity entity) {
+    private static AppAmbitTaskFuture<Void> sendBreadcrumbEndpoint(BreadcrumbEntity entity) {
         AppAmbitTaskFuture<Void> result = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
@@ -155,7 +155,7 @@ public class BreadcrumbManager {
         return result;
     }
 
-    private static AppAmbitTaskFuture<ApiResult<BatchResponse>> sendBatchEndpoint(List<BreadcrumEntity> items) {
+    private static AppAmbitTaskFuture<ApiResult<BatchResponse>> sendBatchEndpoint(List<BreadcrumbEntity> items) {
         AppAmbitTaskFuture<ApiResult<BatchResponse>> future = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {

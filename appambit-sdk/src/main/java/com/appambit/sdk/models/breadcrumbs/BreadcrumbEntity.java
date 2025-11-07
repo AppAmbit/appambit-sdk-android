@@ -7,7 +7,7 @@ import com.appambit.sdk.utils.annotations.CustomDateTimeFormat;
 import java.util.Date;
 import java.util.UUID;
 
-public class BreadcrumEntity extends Breadcrumb implements Identifiable {
+public class BreadcrumbEntity extends Breadcrumb implements Identifiable {
     @JsonKey("id")
     private UUID id;
 

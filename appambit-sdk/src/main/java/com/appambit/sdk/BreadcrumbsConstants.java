@@ -5,7 +5,7 @@ final class BreadcrumbsConstants {
     private BreadcrumbsConstants() { }
 
     // File
-    static final String nameFile = "breadcrumbs";
+    static final String fileName = "breadcrumbs";
 
     // App lifecycle
     static final String onStart   = "On Start";

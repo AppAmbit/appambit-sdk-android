@@ -16,7 +16,7 @@ import com.appambit.sdk.enums.SessionType;
 import com.appambit.sdk.models.analytics.EventEntity;
 import com.appambit.sdk.models.analytics.SessionBatch;
 import com.appambit.sdk.models.analytics.SessionData;
-import com.appambit.sdk.models.breadcrumbs.BreadcrumEntity;
+import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
 import com.appambit.sdk.models.logs.LogEntity;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.services.storage.DataStore;
@@ -819,8 +819,8 @@ public class StorageService implements Storable {
         }
     }
 
-    public List<BreadcrumEntity> getAllBreadcrumbs() {
-        List<BreadcrumEntity> list = new ArrayList<>();
+    public List<BreadcrumbEntity> getAllBreadcrumbs() {
+        List<BreadcrumbEntity> list = new ArrayList<>();
         SQLiteDatabase db = dataStore.getReadableDatabase();
         String sql = "SELECT " +
                 BreadcrumbContract.Columns.ID + ", " +
@@ -842,13 +842,13 @@ public class StorageService implements Storable {
                     String idStr = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.ID));
                     String sid = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.SESSION_ID));
                     long createdMs = c.getLong(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.CREATED_AT));
-                    BreadcrumEntity e;
+                    BreadcrumbEntity e;
                     if (name != null && name.length() > 0) {
-                        BreadcrumEntity ex = new BreadcrumEntity();
+                        BreadcrumbEntity ex = new BreadcrumbEntity();
                         ex.setName(name);
                         e = ex;
                     } else {
-                        e = new BreadcrumEntity();
+                        e = new BreadcrumbEntity();
                     }
                     e.setId(UUID.fromString(idStr));
                     e.setSessionId(sid);
@@ -864,7 +864,7 @@ public class StorageService implements Storable {
         return list;
     }
 
-    public void addBreadcrumb(BreadcrumEntity breadcrumb) {
+    public void addBreadcrumb(BreadcrumbEntity breadcrumb) {
         try {
             SQLiteDatabase db = dataStore.getWritableDatabase();
             ContentValues cv = new ContentValues();
@@ -879,7 +879,7 @@ public class StorageService implements Storable {
         }
     }
 
-    public void deleteBreadcrumbs(List<BreadcrumEntity> breadcrumbs) {
+    public void deleteBreadcrumbs(List<BreadcrumbEntity> breadcrumbs) {
         if (breadcrumbs == null || breadcrumbs.isEmpty()) return;
         StringBuilder where = new StringBuilder();
         where.append(BreadcrumbContract.Columns.ID).append(" IN (");
@@ -899,8 +899,8 @@ public class StorageService implements Storable {
     }
 
     @Override
-    public List<BreadcrumEntity> getOldest100Breadcrumbs() {
-        List<BreadcrumEntity> items = new ArrayList<>();
+    public List<BreadcrumbEntity> getOldest100Breadcrumbs() {
+        List<BreadcrumbEntity> items = new ArrayList<>();
         SQLiteDatabase db = dataStore.getReadableDatabase();
 
         String sql = "SELECT * FROM " + BreadcrumbContract.TABLE_NAME + " " +
@@ -912,7 +912,7 @@ public class StorageService implements Storable {
             c = db.rawQuery(sql, null);
             if (c.moveToFirst()) {
                 do {
-                    BreadcrumEntity b = new BreadcrumEntity();
+                    BreadcrumbEntity b = new BreadcrumbEntity();
 
                     String idStr    = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.ID));
                     String sessionId= c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.SESSION_ID));
