@@ -5,6 +5,7 @@ import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.res.TypedArray;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -46,6 +47,7 @@ public final class AppAmbit {
     private static boolean isWaitingPause = false;
     private static boolean firstConnectivityEvent = true;
     private static final long ACTIVITY_DELAY = 700;
+    private static String lastPageClassName = null;
 
     static void safeRun(@Nullable Runnable r) {
         if (r == null) return;
@@ -116,6 +118,8 @@ public final class AppAmbit {
                     Log.d(TAG, "onResume (App in foreground)");
                     onResumeApp();
                 }
+
+                trackPageChange(activity);
             }
 
             @Override
@@ -376,5 +380,32 @@ public final class AppAmbit {
             Log.e(TAG, "CreateConsumer error", err);
             finishTokenOperation(false);
         });
+    }
+
+    private static void trackPageChange(@NonNull Activity activity) {
+        if (isDialogLike(activity)) return;
+        String className = activity.getClass().getName();
+        if (lastPageClassName == null) {
+            lastPageClassName = className;
+            return;
+        }
+        if (!className.equals(lastPageClassName)) {
+            BreadcrumbManager.addAsync(BreadcrumbsConstants.onDisappear);
+            lastPageClassName = className;
+            BreadcrumbManager.addAsync(BreadcrumbsConstants.onAppear);
+        }
+    }
+
+    private static boolean isDialogLike(@NonNull Activity activity) {
+        try {
+            int[] attrs = new int[]{android.R.attr.windowIsTranslucent, android.R.attr.windowIsFloating};
+            TypedArray ta = activity.getTheme().obtainStyledAttributes(attrs);
+            boolean translucent = ta.getBoolean(0, false);
+            boolean floating = ta.getBoolean(1, false);
+            ta.recycle();
+            return translucent || floating;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 }
