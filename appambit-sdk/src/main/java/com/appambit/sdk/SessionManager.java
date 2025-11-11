@@ -60,20 +60,23 @@ public class SessionManager {
         }
 
         final Date utcNow = DateUtils.getUtcNow();
+        isSessionActivate = true;
 
         AppAmbitTaskFuture<ApiResult<StartSessionResponse>> apiResponseFuture = sendStartSessionEndpoint(utcNow);
+
+
 
         apiResponseFuture.then(result -> {
             try {
                 if (result.errorType != ApiErrorType.None || result.data == null) {
-                    Log.d(TAG, "Start Session failed, saving locally.");
                     sessionId = UUID.randomUUID().toString();
+                    Log.d(TAG, "Start Session failed, saving locally. with ID:  " + sessionId);
                     saveLocallyStartSession(utcNow);
                 } else {
                     sessionId = result.data.getSessionId();
                     Log.d(TAG, "Start Session successful. Session ID: " + sessionId);
                 }
-                isSessionActivate = true;
+
                 sessionFuture.complete(sessionId);
             } catch (Exception e) {
                 sessionFuture.fail(e);
