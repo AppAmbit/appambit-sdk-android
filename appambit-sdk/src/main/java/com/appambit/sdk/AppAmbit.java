@@ -182,8 +182,7 @@ public final class AppAmbit {
         };
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
-        BreadcrumbManager.loadBreadcrumbsFromFile();
-        SessionManager.sendBatchSessions(batchesTasks);
+        BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> SessionManager.sendBatchSessions(batchesTasks));
     }
 
     private static void initializeConsumer() {

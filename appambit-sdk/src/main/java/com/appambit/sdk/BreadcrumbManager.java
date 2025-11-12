@@ -2,6 +2,8 @@ package com.appambit.sdk;
 
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbData;
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
@@ -50,22 +52,17 @@ public class BreadcrumbManager {
     }
 
     public static void saveToFile(String name) {
-
         mExecutorService.execute(() -> {
             try {
                 Log.d(TAG, "Got to save breadcrumbs: " + name);
                 if (isDuplicate(name)) return;
-
                 BreadcrumbData data = BreadcrumbMappings.toData(createEntity(name));
                 FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, data, BreadcrumbData.class);
             } catch (Throwable t) {
                 Log.d(TAG, "SaveToFile error: " + t.getMessage());
             }
         });
-
-
     }
-
 
     public static void loadBreadcrumbsFromFile() {
         try {
@@ -88,6 +85,40 @@ public class BreadcrumbManager {
         }
     }
 
+    public static void loadBreadcrumbsFromFileAsync(@Nullable Runnable onComplete) {
+        if (mExecutorService == null) {
+            loadBreadcrumbsFromFile();
+            if (onComplete != null) {
+                try { onComplete.run(); } catch (Throwable ignored) {}
+            }
+            return;
+        }
+        mExecutorService.execute(() -> {
+            try {
+                List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, BreadcrumbData.class);
+                List<BreadcrumbData> notSent = new ArrayList<>();
+                if (!files.isEmpty()) {
+                    for (BreadcrumbData item : files) {
+                        if (item == null) continue;
+                        try {
+                            if (mStorageService != null) {
+                                mStorageService.addBreadcrumb(BreadcrumbMappings.toEntity(item));
+                            }
+                        } catch (Throwable t) {
+                            notSent.add(item);
+                        }
+                    }
+                    FileUtils.updateJsonArray(BreadcrumbsConstants.fileName, notSent);
+                }
+            } catch (Throwable t) {
+                Log.d(TAG, t.toString());
+            } finally {
+                if (onComplete != null) {
+                    try { onComplete.run(); } catch (Throwable ignored) {}
+                }
+            }
+        });
+    }
 
     public static void sendBatchBreadcrumbs() {
         if (mApiService == null || mExecutorService == null || mStorageService == null) return;
