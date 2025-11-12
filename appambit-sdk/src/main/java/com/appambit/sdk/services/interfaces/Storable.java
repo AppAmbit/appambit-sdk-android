@@ -8,6 +8,7 @@ import com.appambit.sdk.models.analytics.EventEntity;
 import com.appambit.sdk.models.analytics.SessionBatch;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.LogEntity;
+import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
 
 public interface Storable extends Closeable {
 
@@ -48,7 +49,8 @@ public interface Storable extends Closeable {
     void deleteSessionById(UUID sessionId);
 
     SessionData getUnpairedSessionStart();
-    void updateLogsAndEventsId(String localId, String remoteId);
+
+    void updateSessionIdsForAllTrackingData(String localId, String remoteId);
 
     SessionData getUnpairedSessionEnd();
 
@@ -60,4 +62,11 @@ public interface Storable extends Closeable {
 
     void deleteEventList(List<EventEntity> events);
 
+    List<BreadcrumbEntity> getAllBreadcrumbs();
+
+    void addBreadcrumb(BreadcrumbEntity breadcrumb);
+
+    void deleteBreadcrumbs(List<BreadcrumbEntity> breadcrumbs);
+
+    List<BreadcrumbEntity> getOldest100Breadcrumbs();
 }

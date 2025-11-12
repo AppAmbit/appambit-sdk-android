@@ -48,32 +48,56 @@ public class SessionManager {
         mStorageService = storageService;
     }
 
-    public static void startSession() {
+    public static AppAmbitTaskFuture<String> startSession() {
         Log.d(TAG, "Start Session Called");
 
+        AppAmbitTaskFuture<String> sessionFuture = new AppAmbitTaskFuture<>();
+
         if (isSessionActivate) {
-            return;
+            Log.d(TAG, "Session already active. Completing future with existing session ID.");
+            sessionFuture.complete(sessionId);
+            return sessionFuture;
         }
 
-        Date utcNow = DateUtils.getUtcNow();
+        final Date utcNow = DateUtils.getUtcNow();
+        isSessionActivate = true;
 
-        AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(utcNow);
+        AppAmbitTaskFuture<ApiResult<StartSessionResponse>> apiResponseFuture = sendStartSessionEndpoint(utcNow);
 
-        response.then(result -> {
-            if (result.errorType != ApiErrorType.None) {
+
+
+        apiResponseFuture.then(result -> {
+            try {
+                if (result.errorType != ApiErrorType.None || result.data == null) {
+                    sessionId = UUID.randomUUID().toString();
+                    Log.d(TAG, "Start Session failed, saving locally. with ID:  " + sessionId);
+                    saveLocallyStartSession(utcNow);
+                } else {
+                    sessionId = result.data.getSessionId();
+                    Log.d(TAG, "Start Session successful. Session ID: " + sessionId);
+                }
+
+                sessionFuture.complete(sessionId);
+            } catch (Exception e) {
+                sessionFuture.fail(e);
+            }
+        });
+
+        apiResponseFuture.onError(error -> {
+            try {
+                Log.e(TAG, "Exception during startSession network call, saving locally.", error);
                 sessionId = UUID.randomUUID().toString();
                 saveLocallyStartSession(utcNow);
-                Log.d(TAG, "Start Session - save locally");
                 isSessionActivate = true;
-                return;
+                sessionFuture.complete(sessionId);
+            } catch (Exception e) {
+                sessionFuture.fail(e);
             }
-            sessionId = result.data != null ? result.data.getSessionId() : UUID.randomUUID().toString();
         });
-        isSessionActivate = true;
-        response.onError(error -> {
-            Log.d(TAG, Objects.requireNonNull(error.getMessage()));
-        });
+
+        return sessionFuture;
     }
+
 
     public static void endSession() {
         if (!isSessionActivate) {
@@ -277,7 +301,7 @@ public class SessionManager {
             if (result.errorType == ApiErrorType.None) {
                 Log.d(TAG, "Start session sent successfully, deleting " + sessionData.getId());
                 sessionId = result.data.getSessionId();
-                mStorageService.updateLogsAndEventsId(sessionData.getId().toString(), sessionId);
+                mStorageService.updateSessionIdsForAllTrackingData(sessionData.getId().toString(), sessionId);
                 mStorageService.deleteSessionById(sessionData.getId());
                 Crashes.sendBatchesLogs();
                 Analytics.sendBatchesEvents();
@@ -312,7 +336,7 @@ public class SessionManager {
 
                 Log.d(TAG, "Match -> localId: " + localId + " remoteId: " + remoteId);
 
-                mStorageService.updateLogsAndEventsId(localId, remoteId);
+                mStorageService.updateSessionIdsForAllTrackingData(localId, remoteId);
             }
         }
         if(!sessions.isEmpty()) {

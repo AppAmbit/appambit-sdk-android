@@ -122,20 +122,8 @@ public class Crashes {
                     }
                 }
 
-                if (exceptionInfos.size() == 1) {
-                    if(!isUIntNumber(exceptionInfos.get(0).getSessionId())) {
-                        storeBatchCrashesLog(context, exceptionInfos);
-                        Log.d(TAG, "Storing crash log as batch due to invalid session ID");
-                        deleteCrashes(context);
-                        return;
-                    }
-                    logCrash(exceptionInfos.get(0));
-                    Log.d(TAG, "Sending one crash");
-                    deleteCrashes(context);
-                } else if (exceptionInfos.size() > 1) {
-                    storeBatchCrashesLog(context, exceptionInfos);
-                    Log.d(TAG, "Sending crash batch: " + exceptionInfos.size() + " items");
-                }
+                storeBatchCrashesLog(context, exceptionInfos);
+                Log.d(TAG, "Sending crash batch: " + exceptionInfos.size() + " items");
             } catch (InterruptedException e) {
                 Log.d(TAG, "Semaphore interrupted " + e);
             } finally {

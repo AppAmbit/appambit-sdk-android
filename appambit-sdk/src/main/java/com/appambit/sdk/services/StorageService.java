@@ -16,12 +16,14 @@ import com.appambit.sdk.enums.SessionType;
 import com.appambit.sdk.models.analytics.EventEntity;
 import com.appambit.sdk.models.analytics.SessionBatch;
 import com.appambit.sdk.models.analytics.SessionData;
+import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
 import com.appambit.sdk.models.logs.LogEntity;
+import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.services.storage.DataStore;
 import com.appambit.sdk.services.storage.contract.AppSecretContract;
+import com.appambit.sdk.services.storage.contract.BreadcrumbContract;
 import com.appambit.sdk.services.storage.contract.EventEntityContract;
 import com.appambit.sdk.services.storage.contract.LogEntityContract;
-import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.services.storage.contract.SessionContract;
 import com.appambit.sdk.utils.DateUtils;
 
@@ -405,11 +407,11 @@ public class StorageService implements Storable {
                     SQLiteDatabase db = dataStore.getReadableDatabase();
 
                     String sqlCheckSession =
-                        "SELECT " + SessionContract.Columns.ID +
-                        " FROM " + SessionContract.TABLE_NAME +
-                        " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
-                        " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
-                        " LIMIT 1";
+                            "SELECT " + SessionContract.Columns.ID +
+                                    " FROM " + SessionContract.TABLE_NAME +
+                                    " WHERE " + SessionContract.Columns.END_SESSION_DATE + " IS NULL" +
+                                    " ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC" +
+                                    " LIMIT 1";
 
                     c = db.rawQuery(sqlCheckSession, null);
 
@@ -541,16 +543,16 @@ public class StorageService implements Storable {
         SQLiteDatabase db = dataStore.getReadableDatabase();
 
         String selectSessionsSql =
-            "SELECT " +
-                SessionContract.Columns.ID                 + ", " +
-                SessionContract.Columns.SESSION_ID         + ", " +
-                SessionContract.Columns.START_SESSION_DATE + ", " +
-                SessionContract.Columns.END_SESSION_DATE   + " "  +
-            "FROM " + SessionContract.TABLE_NAME + " " +
-            "WHERE " + SessionContract.Columns.START_SESSION_DATE + " IS NOT NULL " +
-            "AND " + SessionContract.Columns.END_SESSION_DATE   + " IS NOT NULL " +
-            "ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC " +
-            "LIMIT 100";
+                "SELECT " +
+                        SessionContract.Columns.ID                 + ", " +
+                        SessionContract.Columns.SESSION_ID         + ", " +
+                        SessionContract.Columns.START_SESSION_DATE + ", " +
+                        SessionContract.Columns.END_SESSION_DATE   + " "  +
+                        "FROM " + SessionContract.TABLE_NAME + " " +
+                        "WHERE " + SessionContract.Columns.START_SESSION_DATE + " IS NOT NULL " +
+                        "AND " + SessionContract.Columns.END_SESSION_DATE   + " IS NOT NULL " +
+                        "ORDER BY " + SessionContract.Columns.START_SESSION_DATE + " DESC " +
+                        "LIMIT 100";
         Cursor c = null;
 
         try {
@@ -577,16 +579,16 @@ public class StorageService implements Storable {
 
     public SessionData getUnpairedSessionEnd() {
         String sqlUnpairedSessions =
-            "SELECT " +
-                SessionContract.Columns.ID                 + ", " +
-                SessionContract.Columns.SESSION_ID         + ", " +
-                SessionContract.Columns.START_SESSION_DATE + ", " +
-                SessionContract.Columns.END_SESSION_DATE   + " "  +
-            "FROM " + SessionContract.TABLE_NAME + " " +
-            "WHERE " + SessionContract.Columns.START_SESSION_DATE + " IS NULL " +
-            "AND " + SessionContract.Columns.END_SESSION_DATE   + " IS NOT NULL " +
-            "ORDER BY " + SessionContract.Columns.END_SESSION_DATE + " ASC" +
-            " LIMIT 1";
+                "SELECT " +
+                        SessionContract.Columns.ID                 + ", " +
+                        SessionContract.Columns.SESSION_ID         + ", " +
+                        SessionContract.Columns.START_SESSION_DATE + ", " +
+                        SessionContract.Columns.END_SESSION_DATE   + " "  +
+                        "FROM " + SessionContract.TABLE_NAME + " " +
+                        "WHERE " + SessionContract.Columns.START_SESSION_DATE + " IS NULL " +
+                        "AND " + SessionContract.Columns.END_SESSION_DATE   + " IS NOT NULL " +
+                        "ORDER BY " + SessionContract.Columns.END_SESSION_DATE + " ASC" +
+                        " LIMIT 1";
 
         Cursor c = null;
         try {
@@ -642,7 +644,7 @@ public class StorageService implements Storable {
         return null;
     }
 
-    public void updateLogsAndEventsId(String localId, String remoteId) {
+    public void updateSessionIdsForAllTrackingData(String localId, String remoteId) {
         SQLiteDatabase db = dataStore.getReadableDatabase();
 
         String updateLogsSql = "UPDATE " + LogEntityContract.TABLE_NAME + " SET " +
@@ -653,9 +655,14 @@ public class StorageService implements Storable {
                 EventEntityContract.Columns.SESSION_ID + " = ? WHERE " +
                 EventEntityContract.Columns.SESSION_ID + " = ?";
 
+        String updateBreadcrumbsSql = "UPDATE " + BreadcrumbContract.TABLE_NAME + " SET " +
+                BreadcrumbContract.Columns.SESSION_ID + " = ? WHERE " +
+                BreadcrumbContract.Columns.SESSION_ID + " = ?";
+
         try {
             db.execSQL(updateLogsSql, new String[]{remoteId, localId});
             db.execSQL(updateEventsSql, new String[]{remoteId, localId});
+            db.execSQL(updateBreadcrumbsSql, new String[]{remoteId, localId});
         }catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error updating logs and events with new session ID", e);
             return;
@@ -812,8 +819,125 @@ public class StorageService implements Storable {
         }
     }
 
+    public List<BreadcrumbEntity> getAllBreadcrumbs() {
+        List<BreadcrumbEntity> list = new ArrayList<>();
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+        String sql = "SELECT " +
+                BreadcrumbContract.Columns.ID + ", " +
+                BreadcrumbContract.Columns.SESSION_ID + ", " +
+                BreadcrumbContract.Columns.NAME + ", " +
+                BreadcrumbContract.Columns.CREATED_AT +
+                " FROM " + BreadcrumbContract.TABLE_NAME +
+                " ORDER BY " + BreadcrumbContract.Columns.CREATED_AT + " ASC " +
+                "LIMIT 100";
+        Cursor c = null;
+        try {
+            c = db.rawQuery(sql, null);
+            if (c.moveToFirst()) {
+                do {
+                    String name = null;
+                    try {
+                        name = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.NAME));
+                    } catch (Exception ignored) { }
+                    String idStr = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.ID));
+                    String sid = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.SESSION_ID));
+                    long createdMs = c.getLong(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.CREATED_AT));
+                    BreadcrumbEntity e;
+                    if (name != null && name.length() > 0) {
+                        BreadcrumbEntity ex = new BreadcrumbEntity();
+                        ex.setName(name);
+                        e = ex;
+                    } else {
+                        e = new BreadcrumbEntity();
+                    }
+                    e.setId(UUID.fromString(idStr));
+                    e.setSessionId(sid);
+                    e.setCreatedAt(new Date(createdMs));
+                    list.add(e);
+                } while (c.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error fetching breadcrumbs", e);
+        } finally {
+            if (c != null) c.close();
+        }
+        return list;
+    }
+
+    public void addBreadcrumb(BreadcrumbEntity breadcrumb) {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(BreadcrumbContract.Columns.ID, breadcrumb.getId().toString());
+            cv.put(BreadcrumbContract.Columns.SESSION_ID, breadcrumb.getSessionId());
+            cv.put(BreadcrumbContract.Columns.NAME, breadcrumb.getName());
+            cv.put(BreadcrumbContract.Columns.CREATED_AT, breadcrumb.getCreatedAt().getTime());
+            db.insert(BreadcrumbContract.TABLE_NAME, null, cv);
+            Log.d(AppAmbit.class.getSimpleName(), "BREADCRUMB CREATE - " + breadcrumb.getId());
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error inserting breadcrumb", e);
+        }
+    }
+
+    public void deleteBreadcrumbs(List<BreadcrumbEntity> breadcrumbs) {
+        if (breadcrumbs == null || breadcrumbs.isEmpty()) return;
+        StringBuilder where = new StringBuilder();
+        where.append(BreadcrumbContract.Columns.ID).append(" IN (");
+        String[] args = new String[breadcrumbs.size()];
+        for (int i = 0; i < breadcrumbs.size(); i++) {
+            args[i] = breadcrumbs.get(i).getId().toString();
+            where.append("?");
+            if (i < breadcrumbs.size() - 1) where.append(",");
+        }
+        where.append(")");
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            db.delete(BreadcrumbContract.TABLE_NAME, where.toString(), args);
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error deleting breadcrumbs", e);
+        }
+    }
+
+    @Override
+    public List<BreadcrumbEntity> getOldest100Breadcrumbs() {
+        List<BreadcrumbEntity> items = new ArrayList<>();
+        SQLiteDatabase db = dataStore.getReadableDatabase();
+
+        String sql = "SELECT * FROM " + BreadcrumbContract.TABLE_NAME + " " +
+                "ORDER BY " + BreadcrumbContract.Columns.CREATED_AT + " ASC " +
+                "LIMIT 100";
+
+        Cursor c = null;
+        try {
+            c = db.rawQuery(sql, null);
+            if (c.moveToFirst()) {
+                do {
+                    BreadcrumbEntity b = new BreadcrumbEntity();
+
+                    String idStr    = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.ID));
+                    String sessionId= c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.SESSION_ID));
+                    String name     = c.getString(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.NAME));
+                    long createdAt  = c.getLong(c.getColumnIndexOrThrow(BreadcrumbContract.Columns.CREATED_AT));
+
+                    b.setId(UUID.fromString(idStr));
+                    b.setSessionId(sessionId);
+                    b.setName(name);
+                    b.setCreatedAt(new Date(createdAt));
+
+                    items.add(b);
+                } while (c.moveToNext());
+            }
+        } finally {
+            if (c != null) c.close();
+        }
+
+        return items;
+    }
+
+
     @Override
     public void close() throws IOException {
 
     }
+
 }
