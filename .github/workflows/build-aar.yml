@@ -33,25 +33,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Read version from gradle.properties
-        id: version
-        run: |
-          VERSION_NAME=$(grep "^VERSION_NAME=" gradle.properties | cut -d'=' -f2)
-          VERSION_CODE=$(grep "^VERSION_CODE=" gradle.properties | cut -d'=' -f2)
-          
-          echo "VERSION_NAME=$VERSION_NAME"
-          echo "VERSION_CODE=$VERSION_CODE"
-          
-          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
-          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
-          echo "new_tag=v$VERSION_NAME" >> $GITHUB_OUTPUT
-          
-          if [[ "$VERSION_NAME" == *"-"* ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Clean project
         run: ./gradlew clean
 
