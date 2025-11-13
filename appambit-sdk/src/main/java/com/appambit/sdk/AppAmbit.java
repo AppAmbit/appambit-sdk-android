@@ -5,6 +5,7 @@ import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.res.TypedArray;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -36,6 +37,17 @@ public final class AppAmbit {
     private static final Object TOKEN_LOCK = new Object();
     private static boolean isRefreshingToken = false;
     private static final List<Runnable> tokenWaiters = new ArrayList<>();
+    private static String mAppKey;
+    private static boolean isInitialized = false;
+    private static boolean hasStartedSession = false;
+    private static boolean isReadyForSendingBatches = false;
+    private static int startedActivities = 0;
+    private static int resumedActivities = 0;
+    private static boolean foreground = false;
+    private static boolean isWaitingPause = false;
+    private static boolean firstConnectivityEvent = true;
+    private static final long ACTIVITY_DELAY = 700;
+    private static String lastPageClassName = null;
 
     static void safeRun(@Nullable Runnable r) {
         if (r == null) return;
@@ -59,17 +71,6 @@ public final class AppAmbit {
             Log.d(TAG, "Token operation failed; callbacks dropped");
         }
     }
-
-    private static String mAppKey;
-    private static boolean isInitialized = false;
-    private static boolean hasStartedSession = false;
-    private static boolean isReadyForSendingBatches = false;
-    private static int startedActivities = 0;
-    private static int resumedActivities = 0;
-    private static boolean foreground = false;
-    private static boolean isWaitingPause = false;
-    private static boolean firstConnectivityEvent = true;
-    private static final long ACTIVITY_DELAY = 700;
 
     public static void start(Context context, String appKey) {
         mAppKey = appKey;
@@ -117,6 +118,8 @@ public final class AppAmbit {
                     Log.d(TAG, "onResume (App in foreground)");
                     onResumeApp();
                 }
+
+                trackPageChange(activity);
             }
 
             @Override
@@ -147,7 +150,6 @@ public final class AppAmbit {
             public void onActivityDestroyed(@NonNull Activity activity) {
                 if (startedActivities == 0 && resumedActivities == 0 && !activity.isChangingConfigurations()) {
                     Log.d(TAG, "onDestroy (App Level)");
-                    onEnd();
                 }
             }
 
@@ -164,24 +166,26 @@ public final class AppAmbit {
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
+        BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
     }
 
     private static void onStartApp(Context context) {
         InitializeServices(context);
         registerNetworkCallback(context);
         initializeConsumer();
+
         hasStartedSession = true;
         final Runnable batchesTasks = () -> {
             Analytics.sendBatchesEvents();
             Crashes.sendBatchesLogs();
+            BreadcrumbManager.sendBatchBreadcrumbs();
         };
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
-        SessionManager.sendBatchSessions(batchesTasks);
+        BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> SessionManager.sendBatchSessions(batchesTasks));
     }
 
     private static void initializeConsumer() {
-
         if (!Analytics.isManualSessionEnabled()) {
             SessionManager.saveSessionEndToDatabaseIfExist();
         }
@@ -193,24 +197,37 @@ public final class AppAmbit {
             }
             Runnable initializeSession = () -> {
                 SessionManager.sendEndSessionFromFile();
-                SessionManager.startSession();
+
+                AppAmbitTaskFuture<String> sessionFuture = SessionManager.startSession();
+
+                sessionFuture.then(sessionId -> {
+                    BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                });
+
+                sessionFuture.onError(error -> {
+                    Log.e(TAG, "Failed to start session before adding breadcrumb.", error);
+                });
             };
             SessionManager.sendEndSessionFromDatabase(initializeSession);
         };
         if (!tokenIsValid()) {
             getNewToken(null);
+            initializeTasks.run();
+        } else {
+            initializeTasks.run();
         }
-        initializeTasks.run();
     }
 
     private static void onSleep() {
         if (!Analytics.isManualSessionEnabled()) {
+            BreadcrumbManager.saveToFile(BreadcrumbsConstants.onPause);
             SessionManager.saveEndSession();
         }
     }
 
     private static void onEnd() {
         if (!Analytics.isManualSessionEnabled()) {
+            BreadcrumbManager.saveToFile(BreadcrumbsConstants.onPause);
             SessionManager.saveEndSession();
         }
     }
@@ -225,15 +242,21 @@ public final class AppAmbit {
             if (!Analytics.isManualSessionEnabled() && isInitialized) {
                 SessionManager.removeSavedEndSession();
             }
+
             Crashes.sendBatchesLogs();
             Analytics.sendBatchesEvents();
+            BreadcrumbManager.loadBreadcrumbsFromFile();
+            BreadcrumbManager.sendBatchBreadcrumbs();
         };
 
         if (!tokenIsValid()) {
-            getNewToken(resumeTasks);
-        }else {
+            getNewToken(null);
+            resumeTasks.run();
+        } else {
             resumeTasks.run();
         }
+
+        BreadcrumbManager.addAsync(BreadcrumbsConstants.onResume);
     }
 
     private static void registerNetworkCallback(@NonNull Context context) {
@@ -259,12 +282,15 @@ public final class AppAmbit {
                         final Runnable batchTasks = () -> {
                             Crashes.sendBatchesLogs();
                             Analytics.sendBatchesEvents();
+                            BreadcrumbManager.sendBatchBreadcrumbs();
                         };
                         final Runnable connectionTasks = () -> {
                             Crashes.loadCrashFileIfExists(context);
                             SessionManager.sendEndSessionFromDatabase(null);
                             SessionManager.sendStartSessionIfExist();
                             SessionManager.sendBatchSessions(batchTasks);
+                            BreadcrumbManager.loadBreadcrumbsFromFile();
+                            BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
                         };
                         getNewToken(null);
                         connectionTasks.run();
@@ -277,6 +303,7 @@ public final class AppAmbit {
             @Override
             public void onLost(@NonNull Network network) {
                 super.onLost(network);
+                BreadcrumbManager.saveToFile(BreadcrumbsConstants.offline);
                 Log.d(TAG, "Internet connection lost");
             }
         });
@@ -299,6 +326,8 @@ public final class AppAmbit {
         }
 
         if (tokenIsValid()) {
+            Log.d(TAG, "Token already valid; skipping refresh");
+            finishTokenOperation(true);
             return;
         }
 
@@ -334,12 +363,55 @@ public final class AppAmbit {
                 finishTokenOperation(false);
                 return;
             }
-            Log.d(TAG, "Consumer successfully created");
-            finishTokenOperation(true);
+            Log.d(TAG, "Consumer successfully created, requesting token...");
+            final AppAmbitTaskFuture<ApiErrorType> ft = api.GetNewToken();
+            ft.then(res -> {
+                boolean ok = (res == ApiErrorType.None);
+                Log.d(TAG, "GetNewToken after create finished: " + res);
+                finishTokenOperation(ok);
+            });
+            ft.onError(err -> {
+                Log.e(TAG, "GetNewToken after create error", err);
+                finishTokenOperation(false);
+            });
         });
         createFuture.onError(err -> {
             Log.e(TAG, "CreateConsumer error", err);
             finishTokenOperation(false);
         });
+    }
+
+    private static void trackPageChange(@NonNull Activity activity) {
+        if (isDialogLike(activity)) return;
+        String className = activity.getClass().getName();
+        if (lastPageClassName == null) {
+            lastPageClassName = className;
+            return;
+        }
+        if (!className.equals(lastPageClassName)) {
+            String previousDisplay = simpleNameOf(lastPageClassName);
+            String currentDisplay = activity.getClass().getSimpleName();
+            BreadcrumbManager.addAsync(BreadcrumbsConstants.onDisappear + ": " + previousDisplay);
+            lastPageClassName = className;
+            BreadcrumbManager.addAsync(BreadcrumbsConstants.onAppear + ": " + currentDisplay);
+        }
+    }
+
+    private static boolean isDialogLike(@NonNull Activity activity) {
+        try {
+            int[] attrs = new int[]{android.R.attr.windowIsTranslucent, android.R.attr.windowIsFloating};
+            TypedArray ta = activity.getTheme().obtainStyledAttributes(attrs);
+            boolean translucent = ta.getBoolean(0, false);
+            boolean floating = ta.getBoolean(1, false);
+            ta.recycle();
+            return translucent || floating;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static String simpleNameOf(@NonNull String fqcn) {
+        int i = fqcn.lastIndexOf('.');
+        return i >= 0 ? fqcn.substring(i + 1) : fqcn;
     }
 }

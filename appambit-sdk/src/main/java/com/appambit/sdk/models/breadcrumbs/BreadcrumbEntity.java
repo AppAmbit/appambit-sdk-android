@@ -1,13 +1,13 @@
-package com.appambit.sdk.models.analytics;
+package com.appambit.sdk.models.breadcrumbs;
 
+import com.appambit.sdk.utils.Identifiable;
 import com.appambit.sdk.utils.JsonKey;
 import com.appambit.sdk.utils.annotations.CustomDateTimeFormat;
 
 import java.util.Date;
 import java.util.UUID;
 
-public class EventEntity extends Event {
-
+public class BreadcrumbEntity extends Breadcrumb implements Identifiable {
     @JsonKey("id")
     private UUID id;
 
@@ -18,6 +18,15 @@ public class EventEntity extends Event {
     @CustomDateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private Date createdAt;
 
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    @Override
     public UUID getId() {
         return id;
     }
@@ -32,13 +41,5 @@ public class EventEntity extends Event {
 
     public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public String getSessionId() {
-        return sessionId;
-    }
-
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
     }
 }

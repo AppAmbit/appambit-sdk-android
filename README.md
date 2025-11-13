@@ -29,6 +29,7 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 ## Features
 
 * Session analytics with automatic lifecycle tracking
+* Ambit Trail records detailed navigation for debugging
 * Event tracking with custom properties
 * Error logging for quick diagnostics 
 * Crash capture with stack traces and threads
@@ -56,7 +57,7 @@ Add the AppAmbit Android SDK to your app’s `build.gradle`.
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:0.0.9")
+    implementation("com.appambit:appambit:0.1.0")
 }
 ```
 
@@ -64,7 +65,7 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:0.0.9'
+    implementation 'com.appambit:appambit:0.1.0'
 }
 ```
 
@@ -117,6 +118,7 @@ Add these permissions to your `AndroidManifest.xml`:
 ## Usage
 
 * **Session activity** – automatically tracks user session starts, stops, and durations
+* **Ambit Trail** – records detailed navigation of user and system actions leading up to an issue for easier debugging
 * **Track events** – send structured events with custom properties
 ### Kotlin
 
@@ -137,10 +139,14 @@ Analytics.trackEvent("ButtonClicked", properties);
 ### Kotlin
 
 ```kotlin
-val properties: Map<String, String> = mapOf(
-    "Count" to "41",
-)
-Analytics.trackEvent("ButtonClicked", properties)
+try {
+  ...
+} catch (exception : Exception) {
+    val properties: Map<String, String> = mapOf(
+        "user_id" to "1"
+    )
+    Crashes.logError(exception, properties);
+}
 ```
 ### Java
 
@@ -150,7 +156,7 @@ try {
 } catch (Exception exception) {
     Map<String, String> properties = new HashMap<>();
     properties.put("user_id", "1");
-    Crashes.LogError(context, exception, null, properties);
+    Crashes.logError(exception, properties);
 }
 ```
 * **Crash Reporting**: uncaught crashes are automatically captured and uploaded on next launch
