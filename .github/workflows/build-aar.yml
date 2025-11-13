@@ -52,36 +52,6 @@ jobs:
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if tag already exists
-        id: check_tag
-        run: |
-          TAG=${{ steps.version.outputs.new_tag }}
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists. Skipping build and publish."
-            echo "skip_build=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip_build=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Stop if tag exists
-        if: steps.check_tag.outputs.skip_build == 'true'
-        run: |
-          echo "Build skipped because version tag already exists."
-          exit 0
-
-      - name: Extract latest changelog entry
-        id: changelog
-        run: |
-          LATEST_CHANGELOG=$(awk '/^## Version /{if (p) exit; p=1} p' CHANGELOG.md | sed '1d')
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$LATEST_CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Show changelog
-        run: |
-          echo "Last changes:"
-          echo "${{ steps.changelog.outputs.changelog }}"
-
       - name: Clean project
         run: ./gradlew clean
 
@@ -101,23 +71,3 @@ jobs:
         with:
           name: ${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}
           path: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}.aar
-
-      - name: Create GitHub Release
-        #      if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.new_tag }}
-          name: ${{ steps.version.outputs.new_tag }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}.aar
-          body: ${{ steps.changelog.outputs.changelog }}
-          prerelease: ${{ steps.version.outputs.is_prerelease }}
-
-      - name: Publish to Maven Central (MavenCentral via Sonatype)
-        if: steps.version.outputs.is_prerelease == 'false'
-        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
-        env:
-          OSS_SIGNING_KEY: ${{ secrets.OSS_SIGNING_KEY }}
-          OSS_SIGNING_PASSWORD: ${{ secrets.OSS_SIGNING_PASSWORD }}
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
