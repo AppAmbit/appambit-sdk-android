@@ -45,7 +45,7 @@ public final class AppAmbit {
     private static int resumedActivities = 0;
     private static boolean foreground = false;
     private static boolean isWaitingPause = false;
-    private static boolean firstConnectivityEvent = true;
+    private static boolean wasOffline = true;
     private static final long ACTIVITY_DELAY = 700;
     private static String lastPageClassName = null;
 
@@ -273,10 +273,10 @@ public final class AppAmbit {
                 super.onAvailable(network);
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
-                    if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled() || firstConnectivityEvent) {
-                        firstConnectivityEvent = false;
+                    if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled() || !wasOffline) {
                         return;
                     }
+                    wasOffline = false;
                     try {
                         InitializeServices(context);
                         final Runnable batchTasks = () -> {
@@ -303,6 +303,7 @@ public final class AppAmbit {
             @Override
             public void onLost(@NonNull Network network) {
                 super.onLost(network);
+                wasOffline = true;
                 BreadcrumbManager.saveToFile(BreadcrumbsConstants.offline);
                 Log.d(TAG, "Internet connection lost");
             }
