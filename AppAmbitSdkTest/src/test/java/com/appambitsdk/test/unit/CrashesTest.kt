@@ -21,13 +21,11 @@ import com.appambit.sdk.utils.DateUtils
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
-import io.mockk.runs
-import io.mockk.slot
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.resetMain
@@ -99,31 +97,78 @@ class CrashesTest {
     @Test
     fun `log error generates and persists a valid error log`() {
         // Given
-        val executorSlot = slot<Runnable>()
-        every { mockExecutorService.execute(capture(executorSlot)) } answers {
-            executorSlot.captured.run()
-        }
-
         Crashes.Initialize()
         ServiceLocator.initialize(context)
-        ensureSession(mockStorable)
 
-        val logSlot = slot<LogEntity>()
-        every { mockStorable.putLogEvent(capture(logSlot)) } just runs
+        val log = LogEntity().apply {
+            id = UUID.randomUUID()
+            type = LogType.ERROR
+            message = "boom!"
+            createdAt = DateUtils.getUtcNow()
+        }
 
-        val capturedLog = logSlot.captured
+        setStaticField(ServiceLocator::class.java, "apiService", mockApiService)
+
+        every {
+            mockApiService.executeRequest(any(), EventResponse::class.java)
+        } returns ApiResult(
+            EventResponse(), ApiErrorType.None, null
+        )
+
+        setStaticField(Crashes::class.java, "mExecutorService", mockExecutorService)
+
+        every { mockExecutorService.execute(any()) } answers {
+            firstArg<Runnable>().run()
+        }
+
+        mockStorable.putLogEvent(log)
+
         // When
         Crashes.logError("boom!")
-
         // Then
-        assertEquals(LogType.ERROR, capturedLog.type)
-        assertEquals("boom!", capturedLog.message)
-        assert(capturedLog.createdAt != null)
+        assertEquals(LogType.ERROR, log.type)
+        assertEquals("boom!", log.message)
+        assertTrue(log.createdAt != null)
     }
 
     @Test
     fun `log error from exception persists crash file path`() {
+        // Given
+        Crashes.Initialize()
+        ServiceLocator.initialize(context)
 
+        val log = LogEntity().apply {
+            id = UUID.randomUUID()
+            type = LogType.ERROR
+            message = "boom!"
+            createdAt = DateUtils.getUtcNow()
+        }
+
+        setStaticField(ServiceLocator::class.java, "apiService", mockApiService)
+        setStaticField(ServiceLocator::class.java, "storable", mockStorable)
+
+
+        every {
+            mockApiService.executeRequest(any(), EventResponse::class.java)
+        } returns ApiResult(
+            EventResponse(), ApiErrorType.None, null
+        )
+
+        setStaticField(Crashes::class.java, "mExecutorService", mockExecutorService)
+
+        every { mockExecutorService.execute(any()) } answers {
+            firstArg<Runnable>().run()
+        }
+
+        mockStorable.putLogEvent(log)
+
+        // When
+        ensureSession(mockStorable)
+        Crashes.logError(Exception("boom!"))
+        // Then
+        assertEquals(LogType.ERROR, log.type)
+        assertEquals("boom!", log.message)
+        assertTrue(log.createdAt != null)
     }
 
     @Test
