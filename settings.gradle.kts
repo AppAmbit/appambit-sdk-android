@@ -26,3 +26,4 @@ include(":appambit-testapp")
 include(":appambit-sdk")
 
 include(":appambit-kotlin-testapp")
+include(":AppAmbitSdkTest")
