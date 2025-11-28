@@ -41,10 +41,17 @@ import java.util.UUID
 import java.util.concurrent.ExecutorService
 import android.os.Handler
 import com.appambit.sdk.ServiceLocator
+import com.appambit.sdk.models.analytics.SessionBatch
+import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity
 import com.appambit.sdk.models.responses.EventsBatchResponse
 import com.appambit.sdk.services.endpoints.EventBatchEndpoint
 import io.mockk.slot
 import io.mockk.unmockkStatic
+import junit.framework.TestCase.assertTrue
+import java.time.Duration
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AnalyticsTest {
@@ -265,7 +272,72 @@ class AnalyticsTest {
 
     @Test
     fun `send batch sessions resolves sessionIds and updates tracking`() {
+        // Given
+        Analytics.Initialize(mockStorable, mockExecutorService, mockApiService)
 
+        val storedEvents = mutableListOf<EventEntity>()
+        val storedBreadcrumbs = mutableListOf<BreadcrumbEntity>()
+
+        every { mockStorable.putLogAnalyticsEvent(any()) } answers {
+            storedEvents.add(firstArg())
+        }
+
+        every { mockStorable.addBreadcrumb(any()) } answers {
+            storedBreadcrumbs.add(firstArg())
+        }
+
+        every { mockStorable.updateSessionIdsForAllTrackingData(any(), any()) } answers {
+            val remoteId = secondArg<String>()
+            storedEvents.forEach { it.sessionId = remoteId }
+            storedBreadcrumbs.forEach { it.sessionId = remoteId }
+        }
+
+        val baseTime = Instant.now()
+
+        val localBatches = (0 until 10).map { i ->
+            val start = baseTime.plus(i.toLong(), ChronoUnit.HOURS)
+            val end = start.plus(30, ChronoUnit.MINUTES)
+
+            SessionBatch().apply {
+                id = "local-$i"
+                sessionId = null
+                startedAt = Date.from(start)
+                endedAt = Date.from(end)
+            }
+        }
+
+        localBatches.forEach { sb ->
+            repeat(25) { j ->
+                storedEvents.add(
+                    EventEntity().apply {
+                        id = UUID.randomUUID()
+                        name = "evt-${sb.id}-$j"
+                        sessionId = ""
+                        createdAt = Date.from(baseTime)
+                    }
+                )
+
+                storedBreadcrumbs.add(
+                    BreadcrumbEntity().apply {
+                        id = UUID.randomUUID()
+                        name = "bc-${sb.id}-$j"
+                        sessionId = ""
+                        createdAt = Date.from(baseTime)
+                    }
+                )
+            }
+        }
+
+        localBatches.forEachIndexed { idx, sb ->
+            mockStorable.updateSessionIdsForAllTrackingData(sb.id, "srv-$idx")
+        }
+
+        // Then
+        assertEquals(250, storedEvents.size)
+        storedEvents.forEach { assertTrue(it.sessionId.contains("srv-")) }
+
+        assertEquals(250, storedBreadcrumbs.size)
+        storedBreadcrumbs.forEach { assertTrue(it.sessionId.contains("srv-")) }
     }
 
     @Test
@@ -283,11 +355,15 @@ class AnalyticsTest {
 
         Analytics.Initialize(mockStorable, mockExecutorService, mockApiService)
 
+        val backdatedDate = Date.from(
+            Instant.now().minus(2, ChronoUnit.DAYS)
+        )
+
         val event = EventEntity().apply {
             id = UUID.randomUUID()
             sessionId = UUID.randomUUID().toString()
             name = "test_event"
-            createdAt = DateUtils.getUtcNow()
+            createdAt = backdatedDate
         }
 
         every { mockStorable.getOldest100Events() } returns listOf(event)
