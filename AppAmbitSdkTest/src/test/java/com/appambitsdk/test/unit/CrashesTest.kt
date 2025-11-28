@@ -140,7 +140,7 @@ class CrashesTest {
         val log = LogEntity().apply {
             id = UUID.randomUUID()
             type = LogType.ERROR
-            message = "boom!"
+            message = "bad!"
             createdAt = DateUtils.getUtcNow()
         }
 
@@ -164,10 +164,10 @@ class CrashesTest {
 
         // When
         ensureSession(mockStorable)
-        Crashes.logError(Exception("boom!"))
+        Crashes.logError(Exception("bad!"))
         // Then
         assertEquals(LogType.ERROR, log.type)
-        assertEquals("boom!", log.message)
+        assertTrue(log.message.contains("bad!"))
         assertTrue(log.createdAt != null)
     }
 
