@@ -48,7 +48,6 @@ import com.appambit.sdk.services.endpoints.EventBatchEndpoint
 import io.mockk.slot
 import io.mockk.unmockkStatic
 import junit.framework.TestCase.assertTrue
-import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Date
