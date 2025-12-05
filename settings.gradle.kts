@@ -24,5 +24,8 @@ dependencyResolutionManagement {
 rootProject.name = "AppAmbit Testing App"
 include(":appambit-testapp")
 include(":appambit-sdk")
-
 include(":appambit-kotlin-testapp")
+include(":apps:app-push-notifications")
+project(":apps:app-push-notifications").projectDir = file("apps/app-push-notifications")
+include(":push:appambit-sdk-push-notifications")
+project(":push:appambit-sdk-push-notifications").projectDir = file("push/appambit-sdk-push-notifications")

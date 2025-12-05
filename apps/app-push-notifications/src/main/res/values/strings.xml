@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AppAmbit Push Notifications Test</string>
+    <string name="app_title">AppAmbit Push SDK Demo</string>
+    <string name="app_subtitle">Add your google-services.json, grant the permission, and see the FCM token below.</string>
+    <string name="token_label">Current FCM Token</string>
+    <string name="token_placeholder">The token will appear here once retrieved.</string>
+</resources>
