@@ -1,10 +1,16 @@
 package com.appambit.pushnotifications;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
 
+import androidx.activity.ComponentActivity;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -12,11 +18,10 @@ import com.google.firebase.messaging.FirebaseMessaging;
 public final class AppAmbitPushNotifications {
 
     private static final String TAG = "AppAmbitPushSDK";
-    private static volatile TokenListener tokenListener;
 
     private AppAmbitPushNotifications() {}
 
-    public static void initialize(@NonNull Context context) {
+    public static void start(@NonNull Context context) {
         boolean hasFirebaseApp = true;
         try {
             FirebaseApp app = FirebaseApp.initializeApp(context.getApplicationContext());
@@ -32,7 +37,24 @@ public final class AppAmbitPushNotifications {
         fetchToken();
     }
 
-    public static void fetchToken() {
+    public static void requestNotificationPermission(@NonNull ComponentActivity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityResultLauncher<String> requestPermissionLauncher = activity.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Log.d(TAG, "POST_NOTIFICATIONS permission granted.");
+                } else {
+                    Log.w(TAG, "POST_NOTIFICATIONS permission denied.");
+                }
+            });
+            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            } else {
+                Log.d(TAG, "POST_NOTIFICATIONS permission was already granted.");
+            }
+        }
+    }
+
+    private static void fetchToken() {
         FirebaseMessaging.getInstance()
                 .getToken()
                 .addOnCompleteListener(task -> {
@@ -41,27 +63,11 @@ public final class AppAmbitPushNotifications {
                         return;
                     }
                     String token = task.getResult();
-                    logAndNotify("Current FCM registration token", token);
+                    Log.i(TAG, "FCM registration token: " + token);
                 });
     }
 
-    public static void setTokenListener(@Nullable TokenListener listener) {
-        tokenListener = listener;
-    }
-
     static void handleNewToken(@NonNull String token) {
-        logAndNotify("FCM registration token refreshed", token);
-    }
-
-    private static void logAndNotify(@NonNull String prefix, @NonNull String token) {
-        Log.i(TAG, prefix + ": " + token);
-        TokenListener listener = tokenListener;
-        if (listener != null) {
-            listener.onNewToken(token);
-        }
-    }
-
-    public interface TokenListener {
-        void onNewToken(@NonNull String token);
+        Log.i(TAG, "FCM registration token refreshed: " + token);
     }
 }

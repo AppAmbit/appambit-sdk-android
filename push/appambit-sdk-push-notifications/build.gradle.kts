@@ -26,6 +26,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":appambit-sdk"))
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(platform(libs.firebaseBom))

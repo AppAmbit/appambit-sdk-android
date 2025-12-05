@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.appambit.kotlintestapp.Analytics as AnalyticsScreen
 import com.appambit.kotlintestapp.Crashes as CrashesScreen
+import com.appambit.pushnotifications.AppAmbitPushNotifications
 import com.appambit.sdk.Analytics
 import com.appambit.sdk.AppAmbit
 
@@ -27,6 +28,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        //Push Notifications
+        AppAmbitPushNotifications.start(applicationContext)
+        AppAmbitPushNotifications.requestNotificationPermission(this)
+
         setContent {
             //Analytics.enableManualSession()
             AppAmbit.start(this, "<YOUR-APPKEY>")
