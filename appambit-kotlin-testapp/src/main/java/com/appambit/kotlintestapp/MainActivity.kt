@@ -29,13 +29,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        //Push Notifications
-        AppAmbitPushNotifications.start(applicationContext)
+        // Comment the line for automatic session management
+        //Analytics.enableManualSession()
+        AppAmbit.start(this, "<YOUR-APPKEY>")
+
+        // Uncomment this line if you want to enable push notifications.
+        AppAmbitPushNotifications.start(this)
         AppAmbitPushNotifications.requestNotificationPermission(this)
 
         setContent {
-            //Analytics.enableManualSession()
-            AppAmbit.start(this, "<YOUR-APPKEY>")
             BottomBar()
         }
     }

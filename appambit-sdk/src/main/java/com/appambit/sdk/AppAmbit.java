@@ -49,6 +49,16 @@ public final class AppAmbit {
     private static final long ACTIVITY_DELAY = 700;
     private static String lastPageClassName = null;
 
+    private AppAmbit() {}
+
+    public static String getAppKey() {
+        return mAppKey;
+    }
+
+    public static boolean isInitialized() {
+        return isInitialized;
+    }
+
     static void safeRun(@Nullable Runnable r) {
         if (r == null) return;
         try {

@@ -346,6 +346,52 @@ public class StorageService implements Storable {
     }
 
     @Override
+    public void putDeviceToken(String deviceToken) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(Columns.DEVICE_TOKEN, deviceToken);
+
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    @Override
+    public void putPushEnabled(boolean pushEnabled) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(Columns.PUSH_ENABLED, pushEnabled ? 1 : 0);
+
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    @Override
     public void putLogEvent(LogEntity logEntity) {
         try {
             SQLiteDatabase db = dataStore.getWritableDatabase();

@@ -12,6 +12,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
+import com.appambit.sdk.AppAmbit;
+import com.appambit.sdk.services.ConsumerService;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
 
@@ -22,16 +24,23 @@ public final class AppAmbitPushNotifications {
     private AppAmbitPushNotifications() {}
 
     public static void start(@NonNull Context context) {
+        if (!AppAmbit.isInitialized()) {
+            Log.e(TAG, "AppAmbit SDK has not been started. Please call AppAmbit.start() before starting the Push SDK.");
+            return;
+        }
+
         boolean hasFirebaseApp = true;
         try {
-            FirebaseApp app = FirebaseApp.initializeApp(context.getApplicationContext());
-            if (app == null && FirebaseApp.getApps(context.getApplicationContext()).isEmpty()) {
-                hasFirebaseApp = false;
-            }
+            FirebaseApp.initializeApp(context.getApplicationContext());
         } catch (IllegalStateException ignored) {
+            Log.w(TAG, "FirebaseApp already initialized.");
         }
+        if (FirebaseApp.getApps(context.getApplicationContext()).isEmpty()) {
+            hasFirebaseApp = false;
+        }
+
         if (!hasFirebaseApp) {
-            Log.w(TAG, "FirebaseApp no se inicializó. Verifica google-services.json y el plugin de Google Services.");
+            Log.w(TAG, "FirebaseApp not initialized. Check your google-services.json file.");
             return;
         }
         fetchToken();
@@ -63,11 +72,17 @@ public final class AppAmbitPushNotifications {
                         return;
                     }
                     String token = task.getResult();
-                    Log.i(TAG, "FCM registration token: " + token);
+                    handleNewToken(token);
                 });
     }
 
     static void handleNewToken(@NonNull String token) {
-        Log.i(TAG, "FCM registration token refreshed: " + token);
+        Log.d(TAG, "FCM registration token updated: " + token);
+
+        if (!AppAmbit.isInitialized()) {
+            Log.d(TAG, "AppAmbit SDK not initialized. Cannot update consumer with new token.");
+        }
+
+        ConsumerService.updateConsumer(token, true);
     }
 }

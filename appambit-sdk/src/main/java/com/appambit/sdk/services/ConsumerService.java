@@ -2,13 +2,14 @@ package com.appambit.sdk.services;
 
 import android.util.Log;
 
-import com.appambit.sdk.Crashes;
 import com.appambit.sdk.ServiceLocator;
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.app.Consumer;
+import com.appambit.sdk.models.app.UpdateConsumer;
 import com.appambit.sdk.models.responses.ApiResult;
 import com.appambit.sdk.models.responses.TokenResponse;
 import com.appambit.sdk.services.endpoints.RegisterEndpoint;
+import com.appambit.sdk.services.endpoints.UpdateConsumerEndpoint;
 import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.interfaces.AppInfoService;
 import com.appambit.sdk.services.interfaces.Storable;
@@ -55,6 +56,7 @@ public class ConsumerService {
                 userId = java.util.UUID.randomUUID().toString();
                 mStorageService.putUserId(userId);
             }
+
 
             Consumer consumer = new Consumer(
                     ensureValue(appId, ""),
@@ -139,6 +141,34 @@ public class ConsumerService {
             }
         });
         return promise;
+    }
+
+    public static void updateConsumer(String deviceToken, boolean pushEnabled) {
+        if (mStorageService == null || mApiService == null) {
+            Log.e(TAG, "Cannot update consumer, services not initialized.");
+            return;
+        }
+
+        mStorageService.putDeviceToken(deviceToken);
+        mStorageService.putPushEnabled(pushEnabled);
+
+        String consumerId = mStorageService.getConsumerId();
+        if (isBlank(consumerId)) {
+            Log.w(TAG, "Cannot update consumer, consumerId is missing.");
+            return;
+        }
+
+        UpdateConsumer request = new UpdateConsumer(deviceToken, pushEnabled);
+        UpdateConsumerEndpoint endpoint = new UpdateConsumerEndpoint(consumerId, request);
+
+        ServiceLocator.getExecutorService().execute(() -> {
+            try {
+                mApiService.executeRequest(endpoint, Void.class);
+                Log.d(TAG, "Consumer update request sent.");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to send consumer update request.", e);
+            }
+        });
     }
 
     private static boolean isBlank(String s) {
