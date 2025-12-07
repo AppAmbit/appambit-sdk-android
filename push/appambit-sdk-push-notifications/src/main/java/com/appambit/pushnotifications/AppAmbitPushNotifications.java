@@ -10,8 +10,11 @@ import androidx.activity.ComponentActivity;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import com.appambit.pushnotifications.models.AppAmbitNotification;
 import com.appambit.sdk.AppAmbit;
 import com.appambit.sdk.services.ConsumerService;
 import com.google.firebase.FirebaseApp;
@@ -20,8 +23,25 @@ import com.google.firebase.messaging.FirebaseMessaging;
 public final class AppAmbitPushNotifications {
 
     private static final String TAG = "AppAmbitPushSDK";
+    private static NotificationCustomizer notificationCustomizer;
 
     private AppAmbitPushNotifications() {}
+
+    public interface PermissionListener {
+        void onPermissionResult(boolean isGranted);
+    }
+
+    public interface NotificationCustomizer {
+        void customize(Context context, NotificationCompat.Builder builder, AppAmbitNotification notification);
+    }
+
+    public static void setNotificationCustomizer(NotificationCustomizer customizer) {
+        notificationCustomizer = customizer;
+    }
+
+    public static NotificationCustomizer getNotificationCustomizer() {
+        return notificationCustomizer;
+    }
 
     public static void start(@NonNull Context context) {
         if (!AppAmbit.isInitialized()) {
@@ -47,6 +67,10 @@ public final class AppAmbitPushNotifications {
     }
 
     public static void requestNotificationPermission(@NonNull ComponentActivity activity) {
+        requestNotificationPermission(activity, null);
+    }
+
+    public static void requestNotificationPermission(@NonNull ComponentActivity activity, @Nullable PermissionListener listener) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ActivityResultLauncher<String> requestPermissionLauncher = activity.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
@@ -54,11 +78,17 @@ public final class AppAmbitPushNotifications {
                 } else {
                     Log.w(TAG, "POST_NOTIFICATIONS permission denied.");
                 }
+                if (listener != null) {
+                    listener.onPermissionResult(isGranted);
+                }
             });
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             } else {
                 Log.d(TAG, "POST_NOTIFICATIONS permission was already granted.");
+                if (listener != null) {
+                    listener.onPermissionResult(true);
+                }
             }
         }
     }

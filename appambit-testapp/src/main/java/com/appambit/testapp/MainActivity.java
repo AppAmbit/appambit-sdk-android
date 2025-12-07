@@ -1,12 +1,9 @@
 package com.appambit.testapp;
 
 import android.os.Bundle;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
-
 import com.appambit.pushnotifications.AppAmbitPushNotifications;
-import com.appambit.sdk.Analytics;
 import com.appambit.sdk.AppAmbit;
 import com.appambit.testapp.databinding.ActivityMainBinding;
 
@@ -19,11 +16,9 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        //Comment the line for automatic session management
-        //Analytics.enableManualSession();
         AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
 
-        //Push Notifications
+        // Default Push Notifications Setup
         AppAmbitPushNotifications.start(getApplicationContext());
         AppAmbitPushNotifications.requestNotificationPermission(this);
 

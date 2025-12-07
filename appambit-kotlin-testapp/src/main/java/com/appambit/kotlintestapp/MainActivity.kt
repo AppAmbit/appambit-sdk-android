@@ -20,7 +20,6 @@ import androidx.navigation.compose.rememberNavController
 import com.appambit.kotlintestapp.Analytics as AnalyticsScreen
 import com.appambit.kotlintestapp.Crashes as CrashesScreen
 import com.appambit.pushnotifications.AppAmbitPushNotifications
-import com.appambit.sdk.Analytics
 import com.appambit.sdk.AppAmbit
 
 class MainActivity : ComponentActivity() {
@@ -29,12 +28,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Comment the line for automatic session management
-        //Analytics.enableManualSession()
         AppAmbit.start(this, "<YOUR-APPKEY>")
 
-        // Uncomment this line if you want to enable push notifications.
-        AppAmbitPushNotifications.start(this)
+        // Default Push Notifications Setup
+        AppAmbitPushNotifications.start(applicationContext)
         AppAmbitPushNotifications.requestNotificationPermission(this)
 
         setContent {

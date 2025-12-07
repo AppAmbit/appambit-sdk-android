@@ -30,7 +30,7 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(platform(libs.firebaseBom))
-    implementation(libs.firebaseMessaging)
+    api(libs.firebaseMessaging)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
