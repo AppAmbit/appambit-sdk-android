@@ -19,7 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.appambit.kotlintestapp.Analytics as AnalyticsScreen
 import com.appambit.kotlintestapp.Crashes as CrashesScreen
-import com.appambit.pushnotifications.AppAmbitPushNotifications
+import com.appambit.sdk.PushNotifications
 import com.appambit.sdk.AppAmbit
 
 class MainActivity : ComponentActivity() {
@@ -31,8 +31,8 @@ class MainActivity : ComponentActivity() {
         AppAmbit.start(this, "<YOUR-APPKEY>")
 
         // Default Push Notifications Setup
-        AppAmbitPushNotifications.start(applicationContext)
-        AppAmbitPushNotifications.requestNotificationPermission(this)
+        PushNotifications.start(applicationContext)
+        PushNotifications.requestNotificationPermission(this)
 
         setContent {
             BottomBar()

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.appambit.pushnotifications"
+    namespace = "com.appambit.sdk"
     compileSdk = 36
 
     defaultConfig {

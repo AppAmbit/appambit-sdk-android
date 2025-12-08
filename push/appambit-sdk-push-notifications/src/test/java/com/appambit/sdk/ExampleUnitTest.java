@@ -1,4 +1,4 @@
-package com.appambit.pushnotifications;
+package com.appambit.sdk;
 
 import org.junit.Test;
 

@@ -1,4 +1,4 @@
-package com.appambit.pushnotifications;
+package com.appambit.sdk;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -10,17 +10,18 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
-import com.appambit.pushnotifications.models.AppAmbitNotification;
+import com.appambit.sdk.models.AppAmbitNotification;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -30,7 +31,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
-public class AppAmbitMessaingService extends FirebaseMessagingService {
+public class MessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "AppAmbitPushSDK";
 
@@ -49,20 +50,39 @@ public class AppAmbitMessaingService extends FirebaseMessagingService {
 
         Map<String, String> data = remoteMessage.getData();
 
+        String title = notification.getTitle();
+        String body = notification.getBody();
+        String deepLink = data.get("deep_link");
+        String largeIconUrl = data.get("large_icon_url");
+        String smallIconName = notification.getIcon();
+        String color = notification.getColor();
+        String channelId = notification.getChannelId();
+        String clickAction = notification.getClickAction();
+        String notificationPriorityString = data.get("notification_priority");
+
         AppAmbitNotification appAmbitNotification = new AppAmbitNotification(
-                notification.getTitle(),
-                notification.getBody(),
-                data.get("priority"),
-                data.get("deep_link"),
-                data.get("color"),
-                data.get("large_icon_url"),
-                data.get("small_icon_name")
+                title,
+                body,
+                notificationPriorityString,
+                deepLink,
+                color,
+                largeIconUrl,
+                smallIconName,
+                data
         );
 
-        String channelId = "default_channel_id";
+        if (TextUtils.isEmpty(channelId)) {
+            channelId = "default_channel_id";
+        }
         String channelName = "Default Channel";
 
-        Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        Intent intent;
+        if (!TextUtils.isEmpty(clickAction)) {
+            intent = new Intent(clickAction);
+        } else {
+            intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        }
+
         PendingIntent pendingIntent = null;
         if (intent != null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -76,17 +96,32 @@ public class AppAmbitMessaingService extends FirebaseMessagingService {
             notificationManager.createNotificationChannel(channel);
         }
 
+        int priority = NotificationCompat.PRIORITY_DEFAULT;
+        Integer notificationObjectPriority = notification.getNotificationPriority();
+        if (notificationObjectPriority != null) {
+            priority = notificationObjectPriority;
+        } else if (notificationPriorityString != null) {
+            priority = getPriorityFromString(notificationPriorityString);
+        }
+
         int appIcon = getSmallIcon(appAmbitNotification);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(appIcon)
                 .setContentTitle(appAmbitNotification.getTitle())
                 .setContentText(appAmbitNotification.getBody())
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(priority)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
 
-        // SDK now handles image and large icon downloads by default
+        if (appAmbitNotification.getColor() != null) {
+            try {
+                builder.setColor(Color.parseColor(appAmbitNotification.getColor()));
+            } catch (IllegalArgumentException e) {
+                Log.w(TAG, "Invalid color format: " + appAmbitNotification.getColor());
+            }
+        }
+
         Bitmap largeIcon = getBitmapFromUrl(appAmbitNotification.getLargeIconUrl());
         if(largeIcon != null) {
             builder.setLargeIcon(largeIcon);
@@ -100,7 +135,7 @@ public class AppAmbitMessaingService extends FirebaseMessagingService {
             }
         }
 
-        AppAmbitPushNotifications.NotificationCustomizer customizer = AppAmbitPushNotifications.getNotificationCustomizer();
+        PushNotifications.NotificationCustomizer customizer = PushNotifications.getNotificationCustomizer();
         if (customizer != null) {
             customizer.customize(this, builder, appAmbitNotification);
         }
@@ -109,6 +144,24 @@ public class AppAmbitMessaingService extends FirebaseMessagingService {
             notificationManager.notify((int) System.currentTimeMillis(), builder.build());
         } else {
             Log.w(TAG, "POST_NOTIFICATIONS permission not granted. Cannot show notification.");
+        }
+    }
+
+    private int getPriorityFromString(String priority) {
+        if (priority == null) {
+            return NotificationCompat.PRIORITY_DEFAULT;
+        }
+        switch (priority) {
+            case "PRIORITY_MIN":
+                return NotificationCompat.PRIORITY_MIN;
+            case "PRIORITY_LOW":
+                return NotificationCompat.PRIORITY_LOW;
+            case "PRIORITY_HIGH":
+                return NotificationCompat.PRIORITY_HIGH;
+            case "PRIORITY_MAX":
+                return NotificationCompat.PRIORITY_MAX;
+            default:
+                return NotificationCompat.PRIORITY_DEFAULT;
         }
     }
 
@@ -150,6 +203,6 @@ public class AppAmbitMessaingService extends FirebaseMessagingService {
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
-        AppAmbitPushNotifications.handleNewToken(token);
+        PushNotifications.handleNewToken(token);
     }
 }

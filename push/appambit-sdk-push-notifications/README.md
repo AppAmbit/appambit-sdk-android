@@ -20,9 +20,9 @@ This SDK is an extension of the core AppAmbit Android SDK, providing a simple an
 ## Features
 
 * **Simple Setup**: Integrates in minutes.
-* **Automatic Click Handling**: Notifications open your app by default.
+* **Automatic Field Handling**: Automatically uses standard fields from the FCM payload like `color`, `icon`, `channel_id`, and `click_action`.
 * **Smart Icon Selection**: Automatically uses your app's icon, with a safe fallback.
-* **Rich Customization**: Provides hooks to easily modify notifications based on push data.
+* **Advanced Customization**: Provides a powerful hook to modify notifications for advanced use cases.
 * **Permission Helper**: Includes a simple utility to request the `POST_NOTIFICATIONS` permission.
 
 ---
@@ -87,19 +87,11 @@ Also, ensure you have the Google Services plugin configured in your project.
     AppAmbitPushNotifications.requestNotificationPermission(this)
     ```
 
-**That's it!** Your app is now ready to receive basic push notifications.
+**That's it!** Your app is now ready to receive and display push notifications.
 
 ---
 
 ## Usage
-
-### Default Behavior
-
-By default, the SDK handles notifications automatically:
-
-*   **Click Action**: Tapping a notification will open your app's main launcher activity.
-*   **Small Icon**: The SDK will use your app's launcher icon. If not found, it uses a safe system default.
-*   **Image**: If the push payload contains an `imageUrl`, the SDK will download and display it as a `BigPictureStyle` notification.
 
 ### Permission Listener (Optional)
 
@@ -119,55 +111,86 @@ AppAmbitPushNotifications.requestNotificationPermission(this) { isGranted ->
 
 ## Customization
 
-The true power of the SDK lies in its simple customization. The SDK looks for specific keys in the `data` payload of your FCM message. You can override almost any aspect of the notification by sending the right data from your backend.
+The SDK is designed to be highly customizable, automatically adapting to the data you send in your FCM payload, while also offering a powerful hook for advanced modifications.
 
-### Example Data Payload
+### Automatic Customization
 
-Here is an example `JSON` data payload you can send from your server:
+The SDK automatically configures the notification by reading standard fields from your FCM message. **For most use cases, you won't need to write any custom code.**
 
-```json
-{
-  "data": {
-    "priority": "high",
-    "deep_link": "https://appambit.com/special-offer",
-    "color": "#FF5722",
-    "large_icon_url": "https://appambit.com/assets/icon.png",
-    "small_icon_name": "ic_notification_custom"
-  }
-}
-```
+**`notification` object:**
 
-### Using the `NotificationCustomizer`
+The SDK uses the standard keys from the FCM `notification` object.
 
-To use this data, register a `NotificationCustomizer`. The SDK provides the default `Notification.Builder` and a clean `AppAmbitNotification` object containing the parsed data.
+- **`title`**: The notification's title.
+- **`body`**: The notification's main text.
+- **`icon`**: The name of a drawable resource for the small icon.
+- **`color`**: The notification's accent color (e.g., `#FF5722`).
+- **`click_action`**: An intent filter name to be triggered when the notification is tapped.
+- **`channel_id`**: The ID of the notification channel to use.
+- **`image`**: A URL to an image to be displayed in the notification.
+- **`notification_priority`**: The integer priority of the notification (e.g., `1` for `PRIORITY_HIGH`).
 
-**Example Implementation:**
+**`data` object:**
 
-```kotlin
-AppAmbitPushNotifications.setNotificationCustomizer { context, builder, notification ->
-    // Change priority based on data
-    notification.priority?.let {
-        if (it == "high") builder.priority = NotificationCompat.PRIORITY_HIGH
+The `data` object is used for your own custom key-value pairs, and as a fallback for some fields.
+
+- **`deep_link`**: A URL to open. This is used if `click_action` is not provided.
+- **`large_icon_url`**: A URL to an image to be used as the large icon.
+- **`notification_priority`**: A string representation of the priority (e.g., `"PRIORITY_HIGH"`), used if not present in the `notification` object.
+
+### Advanced Customization with `NotificationCustomizer`
+
+For scenarios that require custom logic or advanced UI modifications, you can register a `NotificationCustomizer`. This is a powerful hook that gives you **complete freedom** to modify the notification before it's displayed. You receive the `NotificationCompat.Builder` and an `AppAmbitNotification` object, which contains the entire `data` payload from your FCM message.
+
+The `data` payload is a **free-form key-value map**. You are not limited to any specific keys; you can send any data you need and use it to build your custom notification.
+
+**Example: Building a Custom Notification**
+
+The following example shows how to read custom fields from the `data` payload to add a custom action button. This is just one of many possibilities.
+
+1.  **Send any custom data** you need. The keys and values are completely up to you. For example:
+
+    ```json
+    {
+      "notification": {
+        "title": "New Message",
+        "body": "You have a new message from a friend."
+      },
+      "data": {
+        "key1": "Mark as Read",
+        "key2": "MARK_AS_READ_ACTION",
+        "any_other_key": "any_value"
+      }
     }
+    ```
 
-    // Set a custom deep link action
-    notification.deepLink?.let {
-        if (it.isNotEmpty()) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
-            val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
-            builder.setContentIntent(pendingIntent)
+2.  **Register the `NotificationCustomizer`** and use your custom keys:
+
+    ```kotlin
+    AppAmbitPushNotifications.setNotificationCustomizer { context, builder, notification ->
+        val data = notification.data
+
+        // You have full access to the builder and the data map.
+        // You can add action buttons, apply a custom style, or change any aspect of the notification.
+
+        // Let's use the custom keys from our example payload to add an action button.
+        // Remember to replace these with your actual keys.
+        val actionTitle = data["key1"]
+        val actionIntentFilter = data["key2"]
+
+        if (!actionTitle.isNullOrEmpty() && !actionIntentFilter.isNullOrEmpty()) {
+            val intent = Intent(actionIntentFilter).apply {
+                putExtra("EXTRA_DATA", data["any_other_key"])
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            // Add the action to the notification
+            builder.addAction(0, actionTitle, pendingIntent)
         }
     }
-
-    // Change notification color
-    notification.color?.let {
-        try {
-            builder.color = Color.parseColor(it)
-        } catch (e: IllegalArgumentException) {
-            Log.w(TAG, "Invalid color format in push data: $it")
-        }
-    }
-}
-```
-
-**Note on Icons:** The SDK automatically handles the `small_icon_name` and downloads the image for `large_icon_url` for you. You do not need to write code for this in the customizer.
+    ```

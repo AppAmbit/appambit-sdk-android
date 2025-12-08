@@ -5,7 +5,7 @@
 
     <application>
         <service
-            android:name=".AppAmbitMessaingService"
+            android:name="com.appambit.sdk.MessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

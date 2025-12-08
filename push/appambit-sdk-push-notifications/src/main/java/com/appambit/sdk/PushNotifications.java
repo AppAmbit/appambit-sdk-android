@@ -1,4 +1,4 @@
-package com.appambit.pushnotifications;
+package com.appambit.sdk;
 
 import android.Manifest;
 import android.content.Context;
@@ -14,18 +14,17 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
-import com.appambit.pushnotifications.models.AppAmbitNotification;
-import com.appambit.sdk.AppAmbit;
+import com.appambit.sdk.models.AppAmbitNotification;
 import com.appambit.sdk.services.ConsumerService;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
 
-public final class AppAmbitPushNotifications {
+public final class PushNotifications {
 
     private static final String TAG = "AppAmbitPushSDK";
     private static NotificationCustomizer notificationCustomizer;
 
-    private AppAmbitPushNotifications() {}
+    private PushNotifications() {}
 
     public interface PermissionListener {
         void onPermissionResult(boolean isGranted);

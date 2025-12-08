@@ -1,18 +1,19 @@
-package com.appambit.pushnotifications.models;
+package com.appambit.sdk.models;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import java.util.Map;
 
 public class AppAmbitNotification {
 
     private final String title;
     private final String body;
-
-    // Customization fields
     private final String priority;
     private final String deepLink;
     private final String color;
     private final String largeIconUrl;
     private final String smallIconName;
+    private final Map<String, String> data;
 
     public AppAmbitNotification(
             @Nullable String title,
@@ -21,7 +22,8 @@ public class AppAmbitNotification {
             @Nullable String deepLink,
             @Nullable String color,
             @Nullable String largeIconUrl,
-            @Nullable String smallIconName
+            @Nullable String smallIconName,
+            @NonNull Map<String, String> data
     ) {
         this.title = title;
         this.body = body;
@@ -30,6 +32,7 @@ public class AppAmbitNotification {
         this.color = color;
         this.largeIconUrl = largeIconUrl;
         this.smallIconName = smallIconName;
+        this.data = data;
     }
 
     @Nullable
@@ -65,5 +68,10 @@ public class AppAmbitNotification {
     @Nullable
     public String getSmallIconName() {
         return smallIconName;
+    }
+
+    @NonNull
+    public Map<String, String> getData() {
+        return data;
     }
 }

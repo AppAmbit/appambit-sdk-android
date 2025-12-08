@@ -3,7 +3,7 @@ package com.appambit.testapp;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
-import com.appambit.pushnotifications.AppAmbitPushNotifications;
+import com.appambit.sdk.PushNotifications;
 import com.appambit.sdk.AppAmbit;
 import com.appambit.testapp.databinding.ActivityMainBinding;
 
@@ -19,8 +19,8 @@ public class MainActivity extends AppCompatActivity {
         AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
 
         // Default Push Notifications Setup
-        AppAmbitPushNotifications.start(getApplicationContext());
-        AppAmbitPushNotifications.requestNotificationPermission(this);
+        PushNotifications.start(getApplicationContext());
+        PushNotifications.requestNotificationPermission(this);
 
         if (savedInstanceState == null) {
             replaceFragment(new CrashesFragment(), "CrashesFragment");

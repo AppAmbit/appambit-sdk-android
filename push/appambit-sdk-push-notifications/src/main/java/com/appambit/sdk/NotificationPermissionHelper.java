@@ -1,4 +1,4 @@
-package com.appambit.pushnotifications;
+package com.appambit.sdk;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
