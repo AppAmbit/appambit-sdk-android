@@ -135,7 +135,7 @@ public class MessagingService extends FirebaseMessagingService {
             }
         }
 
-        PushNotifications.NotificationCustomizer customizer = PushNotifications.getNotificationCustomizer();
+        PushKernel.NotificationCustomizer customizer = PushKernel.getNotificationCustomizer();
         if (customizer != null) {
             customizer.customize(this, builder, appAmbitNotification);
         }
@@ -203,6 +203,6 @@ public class MessagingService extends FirebaseMessagingService {
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
-        PushNotifications.handleNewToken(token);
+        PushKernel.handleNewToken(token);
     }
 }

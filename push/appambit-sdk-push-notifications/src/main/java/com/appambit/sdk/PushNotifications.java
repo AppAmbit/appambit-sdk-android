@@ -1,117 +1,113 @@
 package com.appambit.sdk;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.util.Log;
 
 import androidx.activity.ComponentActivity;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
 
-import com.appambit.sdk.models.AppAmbitNotification;
 import com.appambit.sdk.services.ConsumerService;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.messaging.FirebaseMessaging;
 
+/**
+ * The public-facing class for integrating AppAmbit Push Notifications.
+ * This class acts as a facade that connects the decoupled PushKernel with the AppAmbit Core SDK.
+ * Native Android developers should use this class for a seamless integration.
+ */
 public final class PushNotifications {
 
     private static final String TAG = "AppAmbitPushSDK";
-    private static NotificationCustomizer notificationCustomizer;
 
     private PushNotifications() {}
 
-    public interface PermissionListener {
-        void onPermissionResult(boolean isGranted);
+    // region Public Interfaces (as proxies to PushKernel for API stability)
+
+    /**
+     * A listener for the notification permission request result.
+     * This is a proxy for {@link PushKernel.PermissionListener}.
+     */
+    public interface PermissionListener extends PushKernel.PermissionListener {}
+
+    /**
+     * A customizer to modify a notification before it is displayed.
+     * This is a proxy for {@link PushKernel.NotificationCustomizer}.
+     */
+    public interface NotificationCustomizer extends PushKernel.NotificationCustomizer {}
+
+    // endregion
+
+    // region Public Configuration
+
+    /**
+     * Sets a customizer to modify notifications before they are displayed.
+     * This method delegates the call to the underlying {@link PushKernel}.
+     *
+     * @param customizer The customizer to set.
+     */
+    public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
+        PushKernel.setNotificationCustomizer(customizer);
     }
 
-    public interface NotificationCustomizer {
-        void customize(Context context, NotificationCompat.Builder builder, AppAmbitNotification notification);
+    /**
+     * Gets the currently configured notification customizer.
+     * This method delegates the call to the underlying {@link PushKernel}.
+     *
+     * @return The currently configured customizer.
+     */
+    @Nullable
+    public static PushKernel.NotificationCustomizer getNotificationCustomizer() {
+        return PushKernel.getNotificationCustomizer();
     }
 
-    public static void setNotificationCustomizer(NotificationCustomizer customizer) {
-        notificationCustomizer = customizer;
-    }
+    // endregion
 
-    public static NotificationCustomizer getNotificationCustomizer() {
-        return notificationCustomizer;
-    }
+    // region Public Methods
 
+    /**
+     * Starts the Push Notifications SDK and integrates it with the AppAmbit Core SDK.
+     * This method ensures the Core SDK is initialized and sets up a listener to automatically
+     * update the consumer's push token.
+     *
+     * @param context The application context.
+     */
     public static void start(@NonNull Context context) {
         if (!AppAmbit.isInitialized()) {
             Log.e(TAG, "AppAmbit SDK has not been started. Please call AppAmbit.start() before starting the Push SDK.");
             return;
         }
 
-        boolean hasFirebaseApp = true;
-        try {
-            FirebaseApp.initializeApp(context.getApplicationContext());
-        } catch (IllegalStateException ignored) {
-            Log.w(TAG, "FirebaseApp already initialized.");
-        }
-        if (FirebaseApp.getApps(context.getApplicationContext()).isEmpty()) {
-            hasFirebaseApp = false;
-        }
+        Log.d(TAG, "Starting Push SDK and binding to AppAmbit Core.");
 
-        if (!hasFirebaseApp) {
-            Log.w(TAG, "FirebaseApp not initialized. Check your google-services.json file.");
-            return;
-        }
-        fetchToken();
+        // 1. Bridge the PushKernel token updates to the Core SDK's ConsumerService.
+        PushKernel.setTokenListener(token -> {
+            Log.d(TAG, "FCM token received, updating consumer via AppAmbit Core.");
+            ConsumerService.updateConsumer(token, true);
+        });
+
+        // 2. Start the underlying push kernel.
+        PushKernel.start(context);
     }
 
+    /**
+     * Requests the POST_NOTIFICATIONS permission.
+     * This method delegates the call to the underlying {@link PushKernel}.
+     *
+     * @param activity The activity to register the permission result with.
+     */
     public static void requestNotificationPermission(@NonNull ComponentActivity activity) {
-        requestNotificationPermission(activity, null);
+        PushKernel.requestNotificationPermission(activity, null);
     }
 
+    /**
+     * Requests the POST_NOTIFICATIONS permission with a result listener.
+     * This method delegates the call to the underlying {@link PushKernel}.
+     *
+     * @param activity The activity to register the permission result with.
+     * @param listener A listener to be notified of the result.
+     */
     public static void requestNotificationPermission(@NonNull ComponentActivity activity, @Nullable PermissionListener listener) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ActivityResultLauncher<String> requestPermissionLauncher = activity.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    Log.d(TAG, "POST_NOTIFICATIONS permission granted.");
-                } else {
-                    Log.w(TAG, "POST_NOTIFICATIONS permission denied.");
-                }
-                if (listener != null) {
-                    listener.onPermissionResult(isGranted);
-                }
-            });
-            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
-            } else {
-                Log.d(TAG, "POST_NOTIFICATIONS permission was already granted.");
-                if (listener != null) {
-                    listener.onPermissionResult(true);
-                }
-            }
-        }
+        PushKernel.requestNotificationPermission(activity, listener);
     }
 
-    private static void fetchToken() {
-        FirebaseMessaging.getInstance()
-                .getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
-                        return;
-                    }
-                    String token = task.getResult();
-                    handleNewToken(token);
-                });
-    }
-
-    static void handleNewToken(@NonNull String token) {
-        Log.d(TAG, "FCM registration token updated: " + token);
-
-        if (!AppAmbit.isInitialized()) {
-            Log.d(TAG, "AppAmbit SDK not initialized. Cannot update consumer with new token.");
-        }
-
-        ConsumerService.updateConsumer(token, true);
-    }
+    // endregion
 }
