@@ -22,38 +22,18 @@ public final class PushNotifications {
 
     // region Public Interfaces (as proxies to PushKernel for API stability)
 
-    /**
-     * A listener for the notification permission request result.
-     * This is a proxy for {@link PushKernel.PermissionListener}.
-     */
     public interface PermissionListener extends PushKernel.PermissionListener {}
 
-    /**
-     * A customizer to modify a notification before it is displayed.
-     * This is a proxy for {@link PushKernel.NotificationCustomizer}.
-     */
     public interface NotificationCustomizer extends PushKernel.NotificationCustomizer {}
 
     // endregion
 
     // region Public Configuration
 
-    /**
-     * Sets a customizer to modify notifications before they are displayed.
-     * This method delegates the call to the underlying {@link PushKernel}.
-     *
-     * @param customizer The customizer to set.
-     */
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         PushKernel.setNotificationCustomizer(customizer);
     }
 
-    /**
-     * Gets the currently configured notification customizer.
-     * This method delegates the call to the underlying {@link PushKernel}.
-     *
-     * @return The currently configured customizer.
-     */
     @Nullable
     public static PushKernel.NotificationCustomizer getNotificationCustomizer() {
         return PushKernel.getNotificationCustomizer();
@@ -63,13 +43,6 @@ public final class PushNotifications {
 
     // region Public Methods
 
-    /**
-     * Starts the Push Notifications SDK and integrates it with the AppAmbit Core SDK.
-     * This method ensures the Core SDK is initialized and sets up a listener to automatically
-     * update the consumer's push token.
-     *
-     * @param context The application context.
-     */
     public static void start(@NonNull Context context) {
         if (!AppAmbit.isInitialized()) {
             Log.e(TAG, "AppAmbit SDK has not been started. Please call AppAmbit.start() before starting the Push SDK.");
@@ -78,33 +51,71 @@ public final class PushNotifications {
 
         Log.d(TAG, "Starting Push SDK and binding to AppAmbit Core.");
 
-        // 1. Bridge the PushKernel token updates to the Core SDK's ConsumerService.
+        // Set the token listener. This listener will be invoked whenever a new token is fetched.
         PushKernel.setTokenListener(token -> {
-            Log.d(TAG, "FCM token received, updating consumer via AppAmbit Core.");
-            ConsumerService.updateConsumer(token, true);
+            // IMPORTANT: Only update the backend if notifications are actually enabled by the user.
+            if (PushKernel.areNotificationsEnabled(context)) {
+                Log.d(TAG, "FCM token received and notifications are enabled, updating consumer via AppAmbit Core.");
+                ConsumerService.updateConsumer(token, true);
+            } else {
+                Log.d(TAG, "FCM token received, but notifications are disabled by the user. Skipping backend update.");
+            }
         });
 
-        // 2. Start the underlying push kernel.
+        // Start the underlying push kernel, which may or may not fetch a token based on the enabled status.
         PushKernel.start(context);
     }
 
     /**
-     * Requests the POST_NOTIFICATIONS permission.
-     * This method delegates the call to the underlying {@link PushKernel}.
+     * Enables or disables push notifications at both the business and FCM levels.
      *
-     * @param activity The activity to register the permission result with.
+     * <p>When set to {@code false}, this method will:
+     * <ol>
+     *     <li>Update the AppAmbit backend to reflect that the user has opted out.</li>
+     *     <li>Delete the local FCM token to stop the device from receiving push notifications.</li>
+     * </ol>
+     *
+     * <p>When set to {@code true}, a new FCM token will be fetched and sent to the AppAmbit backend.
+     *
+     * @param context The application context.
+     * @param enabled {@code true} to enable notifications, {@code false} to disable.
      */
+    public static void setNotificationsEnabled(@NonNull Context context, boolean enabled) {
+        if (!AppAmbit.isInitialized()) {
+            Log.e(TAG, "AppAmbit SDK is not initialized. Cannot set notification status.");
+            return;
+        }
+
+        Log.d(TAG, "Setting notifications enabled state to: " + enabled);
+
+        // If disabling, we must notify the backend *before* deleting the token.
+        if (!enabled) {
+            String currentToken = PushKernel.getCurrentToken();
+            if (currentToken != null) {
+                Log.d(TAG, "Disabling notifications: Updating consumer with 'false' flag.");
+                ConsumerService.updateConsumer(currentToken, false);
+            }
+        }
+
+        // Delegate the FCM-level logic (token deletion/creation) to the kernel.
+        // If enabling, the kernel will fetch a new token, which will trigger the listener we set in start().
+        PushKernel.setNotificationsEnabled(context, enabled);
+    }
+
+    /**
+     * Checks if push notifications are currently enabled by the user.
+     *
+     * @param context The application context.
+     * @return {@code true} if notifications are enabled, {@code false} otherwise.
+     */
+    public static boolean areNotificationsEnabled(@NonNull Context context) {
+        return PushKernel.areNotificationsEnabled(context);
+    }
+
     public static void requestNotificationPermission(@NonNull ComponentActivity activity) {
         PushKernel.requestNotificationPermission(activity, null);
     }
 
-    /**
-     * Requests the POST_NOTIFICATIONS permission with a result listener.
-     * This method delegates the call to the underlying {@link PushKernel}.
-     *
-     * @param activity The activity to register the permission result with.
-     * @param listener A listener to be notified of the result.
-     */
     public static void requestNotificationPermission(@NonNull ComponentActivity activity, @Nullable PermissionListener listener) {
         PushKernel.requestNotificationPermission(activity, listener);
     }

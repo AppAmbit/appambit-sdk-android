@@ -20,6 +20,7 @@ This SDK is an extension of the core AppAmbit Android SDK, providing a simple an
 ## Features
 
 * **Simple Setup**: Integrates in minutes.
+* **Enable/Disable Notifications**: Easily manage user preferences at both the business and FCM level.
 * **Automatic Field Handling**: Automatically uses standard fields from the FCM payload like `color`, `icon`, `channel_id`, and `click_action`.
 * **Smart Icon Selection**: Automatically uses your app's icon, with a safe fallback.
 * **Advanced Customization**: Provides a powerful hook to modify notifications for advanced use cases.
@@ -93,6 +94,24 @@ Also, ensure you have the Google Services plugin configured in your project.
 
 ## Usage
 
+### Enabling and Disabling Notifications
+
+By default, notifications are enabled when you first call `start()`. To manage user preferences afterward, use `setNotificationsEnabled`.
+
+```kotlin
+// To disable all future notifications
+AppAmbitPushNotifications.setNotificationsEnabled(context, false)
+
+// To re-enable them
+AppAmbitPushNotifications.setNotificationsEnabled(context, true)
+```
+
+This method updates the opt-out status on the AppAmbit dashboard and stops the device from receiving FCM messages. You can check the current setting at any time:
+
+```kotlin
+val areEnabled = AppAmbitPushNotifications.areNotificationsEnabled(context)
+```
+
 ### Permission Listener (Optional)
 
 To know if the user granted or denied the notification permission, you can provide an optional listener.
@@ -132,15 +151,12 @@ The SDK uses the standard keys from the FCM `notification` object.
 
 **`data` object:**
 
-The `data` object is used for your own custom key-value pairs, and as a fallback for some fields.
-
-- **`deep_link`**: A URL to open. This is used if `click_action` is not provided.
-- **`large_icon_url`**: A URL to an image to be used as the large icon.
-- **`notification_priority`**: A string representation of the priority (e.g., `"PRIORITY_HIGH"`), used if not present in the `notification` object.
+The `data` object is a free-form container for any custom key-value pairs you wish to send (e.g., `{"your_key": "your_value", "another_key": 123}`). Its sole purpose is to pass custom data to your application, which you can then access using the `NotificationCustomizer` to implement any advanced logic you require.
 
 ### Advanced Customization with `NotificationCustomizer`
 
 For scenarios that require custom logic or advanced UI modifications, you can register a `NotificationCustomizer`. This is a powerful hook that gives you **complete freedom** to modify the notification before it's displayed. You receive the `NotificationCompat.Builder` and an `AppAmbitNotification` object, which contains the entire `data` payload from your FCM message.
+
 
 The `data` payload is a **free-form key-value map**. You are not limited to any specific keys; you can send any data you need and use it to build your custom notification.
 

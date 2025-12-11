@@ -2,6 +2,7 @@ package com.appambit.sdk;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
@@ -15,6 +16,8 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.appambit.sdk.models.AppAmbitNotification;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
 
@@ -26,6 +29,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 public final class PushKernel {
 
     private static final String TAG = "AppAmbitPushKernel";
+    private static final String PREFS_NAME = "com.appambit.sdk.push.prefs";
+    private static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
 
     private static TokenListener tokenListener;
     private static NotificationCustomizer notificationCustomizer;
@@ -36,23 +41,14 @@ public final class PushKernel {
 
     // region Public Interfaces
 
-    /**
-     * Listener to receive updates for the FCM registration token.
-     */
     public interface TokenListener {
         void onNewToken(@NonNull String token);
     }
 
-    /**
-     * Listener to receive the result of the notification permission request.
-     */
     public interface PermissionListener {
         void onPermissionResult(boolean isGranted);
     }
 
-    /**
-     * Customizer to modify a notification before it is displayed.
-     */
     public interface NotificationCustomizer {
         void customize(@NonNull Context context, @NonNull NotificationCompat.Builder builder, @NonNull AppAmbitNotification notification);
     }
@@ -61,29 +57,17 @@ public final class PushKernel {
 
     // region Public Configuration
 
-    /**
-     * Sets a listener to be notified of FCM token updates.
-     * @param listener The listener to set.
-     */
     public static void setTokenListener(@Nullable TokenListener listener) {
         tokenListener = listener;
-        // If a token is already available and a new listener is set, notify it immediately.
-        if (isStarted && currentToken != null && tokenListener != null) {
+        if (isStarted && currentToken != null && tokenListener != null && areNotificationsEnabled(null)) { // Context can be null here as it's not used if already initialized
             tokenListener.onNewToken(currentToken);
         }
     }
 
-    /**
-     * Sets a customizer to modify notifications before they are displayed.
-     * @param customizer The customizer to set.
-     */
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         notificationCustomizer = customizer;
     }
 
-    /**
-     * @return The currently configured NotificationCustomizer.
-     */
     @Nullable
     public static NotificationCustomizer getNotificationCustomizer() {
         return notificationCustomizer;
@@ -93,11 +77,6 @@ public final class PushKernel {
 
     // region Public Methods
 
-    /**
-     * Initializes the Firebase App and starts fetching the FCM token.
-     * This is the entry point for decoupled usage (e.g., from .NET).
-     * @param context The application context.
-     */
     public static void start(@NonNull Context context) {
         if (isStarted) {
             Log.d(TAG, "PushKernel already started.");
@@ -117,37 +96,44 @@ public final class PushKernel {
 
         Log.d(TAG, "PushKernel started successfully.");
         isStarted = true;
-        fetchToken();
+
+        if (areNotificationsEnabled(context)) {
+            fetchToken();
+        } else {
+            Log.d(TAG, "Notifications are disabled by user. Skipping token fetch.");
+        }
     }
 
-    /**
-     * Requests the POST_NOTIFICATIONS permission if needed on Android 13+.
-     * @param activity The activity to register the permission result with.
-     * @param listener An optional listener to be notified of the result.
-     */
+    public static void setNotificationsEnabled(@NonNull Context context, boolean enabled) {
+        Log.d(TAG, "Setting notifications enabled status to: " + enabled);
+        getPrefs(context).edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply();
+
+        if (enabled) {
+            // If we enable notifications, fetch a new token.
+            fetchToken();
+        } else {
+            // If we disable notifications, delete the existing token to stop receiving messages.
+            currentToken = null; // Clear local token
+            FirebaseMessaging.getInstance().deleteToken();
+        }
+    }
+
+    public static boolean areNotificationsEnabled(@NonNull Context context) {
+        return getPrefs(context).getBoolean(KEY_NOTIFICATIONS_ENABLED, true);
+    }
+
     public static void requestNotificationPermission(@NonNull ComponentActivity activity, @Nullable PermissionListener listener) {
+        // Permission logic remains the same
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "POST_NOTIFICATIONS permission is already granted.");
-                if (listener != null) {
-                    listener.onPermissionResult(true);
-                }
+                if (listener != null) listener.onPermissionResult(true);
                 return;
             }
-
-            ActivityResultLauncher<String> requestPermissionLauncher = activity.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                Log.d(TAG, "POST_NOTIFICATIONS permission result: " + (isGranted ? "Granted" : "Denied"));
-                if (listener != null) {
-                    listener.onPermissionResult(isGranted);
-                }
-            });
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            activity.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (listener != null) listener.onPermissionResult(isGranted);
+            }).launch(Manifest.permission.POST_NOTIFICATIONS);
         } else {
-            // On older versions, permission is granted by default.
-            Log.d(TAG, "SDK < 33. No runtime permission required.");
-            if (listener != null) {
-                listener.onPermissionResult(true);
-            }
+            if (listener != null) listener.onPermissionResult(true);
         }
     }
 
@@ -155,9 +141,15 @@ public final class PushKernel {
 
     // region Internal and Private Methods
 
-    /**
-     * Fetches the current FCM registration token.
-     */
+    private static SharedPreferences getPrefs(@NonNull Context context) {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    @Nullable
+    static String getCurrentToken() {
+        return currentToken;
+    }
+
     private static void fetchToken() {
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
             if (!task.isSuccessful()) {
@@ -171,17 +163,12 @@ public final class PushKernel {
         });
     }
 
-    /**
-     * Internal method to handle token updates from Firebase.
-     * Called by MessagingService and on initial fetch.
-     * @param token The new FCM token.
-     */
     static void handleNewToken(@NonNull String token) {
         if (token.equals(currentToken)) {
-            return; // No change
+            return;
         }
         currentToken = token;
-        Log.d(TAG, "New FCM Token received: " + token);
+        Log.d(TAG, "New FCM Token received.");
         if (tokenListener != null) {
             tokenListener.onNewToken(token);
         }
