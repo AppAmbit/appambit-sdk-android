@@ -59,7 +59,7 @@ public final class PushKernel {
 
     public static void setTokenListener(@Nullable TokenListener listener) {
         tokenListener = listener;
-        if (isStarted && currentToken != null && tokenListener != null && areNotificationsEnabled(null)) { // Context can be null here as it's not used if already initialized
+        if (isStarted && currentToken != null && tokenListener != null && isNotificationsEnabled(null)) { // Context can be null here as it's not used if already initialized
             tokenListener.onNewToken(currentToken);
         }
     }
@@ -97,7 +97,7 @@ public final class PushKernel {
         Log.d(TAG, "PushKernel started successfully.");
         isStarted = true;
 
-        if (areNotificationsEnabled(context)) {
+        if (isNotificationsEnabled(context)) {
             fetchToken();
         } else {
             Log.d(TAG, "Notifications are disabled by user. Skipping token fetch.");
@@ -118,7 +118,7 @@ public final class PushKernel {
         }
     }
 
-    public static boolean areNotificationsEnabled(@NonNull Context context) {
+    public static boolean isNotificationsEnabled(@NonNull Context context) {
         return getPrefs(context).getBoolean(KEY_NOTIFICATIONS_ENABLED, true);
     }
 

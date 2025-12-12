@@ -369,6 +369,33 @@ public class StorageService implements Storable {
     }
 
     @Override
+    public String getDeviceToken() {
+        String deviceToken = "";
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{Columns.DEVICE_TOKEN},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
+            if (c.moveToFirst()) {
+                deviceToken = c.getString(
+                        c.getColumnIndexOrThrow(AppSecretContract.Columns.DEVICE_TOKEN)
+                );
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return deviceToken;
+    }
+
+    @Override
     public void putPushEnabled(boolean pushEnabled) {
         Cursor cursor = null;
         try {
@@ -389,6 +416,36 @@ public class StorageService implements Storable {
                 cursor.close();
             }
         }
+    }
+
+    @Override
+    public Boolean getPushEnabled() {
+        Boolean pushEnable = null;
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{Columns.PUSH_ENABLED},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
+            if (c.moveToFirst()) {
+                int value = c.getInt(
+                        c.getColumnIndexOrThrow(AppSecretContract.Columns.PUSH_ENABLED)
+                );
+                if (!c.isNull(c.getColumnIndexOrThrow(AppSecretContract.Columns.PUSH_ENABLED))) {
+                    pushEnable = (value == 1);
+                }
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return pushEnable;
     }
 
     @Override

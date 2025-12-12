@@ -348,6 +348,7 @@ public final class AppAmbit {
         String consumerId = null;
         try {
             ConsumerService.updateAppKeyIfNeeded(mAppKey);
+            ConsumerService.updateConsumer(null, null);
             consumerId = storage.getConsumerId();
         } catch (Exception e) {
             Log.w(TAG, "Error reading consumerId", e);

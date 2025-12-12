@@ -14,6 +14,7 @@ import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.interfaces.AppInfoService;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
+import com.appambit.sdk.utils.StringUtils;
 
 public class ConsumerService {
     private static final String TAG = ConsumerService.class.getSimpleName();
@@ -47,12 +48,12 @@ public class ConsumerService {
 
             appId = mStorageService.getAppId();
 
-            if (isBlank(deviceId)) {
+            if (StringUtils.isNullOrBlank(deviceId)) {
                 deviceId = java.util.UUID.randomUUID().toString();
                 mStorageService.putDeviceId(deviceId);
             }
 
-            if (isBlank(userId)) {
+            if (StringUtils.isNullOrBlank(userId)) {
                 userId = java.util.UUID.randomUUID().toString();
                 mStorageService.putUserId(userId);
             }
@@ -85,7 +86,7 @@ public class ConsumerService {
 
         String newKey = (appKey == null) ? "" : appKey.trim();
 
-        if (isBlank(newKey)) {
+        if (StringUtils.isNullOrBlank(newKey)) {
             return;
         }
 
@@ -143,22 +144,34 @@ public class ConsumerService {
         return promise;
     }
 
-    public static void updateConsumer(String deviceToken, boolean pushEnabled) {
+    public static void updateConsumer(String deviceToken, Boolean pushEnabled) {
         if (mStorageService == null || mApiService == null) {
             Log.e(TAG, "Cannot update consumer, services not initialized.");
             return;
         }
 
-        mStorageService.putDeviceToken(deviceToken);
-        mStorageService.putPushEnabled(pushEnabled);
+        if (deviceToken != null) {
+            mStorageService.putDeviceToken(deviceToken);
+        }
+        if (pushEnabled != null) {
+            mStorageService.putPushEnabled(pushEnabled);
+        }
 
         String consumerId = mStorageService.getConsumerId();
-        if (isBlank(consumerId)) {
+        if (StringUtils.isNullOrBlank(consumerId)) {
             Log.w(TAG, "Cannot update consumer, consumerId is missing.");
             return;
         }
 
-        UpdateConsumer request = new UpdateConsumer(deviceToken, pushEnabled);
+        String storedToken = mStorageService.getDeviceToken();
+        boolean storedPushEnabled = mStorageService.getPushEnabled();
+
+        if (StringUtils.isNullOrBlank(storedToken)) {
+            Log.d(TAG, "No push-related data to sync. Skipping consumer update.");
+            return;
+        }
+
+        UpdateConsumer request = new UpdateConsumer(storedToken, storedPushEnabled);
         UpdateConsumerEndpoint endpoint = new UpdateConsumerEndpoint(consumerId, request);
 
         ServiceLocator.getExecutorService().execute(() -> {
@@ -169,10 +182,6 @@ public class ConsumerService {
                 Log.e(TAG, "Failed to send consumer update request.", e);
             }
         });
-    }
-
-    private static boolean isBlank(String s) {
-        return s == null || s.trim().isEmpty();
     }
 
     private static String ensureValue(String value, String defaultValue) {

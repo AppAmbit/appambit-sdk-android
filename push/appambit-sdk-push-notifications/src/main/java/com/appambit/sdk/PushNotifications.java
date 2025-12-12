@@ -20,15 +20,9 @@ public final class PushNotifications {
 
     private PushNotifications() {}
 
-    // region Public Interfaces (as proxies to PushKernel for API stability)
-
     public interface PermissionListener extends PushKernel.PermissionListener {}
 
     public interface NotificationCustomizer extends PushKernel.NotificationCustomizer {}
-
-    // endregion
-
-    // region Public Configuration
 
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         PushKernel.setNotificationCustomizer(customizer);
@@ -39,10 +33,6 @@ public final class PushNotifications {
         return PushKernel.getNotificationCustomizer();
     }
 
-    // endregion
-
-    // region Public Methods
-
     public static void start(@NonNull Context context) {
         if (!AppAmbit.isInitialized()) {
             Log.e(TAG, "AppAmbit SDK has not been started. Please call AppAmbit.start() before starting the Push SDK.");
@@ -51,10 +41,8 @@ public final class PushNotifications {
 
         Log.d(TAG, "Starting Push SDK and binding to AppAmbit Core.");
 
-        // Set the token listener. This listener will be invoked whenever a new token is fetched.
         PushKernel.setTokenListener(token -> {
-            // IMPORTANT: Only update the backend if notifications are actually enabled by the user.
-            if (PushKernel.areNotificationsEnabled(context)) {
+            if (PushKernel.isNotificationsEnabled(context)) {
                 Log.d(TAG, "FCM token received and notifications are enabled, updating consumer via AppAmbit Core.");
                 ConsumerService.updateConsumer(token, true);
             } else {
@@ -62,8 +50,15 @@ public final class PushNotifications {
             }
         });
 
-        // Start the underlying push kernel, which may or may not fetch a token based on the enabled status.
         PushKernel.start(context);
+
+        if (PushKernel.isNotificationsEnabled(context)) {
+            String currentToken = PushKernel.getCurrentToken();
+            if (currentToken != null && !currentToken.isEmpty()) {
+                Log.d(TAG, "Push SDK started. Syncing current token with backend.");
+                ConsumerService.updateConsumer(currentToken, true);
+            }
+        }
     }
 
     /**
@@ -71,11 +66,11 @@ public final class PushNotifications {
      *
      * <p>When set to {@code false}, this method will:
      * <ol>
-     *     <li>Update the AppAmbit backend to reflect that the user has opted out.</li>
+     *     <li>Update the AppAmbit dashboard to reflect that the user has opted out.</li>
      *     <li>Delete the local FCM token to stop the device from receiving push notifications.</li>
      * </ol>
      *
-     * <p>When set to {@code true}, a new FCM token will be fetched and sent to the AppAmbit backend.
+     * <p>When set to {@code true}, a new FCM token will be fetched and sent to the AppAmbit dashboard.
      *
      * @param context The application context.
      * @param enabled {@code true} to enable notifications, {@code false} to disable.
@@ -88,17 +83,13 @@ public final class PushNotifications {
 
         Log.d(TAG, "Setting notifications enabled state to: " + enabled);
 
-        // If disabling, we must notify the backend *before* deleting the token.
         if (!enabled) {
             String currentToken = PushKernel.getCurrentToken();
-            if (currentToken != null) {
-                Log.d(TAG, "Disabling notifications: Updating consumer with 'false' flag.");
+            if (currentToken != null && !currentToken.isEmpty()) {
                 ConsumerService.updateConsumer(currentToken, false);
             }
         }
 
-        // Delegate the FCM-level logic (token deletion/creation) to the kernel.
-        // If enabling, the kernel will fetch a new token, which will trigger the listener we set in start().
         PushKernel.setNotificationsEnabled(context, enabled);
     }
 
@@ -108,8 +99,8 @@ public final class PushNotifications {
      * @param context The application context.
      * @return {@code true} if notifications are enabled, {@code false} otherwise.
      */
-    public static boolean areNotificationsEnabled(@NonNull Context context) {
-        return PushKernel.areNotificationsEnabled(context);
+    public static boolean isNotificationsEnabled(@NonNull Context context) {
+        return PushKernel.isNotificationsEnabled(context);
     }
 
     public static void requestNotificationPermission(@NonNull ComponentActivity activity) {
@@ -119,6 +110,4 @@ public final class PushNotifications {
     public static void requestNotificationPermission(@NonNull ComponentActivity activity, @Nullable PermissionListener listener) {
         PushKernel.requestNotificationPermission(activity, listener);
     }
-
-    // endregion
 }

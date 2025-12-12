@@ -109,7 +109,7 @@ AppAmbitPushNotifications.setNotificationsEnabled(context, true)
 This method updates the opt-out status on the AppAmbit dashboard and stops the device from receiving FCM messages. You can check the current setting at any time:
 
 ```kotlin
-val areEnabled = AppAmbitPushNotifications.areNotificationsEnabled(context)
+val isEnabled = AppAmbitPushNotifications.isNotificationsEnabled(context)
 ```
 
 ### Permission Listener (Optional)

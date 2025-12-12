@@ -5,12 +5,14 @@ import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
@@ -50,33 +52,22 @@ public class MessagingService extends FirebaseMessagingService {
 
         Map<String, String> data = remoteMessage.getData();
 
-        String title = notification.getTitle();
-        String body = notification.getBody();
-        String deepLink = data.get("deep_link");
-        String largeIconUrl = data.get("large_icon_url");
-        String smallIconName = notification.getIcon();
-        String color = notification.getColor();
-        String channelId = notification.getChannelId();
-        String clickAction = notification.getClickAction();
-        String notificationPriorityString = data.get("notification_priority");
-
         AppAmbitNotification appAmbitNotification = new AppAmbitNotification(
-                title,
-                body,
-                notificationPriorityString,
-                deepLink,
-                color,
-                largeIconUrl,
-                smallIconName,
+                notification.getTitle(),
+                notification.getBody(),
+                notification.getColor(),
+                notification.getIcon(),
                 data
         );
 
+        String channelId = notification.getChannelId();
         if (TextUtils.isEmpty(channelId)) {
             channelId = "default_channel_id";
         }
         String channelName = "Default Channel";
 
         Intent intent;
+        String clickAction = notification.getClickAction();
         if (!TextUtils.isEmpty(clickAction)) {
             intent = new Intent(clickAction);
         } else {
@@ -92,16 +83,14 @@ public class MessagingService extends FirebaseMessagingService {
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT);
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            if (notification.getNotificationPriority() != null) {
+                importance = getImportanceFromPriority(notification.getNotificationPriority());
+            }
+            NotificationChannel channel = new NotificationChannel(channelId, channelName, importance);
+            Uri soundUri = getSoundUri(notification.getSound());
+            channel.setSound(soundUri, null);
             notificationManager.createNotificationChannel(channel);
-        }
-
-        int priority = NotificationCompat.PRIORITY_DEFAULT;
-        Integer notificationObjectPriority = notification.getNotificationPriority();
-        if (notificationObjectPriority != null) {
-            priority = notificationObjectPriority;
-        } else if (notificationPriorityString != null) {
-            priority = getPriorityFromString(notificationPriorityString);
         }
 
         int appIcon = getSmallIcon(appAmbitNotification);
@@ -110,21 +99,33 @@ public class MessagingService extends FirebaseMessagingService {
                 .setSmallIcon(appIcon)
                 .setContentTitle(appAmbitNotification.getTitle())
                 .setContentText(appAmbitNotification.getBody())
-                .setPriority(priority)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
+
+        if (notification.getNotificationPriority() != null) {
+            builder.setPriority(notification.getNotificationPriority());
+        } else {
+            builder.setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        }
 
         if (appAmbitNotification.getColor() != null) {
             try {
                 builder.setColor(Color.parseColor(appAmbitNotification.getColor()));
             } catch (IllegalArgumentException e) {
-                Log.w(TAG, "Invalid color format: " + appAmbitNotification.getColor());
+                Log.w(TAG, "Invalid color format: " + appAmbitNotification.getColor() + ". Using default.");
             }
         }
 
-        Bitmap largeIcon = getBitmapFromUrl(appAmbitNotification.getLargeIconUrl());
-        if(largeIcon != null) {
-            builder.setLargeIcon(largeIcon);
+        builder.setSound(getSoundUri(notification.getSound()));
+
+        if (notification.getTicker() != null) {
+            builder.setTicker(notification.getTicker());
+        }
+
+        builder.setOngoing(notification.getSticky());
+
+        if (notification.getVisibility() != null) {
+            builder.setVisibility(notification.getVisibility());
         }
 
         Uri imageUrl = remoteMessage.getNotification().getImageUrl();
@@ -141,27 +142,39 @@ public class MessagingService extends FirebaseMessagingService {
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+            notificationManager.notify(notification.getTag(), (int) System.currentTimeMillis(), builder.build());
         } else {
             Log.w(TAG, "POST_NOTIFICATIONS permission not granted. Cannot show notification.");
         }
     }
 
-    private int getPriorityFromString(String priority) {
-        if (priority == null) {
-            return NotificationCompat.PRIORITY_DEFAULT;
+    private Uri getSoundUri(String sound) {
+        if (sound == null || sound.isEmpty() || "default".equalsIgnoreCase(sound)) {
+            return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         }
+
+        int soundResourceId = getResources().getIdentifier(sound, "raw", getPackageName());
+        if (soundResourceId != 0) {
+            return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + getPackageName() + "/" + soundResourceId);
+        }
+
+        Log.w(TAG, "Sound resource '" + sound + "' not found. Using default sound.");
+        return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+    }
+
+    private int getImportanceFromPriority(int priority) {
         switch (priority) {
-            case "PRIORITY_MIN":
-                return NotificationCompat.PRIORITY_MIN;
-            case "PRIORITY_LOW":
-                return NotificationCompat.PRIORITY_LOW;
-            case "PRIORITY_HIGH":
-                return NotificationCompat.PRIORITY_HIGH;
-            case "PRIORITY_MAX":
-                return NotificationCompat.PRIORITY_MAX;
+            case NotificationCompat.PRIORITY_MAX:
+                return NotificationManager.IMPORTANCE_MAX;
+            case NotificationCompat.PRIORITY_HIGH:
+                return NotificationManager.IMPORTANCE_HIGH;
+            case NotificationCompat.PRIORITY_LOW:
+                return NotificationManager.IMPORTANCE_LOW;
+            case NotificationCompat.PRIORITY_MIN:
+                return NotificationManager.IMPORTANCE_MIN;
+            case NotificationCompat.PRIORITY_DEFAULT:
             default:
-                return NotificationCompat.PRIORITY_DEFAULT;
+                return NotificationManager.IMPORTANCE_DEFAULT;
         }
     }
 
@@ -169,9 +182,10 @@ public class MessagingService extends FirebaseMessagingService {
         String customIconName = notification.getSmallIconName();
         if (customIconName != null && !customIconName.isEmpty()) {
             try {
-                int iconId = getResources().getIdentifier(customIconName, "drawable", getPackageName());
+                String iconNameWithoutExtension = customIconName.split("\\.")[0];
+                int iconId = getResources().getIdentifier(iconNameWithoutExtension, "drawable", getPackageName());
                 if (iconId != 0) return iconId;
-                Log.w(TAG, "Custom icon '" + customIconName + "' not found.");
+                Log.w(TAG, "Custom icon '" + customIconName + "' not found in drawables.");
             } catch (Exception e) {
                 Log.e(TAG, "Error getting custom icon", e);
             }
@@ -179,6 +193,7 @@ public class MessagingService extends FirebaseMessagingService {
         try {
             ApplicationInfo appInfo = getPackageManager().getApplicationInfo(getPackageName(), 0);
             if (appInfo.icon != 0) return appInfo.icon;
+            Log.w(TAG, "App icon not found, using default.");
         } catch (PackageManager.NameNotFoundException e) {
             Log.e(TAG, "Could not find application package icon", e);
         }
