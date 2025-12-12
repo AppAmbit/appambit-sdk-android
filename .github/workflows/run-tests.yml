@@ -17,7 +17,7 @@ jobs:
           cache: gradle
 
       - name: Run Unit Tests
-        run: ./gradlew :AppAmbitSdkTest:test --stacktrace
+        run: ./gradlew :AppAmbitSdkTest:testDebugUnitTest
 
       - name: Android Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
