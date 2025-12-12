@@ -10,22 +10,27 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center"
-        android:paddingBottom="16dp">
+        android:gravity="center_horizontal"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/btn_notifications"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:text="Setup Push Notifications" />
 
         <Button
             android:id="@+id/btnDidCrash"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/did_the_app_crash_during_your_last_session"
-            android:layout_gravity="center" />
+            android:layout_marginHorizontal="34dp"
+            android:text="@string/did_the_app_crash_during_your_last_session" />
 
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_marginHorizontal="50dp"
+            android:layout_marginHorizontal="34dp"
             android:padding="16dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_card_layout"
@@ -52,7 +57,7 @@
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_marginHorizontal="50dp"
+            android:layout_marginHorizontal="34dp"
             android:padding="16dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_card_layout"
@@ -80,7 +85,7 @@
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_marginHorizontal="50dp"
+            android:layout_marginHorizontal="34dp"
             android:padding="16dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_card_layout"
@@ -110,54 +115,48 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/send_default_logerror"
-            android:layout_gravity="center" />
+            android:layout_marginHorizontal="34dp"
+            android:text="@string/send_default_logerror" />
 
         <Button
             android:id="@+id/btnSendExceptionLogError"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/send_exception_logerror"
-            android:layout_gravity="center" />
+            android:layout_marginHorizontal="34dp"
+            android:text="@string/send_exception_logerror" />
 
         <Button
             android:id="@+id/btnGenerateLast30DailyErrors"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/generate_the_last_30_daily_errors"
-            android:layout_gravity="center" />
+            android:layout_marginHorizontal="34dp"
+            android:text="@string/generate_the_last_30_daily_errors" />
 
         <Button
             android:id="@+id/btnGenerateLast30DailyCrashes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/generate_the_last_30_daily_crashes"
-            android:layout_gravity="center" />
+            android:layout_marginHorizontal="34dp"
+            android:text="@string/generate_the_last_30_daily_crashes" />
 
         <Button
             android:id="@+id/btnThrowNewCrash"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/throw_new_crash"
-            android:layout_gravity="center" />
+            android:layout_marginHorizontal="34dp"
+            android:text="@string/throw_new_crash" />
 
         <Button
             android:id="@+id/btnGenerateTestCrash"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:layout_marginHorizontal="50dp"
-            android:text="@string/generate_test_crash"
-            android:layout_gravity="center" />
+            android:layout_marginHorizontal="34dp"
+            android:text="@string/generate_test_crash" />
 
     </LinearLayout>
 

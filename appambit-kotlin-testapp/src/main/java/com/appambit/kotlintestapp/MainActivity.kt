@@ -28,11 +28,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        //Analytics.enableManualSession()
         AppAmbit.start(this, "<YOUR-APPKEY>")
 
-        // Default Push Notifications Setup
+        // Initialize Push SDK on app start
         PushNotifications.start(applicationContext)
-        PushNotifications.requestNotificationPermission(this)
 
         setContent {
             BottomBar()

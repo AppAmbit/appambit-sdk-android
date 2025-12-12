@@ -83,12 +83,8 @@ public final class PushNotifications {
 
         Log.d(TAG, "Setting notifications enabled state to: " + enabled);
 
-        if (!enabled) {
-            String currentToken = PushKernel.getCurrentToken();
-            if (currentToken != null && !currentToken.isEmpty()) {
-                ConsumerService.updateConsumer(currentToken, false);
-            }
-        }
+        String currentToken = PushKernel.getCurrentToken();
+        ConsumerService.updateConsumer(currentToken, enabled);
 
         PushKernel.setNotificationsEnabled(context, enabled);
     }

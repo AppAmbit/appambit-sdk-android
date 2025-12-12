@@ -2,22 +2,19 @@ package com.appambit.sdk;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
 
 import androidx.activity.ComponentActivity;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.appambit.sdk.models.AppAmbitNotification;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
 
@@ -39,8 +36,6 @@ public final class PushKernel {
 
     private PushKernel() {}
 
-    // region Public Interfaces
-
     public interface TokenListener {
         void onNewToken(@NonNull String token);
     }
@@ -53,15 +48,8 @@ public final class PushKernel {
         void customize(@NonNull Context context, @NonNull NotificationCompat.Builder builder, @NonNull AppAmbitNotification notification);
     }
 
-    // endregion
-
-    // region Public Configuration
-
     public static void setTokenListener(@Nullable TokenListener listener) {
         tokenListener = listener;
-        if (isStarted && currentToken != null && tokenListener != null && isNotificationsEnabled(null)) { // Context can be null here as it's not used if already initialized
-            tokenListener.onNewToken(currentToken);
-        }
     }
 
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
@@ -72,10 +60,6 @@ public final class PushKernel {
     public static NotificationCustomizer getNotificationCustomizer() {
         return notificationCustomizer;
     }
-
-    // endregion
-
-    // region Public Methods
 
     public static void start(@NonNull Context context) {
         if (isStarted) {
@@ -109,11 +93,9 @@ public final class PushKernel {
         getPrefs(context).edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply();
 
         if (enabled) {
-            // If we enable notifications, fetch a new token.
             fetchToken();
         } else {
-            // If we disable notifications, delete the existing token to stop receiving messages.
-            currentToken = null; // Clear local token
+            currentToken = null;
             FirebaseMessaging.getInstance().deleteToken();
         }
     }
@@ -123,17 +105,21 @@ public final class PushKernel {
     }
 
     public static void requestNotificationPermission(@NonNull ComponentActivity activity, @Nullable PermissionListener listener) {
-        // Permission logic remains the same
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-                if (listener != null) listener.onPermissionResult(true);
+                if (listener != null) {
+                    listener.onPermissionResult(true);
+                }
                 return;
             }
-            activity.registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (listener != null) listener.onPermissionResult(isGranted);
-            }).launch(Manifest.permission.POST_NOTIFICATIONS);
+
+            PermissionCallbackHolder.getInstance().setListener(listener);
+            Intent intent = new Intent(activity, PermissionRequestActivity.class);
+            activity.startActivity(intent);
         } else {
-            if (listener != null) listener.onPermissionResult(true);
+            if (listener != null) {
+                listener.onPermissionResult(true);
+            }
         }
     }
 
@@ -173,6 +159,4 @@ public final class PushKernel {
             tokenListener.onNewToken(token);
         }
     }
-
-    // endregion
 }
