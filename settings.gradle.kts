@@ -22,7 +22,16 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "AppAmbit Testing App"
-include(":appambit-testapp")
+// SDK
 include(":appambit-sdk")
 
+// APPS
+include(":appambit-testapp")
+project(":appambit-testapp").projectDir = file("samples/java-app")
+
 include(":appambit-kotlin-testapp")
+project(":appambit-kotlin-testapp").projectDir = file("samples/kotlin-app")
+
+// TESTS
+include(":AppAmbitSdkTest")
+project(":AppAmbitSdkTest").projectDir = file("tests/AppAmbitSdkTest")
