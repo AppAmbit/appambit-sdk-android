@@ -1,4 +1,4 @@
-package com.appambit.testapp.utils;
+package com.appambit.javaapp.utils;
 
 import android.app.AlertDialog;
 import android.content.Context;

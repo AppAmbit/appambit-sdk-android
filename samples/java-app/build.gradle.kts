@@ -8,11 +8,11 @@ android {
         viewBinding = true
     }
 
-    namespace = "com.appambit.testapp"
+    namespace = "com.appambit.javaapp"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.appambit.testapp"
+        applicationId = "com.appambit.javaapp"
         minSdk = 21
         targetSdk = 36
         versionCode = 1

@@ -1,4 +1,4 @@
-package com.appambit.testapp;
+package com.appambit.javaapp;
 
 import android.content.Intent;
 import android.os.Bundle;

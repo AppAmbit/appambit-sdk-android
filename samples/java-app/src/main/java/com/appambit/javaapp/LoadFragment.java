@@ -1,4 +1,4 @@
-package com.appambit.testapp;
+package com.appambit.javaapp;
 
 import static com.appambit.sdk.utils.InternetConnection.hasInternetConnection;
 import static java.sql.DriverManager.println;
@@ -15,7 +15,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import com.appambit.sdk.Analytics;
 import com.appambit.sdk.Crashes;
-import com.appambit.testapp.utils.AlertsUtils;
+import com.appambit.javaapp.utils.AlertsUtils;
 import java.util.HashMap;
 import java.util.Map;
 

@@ -20,8 +20,8 @@ pipelines:
                 exit 1
               fi
 
-            - PACKAGE_NAME="appambit-testapp"
-            - APK_NAME="com_appambit_testapp"
+            - PACKAGE_NAME="java-app"
+            - APK_NAME="com_appambit_java_app"
             - BUNDLE_NAME="my_app_bundle.zip"
             
             - apt-get update && apt-get install -y wget unzip zip openjdk-17-jdk

@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.appambit.kotlintestapp"
+    namespace = "com.appambit.kotlinapp"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.appambit.kotlintestapp"
+        applicationId = "com.appambit.kotlinapp"
         minSdk = 21
         targetSdk = 36
         versionCode = 1

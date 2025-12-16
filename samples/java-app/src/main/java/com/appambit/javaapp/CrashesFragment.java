@@ -1,4 +1,4 @@
-package com.appambit.testapp;
+package com.appambit.javaapp;
 
 import android.Manifest;
 import android.content.Context;
@@ -20,7 +20,7 @@ import com.appambit.sdk.Analytics;
 import com.appambit.sdk.Crashes;
 import com.appambit.sdk.PushNotifications;
 import com.appambit.sdk.ServiceLocator;
-import com.appambit.testapp.utils.AlertsUtils;
+import com.appambit.javaapp.utils.AlertsUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -105,8 +105,7 @@ public class CrashesFragment extends Fragment {
             notificationButton.setText(isEnabled ? "Disable Notifications" : "Enable Notifications");
         } else {
             notificationButton.setText("Allow Notifications");
-        }
-    }
+        }    }
 
     private boolean hasNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

@@ -1,4 +1,4 @@
-package com.appambit.testapp;
+package com.appambit.javaapp;
 
 import android.content.Context;
 import android.content.Intent;
@@ -15,7 +15,7 @@ import android.widget.Toast;
 
 import com.appambit.sdk.Analytics;
 import com.appambit.sdk.Crashes;
-import com.appambit.testapp.utils.AlertsUtils;
+import com.appambit.javaapp.utils.AlertsUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.appambit.testapp;
+package com.appambit.javaapp;
 
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
