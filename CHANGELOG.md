@@ -4,7 +4,7 @@ ___
 
 ### AppAmbit
 
-* **[Feature]** Implemented a method to update consumer data, including the device token and the status of push notifications.
+* **[Feature]** Integrated push notification support.
 
 ___
 
