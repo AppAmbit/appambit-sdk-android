@@ -1,5 +1,13 @@
 ___
 
+## Version 0.2.0
+
+### AppAmbit
+
+* **[Feature]** Implemented a method to update consumer data, including the device token and the status of push notifications.
+
+___
+
 ## Version 0.1.0
 
 ### AppAmbit
