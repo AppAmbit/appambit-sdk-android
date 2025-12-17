@@ -5,11 +5,11 @@ trigger: none
 variables:
 - group: ANDROID VARIABLES
 - name: APK_NAME
-  value: 'app_appambit_testapp'
+  value: 'app_appambit_java_app'
 - name: PACKAGE_NAME
   value: 'com.appambit.testapp'
 - name: DIRECTORY_NAME
-  value: 'appambit-testapp'
+  value: 'java-app'
 - name: KEYSTORE_NAME
   value: 'appambit.keystore'
 - name: RELEASE_TYPE

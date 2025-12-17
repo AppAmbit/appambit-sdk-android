@@ -311,6 +311,8 @@ class AnalyticsTest {
         private var userEmail: String? = null
         private var consumerId: String? = null
         private var sessionId: String? = null
+        private var deviceToken: String? = null
+        private var pushEnabled: Boolean? = null
 
         override fun close() {}
 
@@ -331,6 +333,12 @@ class AnalyticsTest {
 
         override fun putSessionId(sessionId: String?) { this.sessionId = sessionId }
         override fun getSessionId(): String? = sessionId
+
+        override fun putDeviceToken(deviceToken: String?) { this.deviceToken = deviceToken }
+        override fun getDeviceToken(): String? = deviceToken
+
+        override fun putPushEnabled(pushEnabled: Boolean) { this.pushEnabled = pushEnabled }
+        override fun getPushEnabled(): Boolean? = pushEnabled
 
         override fun putSessionData(session: SessionData?) {
             if (session != null) sessions.add(session)

@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -7,13 +8,13 @@ android {
         viewBinding = true
     }
 
-    namespace = "com.appambit.testapp"
-    compileSdk = 35
+    namespace = "com.appambit.javaapp"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.appambit.testapp"
+        applicationId = "com.appambit.javaapp"
         minSdk = 21
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -48,6 +49,8 @@ android {
 dependencies {
 
     implementation(project(":appambit-sdk"))
+    implementation(project(":push:appambit-sdk-push-notifications"))
+    implementation(platform(libs.firebaseBom))
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
