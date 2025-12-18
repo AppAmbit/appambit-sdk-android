@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  PACKAGE_NAME: appambit-testapp
-  APK_NAME: com_appambit_testapp
+  PACKAGE_NAME: java-app
+  APK_NAME: com_appambit_java_app
   SIGNING_KEY_STORE_PATH: ${{ secrets.SIGNING_KEY_STORE_PATH }}
   SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
   SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}

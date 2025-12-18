@@ -346,6 +346,109 @@ public class StorageService implements Storable {
     }
 
     @Override
+    public void putDeviceToken(String deviceToken) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(Columns.DEVICE_TOKEN, deviceToken);
+
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    @Override
+    public String getDeviceToken() {
+        String deviceToken = "";
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{Columns.DEVICE_TOKEN},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
+            if (c.moveToFirst()) {
+                deviceToken = c.getString(
+                        c.getColumnIndexOrThrow(AppSecretContract.Columns.DEVICE_TOKEN)
+                );
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return deviceToken;
+    }
+
+    @Override
+    public void putPushEnabled(boolean pushEnabled) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(Columns.PUSH_ENABLED, pushEnabled ? 1 : 0);
+
+            cursor = db.query(AppSecretContract.TABLE_NAME, new String[]{AppSecretContract.Columns.ID}, null, null, null, null, null);
+            if (cursor.moveToFirst()) {
+                String existingId = cursor.getString(cursor.getColumnIndexOrThrow(AppSecretContract.Columns.ID));
+                db.update(AppSecretContract.TABLE_NAME, cv, AppSecretContract.Columns.ID + " = ?", new String[]{existingId});
+            } else {
+                cv.put(AppSecretContract.Columns.ID, UUID.randomUUID().toString());
+                db.insert(AppSecretContract.TABLE_NAME, null, cv);
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    @Override
+    public Boolean getPushEnabled() {
+        Boolean pushEnable = null;
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    AppSecretContract.TABLE_NAME,
+                    new String[]{Columns.PUSH_ENABLED},
+                    null, null,
+                    null, null,
+                    null,
+                    "1"
+            );
+            if (c.moveToFirst()) {
+                int value = c.getInt(
+                        c.getColumnIndexOrThrow(AppSecretContract.Columns.PUSH_ENABLED)
+                );
+                if (!c.isNull(c.getColumnIndexOrThrow(AppSecretContract.Columns.PUSH_ENABLED))) {
+                    pushEnable = (value == 1);
+                }
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return pushEnable;
+    }
+
+    @Override
     public void putLogEvent(LogEntity logEntity) {
         try {
             SQLiteDatabase db = dataStore.getWritableDatabase();

@@ -2,7 +2,7 @@ package com.appambit.sdk;
 
 public class AppConstants {
     public static final String DATABASE_NAME = "AppAmbit.db";
-    public static final int DB_VERSION = 1;
+    public static final int DB_VERSION = 2;
     public static final String NO_STACK_TRACE_AVAILABLE  = "NoStackTraceAvailable";
     public static String UNKNOWN_FILENAME = "UnknownFileName";
     public static final String UNKNOWN_CLASS = "UnknownClass";

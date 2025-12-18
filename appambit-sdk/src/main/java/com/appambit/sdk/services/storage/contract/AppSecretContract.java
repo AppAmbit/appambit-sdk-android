@@ -6,14 +6,16 @@ public final class AppSecretContract {
     public static final class Columns {
         private Columns() {}
 
-        public static final String ID         = "id";
-        public static final String CONSUMER_ID     = "consumerId";
-        public static final String APP_ID     = "appId";
-        public static final String DEVICE_ID  = "deviceId";
-        public static final String TOKEN      = "token";
-        public static final String SESSION_ID = "sessionId";
-        public static final String USER_ID    = "userId";
-        public static final String USER_EMAIL = "userEmail";
+        public static final String ID            = "id";
+        public static final String CONSUMER_ID   = "consumerId";
+        public static final String APP_ID        = "appId";
+        public static final String DEVICE_ID     = "deviceId";
+        public static final String TOKEN         = "token";
+        public static final String SESSION_ID    = "sessionId";
+        public static final String USER_ID       = "userId";
+        public static final String USER_EMAIL    = "userEmail";
+        public static final String DEVICE_TOKEN  = "device_token";
+        public static final String PUSH_ENABLED  = "push_enabled";
     }
 
     public static final String CREATE_TABLE =
@@ -25,7 +27,8 @@ public final class AppSecretContract {
                     + Columns.TOKEN         + " TEXT, "
                     + Columns.SESSION_ID    + " TEXT, "
                     + Columns.USER_ID       + " TEXT, "
-                    + Columns.USER_EMAIL    + " TEXT "
+                    + Columns.USER_EMAIL    + " TEXT, "
+                    + Columns.DEVICE_TOKEN  + " TEXT, "
+                    + Columns.PUSH_ENABLED  + " INTEGER "
                     + ");";
 }
-

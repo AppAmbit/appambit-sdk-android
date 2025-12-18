@@ -3,8 +3,8 @@ pluginManagement {
         mavenLocal()
         google {
             content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("com.android.*")
+                includeGroupByRegex("com.google.*")
                 includeGroupByRegex("androidx.*")
             }
         }
@@ -21,8 +21,18 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AppAmbit Testing App"
-include(":appambit-testapp")
+rootProject.name = "AppAmbit"
+// SDK
 include(":appambit-sdk")
 
-include(":appambit-kotlin-testapp")
+// APPS
+include(":java-app")
+project(":java-app").projectDir = file("samples/java-app")
+include(":kotlin-app")
+project(":kotlin-app").projectDir = file("samples/kotlin-app")
+include(":appambit-sdk-push-notifications")
+project(":appambit-sdk-push-notifications").projectDir = file("push/appambit-sdk-push-notifications")
+
+// TESTS
+include(":AppAmbitSdkTest")
+project(":AppAmbitSdkTest").projectDir = file("tests/AppAmbitSdkTest")

@@ -36,6 +36,14 @@ public interface Storable extends Closeable {
 
     String getSessionId();
 
+    void putDeviceToken(String deviceToken);
+
+    String getDeviceToken();
+
+    void putPushEnabled(boolean pushEnabled);
+
+    Boolean getPushEnabled();
+
     void putLogEvent(LogEntity logEntity);
 
     void putLogAnalyticsEvent(EventEntity logEntity);

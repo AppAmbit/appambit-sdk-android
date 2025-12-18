@@ -27,7 +27,10 @@ public class DataStore extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-
+    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
+        if (oldVersion < 2) {
+            sqLiteDatabase.execSQL("ALTER TABLE " + AppSecretContract.TABLE_NAME + " ADD COLUMN " + AppSecretContract.Columns.DEVICE_TOKEN + " TEXT;");
+            sqLiteDatabase.execSQL("ALTER TABLE " + AppSecretContract.TABLE_NAME + " ADD COLUMN " + AppSecretContract.Columns.PUSH_ENABLED + " INTEGER;");
+        }
     }
 }

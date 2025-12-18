@@ -1,18 +1,20 @@
-name: Android CI/CD Library
+name: Android CI/CD Libraries
 
 on:
   workflow_dispatch:
 
 env:
-  PACKAGE_NAME: appambit-sdk
-  BUILD_PATH: build/outputs/aar/appambit-sdk-release.aar
+  PACKAGE_NAME_APPAMBIT_SDK: appambit-sdk
+  BUILD_PATH_APPAMBIT_SDK: build/outputs/aar/appambit-sdk-release.aar
+  PACKAGE_NAME_PUSH: appambit-sdk-push-notifications
+  BUILD_PATH_PUSH: build/outputs/aar/appambit-sdk-push-notifications-release.aar
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build Android Library with Version
+    name: Build Android Libraries
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -85,35 +87,42 @@ jobs:
       - name: Clean project
         run: ./gradlew clean
 
-      - name: Build project
-        run: ./gradlew :${{ env.PACKAGE_NAME }}:build
+      - name: Build project AppAmbit SDK
+        run: ./gradlew :${{ env.PACKAGE_NAME_APPAMBIT_SDK }}:build
 
-      - name: Build with Gradle
-        run: ./gradlew :${{ env.PACKAGE_NAME }}:assembleRelease
+      - name: Build with Gradle AppAmbit SDK
+        run: ./gradlew :${{ env.PACKAGE_NAME_APPAMBIT_SDK }}:assembleRelease
+
+      - name: Build project AppAmbit Push Notifications
+        run: ./gradlew :${{ env.PACKAGE_NAME_PUSH }}:build
+
+      - name: Build with Gradle AppAmbit Push Notifications
+        run: ./gradlew :${{ env.PACKAGE_NAME_PUSH }}:assembleRelease
 
       - name: Rename AAR with version
         run: |
           mkdir -p artifacts
-          cp ${{ env.PACKAGE_NAME }}/${{ env.BUILD_PATH }} artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}.aar
+          cp ${{ env.PACKAGE_NAME_APPAMBIT_SDK }}/${{ env.BUILD_PATH_APPAMBIT_SDK }} artifacts/${{ env.PACKAGE_NAME_APPAMBIT_SDK }}-${{ steps.version.outputs.version_name }}.aar
+          cp push/${{ env.PACKAGE_NAME_PUSH }}/${{ env.BUILD_PATH_PUSH }} artifacts/${{ env.PACKAGE_NAME_PUSH }}-${{ steps.version.outputs.version_name }}.aar
 
       - name: Upload AAR artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}
-          path: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}.aar
+          name: AppAmbit-Packages-${{ steps.version.outputs.version_name }}
+          path: artifacts/*.aar
 
       - name: Create GitHub Release
-        #      if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
+        # if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.new_tag }}
           name: ${{ steps.version.outputs.new_tag }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: artifacts/${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.version_name }}.aar
+          files: artifacts/*.aar
           body: ${{ steps.changelog.outputs.changelog }}
           prerelease: ${{ steps.version.outputs.is_prerelease }}
 
-      - name: Publish to Maven Central (MavenCentral via Sonatype)
+      - name: Publish to Maven Central AppAmbit SDK (MavenCentral via Sonatype)
         if: steps.version.outputs.is_prerelease == 'false'
         run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
         env:

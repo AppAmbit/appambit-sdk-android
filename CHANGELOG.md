@@ -1,5 +1,13 @@
 ___
 
+## Version 0.2.0
+
+### AppAmbit
+
+* **[Feature]** Integrated push notification support.
+
+___
+
 ## Version 0.1.0
 
 ### AppAmbit
