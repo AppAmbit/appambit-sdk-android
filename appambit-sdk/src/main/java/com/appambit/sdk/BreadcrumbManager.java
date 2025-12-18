@@ -176,6 +176,7 @@ public class BreadcrumbManager {
                 if (apiResponse != null && apiResponse.errorType == ApiErrorType.None) {
                     result.complete(null);
                 } else {
+                    entity.setSessionId(SessionManager.getSessionId());
                     mStorageService.addBreadcrumb(entity);
                     result.fail(new RuntimeException("Breadcrumb send failed"));
                 }
