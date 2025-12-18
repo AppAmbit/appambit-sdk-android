@@ -30,8 +30,8 @@ include(":java-app")
 project(":java-app").projectDir = file("samples/java-app")
 include(":kotlin-app")
 project(":kotlin-app").projectDir = file("samples/kotlin-app")
-include(":push:appambit-sdk-push-notifications")
-project(":push:appambit-sdk-push-notifications").projectDir = file("push/appambit-sdk-push-notifications")
+include(":appambit-sdk-push-notifications")
+project(":appambit-sdk-push-notifications").projectDir = file("push/appambit-sdk-push-notifications")
 
 // TESTS
 include(":AppAmbitSdkTest")

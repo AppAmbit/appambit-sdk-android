@@ -49,7 +49,7 @@ android {
 dependencies {
 
     implementation(project(":appambit-sdk"))
-    implementation(project(":push:appambit-sdk-push-notifications"))
+    implementation(project(":appambit-sdk-push-notifications"))
     implementation(platform(libs.firebaseBom))
     implementation(libs.appcompat)
     implementation(libs.material)

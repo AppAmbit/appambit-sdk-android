@@ -1,0 +1,88 @@
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+ext {
+    // Constant variables
+    MIN_SDK_VERSION = project.property("MIN_SDK_VERSION")
+    VERSION_NAME = project.property("VERSION_NAME")
+    VERSION_CODE = project.property("VERSION_CODE")
+
+    // Maven variables
+    GROUP_ID = "com.appambit"
+    ARTIFACT_ID = "appambit.push.notifications"
+
+    SITE_URL = "https://github.com/AppAmbit/appambit-sdk-android"
+    GIT_URL = "https://github.com/AppAmbit/appambit-sdk-android.git"
+
+    POM_DESCRIPTION = "Push Notifications SDK for Android to send push notifications via AppAmbit platform."
+    POM_URL = SITE_URL
+
+    LICENCE_NAME = "The MIT License (MIT)"
+    LICENCE_SITE = "https://opensource.org/licenses/MIT"
+    LICENCE_CODE = "MIT"
+
+    DEVELOPER_ID = "AppAmbit"
+    DEVELOPER_NAME = "AppAmbit"
+    DEVELOPER_EMAIL = "hello@appambit.com"
+
+}
+
+signing {
+    useInMemoryPgpKeys(
+        System.getenv("OSS_SIGNING_KEY"),
+        System.getenv("OSS_SIGNING_PASSWORD")
+    )
+    sign publishing.publications
+}
+
+task emptyJavadocsJar(type: Jar) {
+    archiveClassifier.set("javadoc")
+    from("$buildDir/empty")
+}
+
+task androidSourcesJar(type: Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
+    from android.sourceSets.main.kotlin.srcDirs
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId GROUP_ID
+                artifactId ARTIFACT_ID
+                version VERSION_NAME
+
+                artifact("$buildDir/outputs/aar/${project.name}-release.aar")
+
+                artifact androidSourcesJar
+                artifact emptyJavadocsJar
+
+                pom {
+                    name = ARTIFACT_ID
+                    description = POM_DESCRIPTION
+                    url = POM_URL
+                    licenses {
+                        license {
+                            name = LICENCE_NAME
+                            url = LICENCE_SITE
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = DEVELOPER_ID
+                            name = DEVELOPER_NAME
+                            email = DEVELOPER_EMAIL
+                        }
+                    }
+                    scm {
+                        connection = GIT_URL
+                        developerConnection = GIT_URL
+                        url = SITE_URL
+                    }
+                }
+            }
+        }
+    }
+}

@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.library)
 }
 
+apply ("../../gradle/publish-notifications-package.gradle")
+
 android {
     namespace = "com.appambit.sdk"
     compileSdk = 36
