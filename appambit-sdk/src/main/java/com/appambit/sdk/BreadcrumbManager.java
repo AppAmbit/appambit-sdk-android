@@ -43,7 +43,8 @@ public class BreadcrumbManager {
     }
 
     public static void addAsync(String name) {
-        if (mApiService == null || mExecutorService == null || mStorageService == null) return;
+        if (mApiService == null || mExecutorService == null || mStorageService == null
+            || Analytics.isManualSessionEnabled() || !SessionManager.isSessionActivate()) return;
         if (isDuplicate(name)) return;
         BreadcrumbEntity entity = createEntity(name);
         AppAmbitTaskFuture<Void> send = sendBreadcrumbEndpoint(entity);

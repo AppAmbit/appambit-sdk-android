@@ -412,9 +412,7 @@ public final class AppAmbit {
     // Internal SDK method – not part of the public API.
     // Used only for hybrid platform integrations.
     public static void addBreadcrumb(String name) {
-        if (!Analytics.isManualSessionEnabled() && SessionManager.isSessionActivate()) {
-            BreadcrumbManager.addAsync(name);
-        }
+        BreadcrumbManager.addAsync(name);
     }
 
     private static boolean isDialogLike(@NonNull Activity activity) {
