@@ -409,6 +409,12 @@ public final class AppAmbit {
         }
     }
 
+    // Internal SDK method – not part of the public API.
+    // Used only for hybrid platform integrations.
+    public static void addBreadcrumb(String name) {
+        BreadcrumbManager.addAsync(name);
+    }
+
     private static boolean isDialogLike(@NonNull Activity activity) {
         try {
             int[] attrs = new int[]{android.R.attr.windowIsTranslucent, android.R.attr.windowIsFloating};
