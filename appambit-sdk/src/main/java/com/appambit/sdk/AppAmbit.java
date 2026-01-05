@@ -45,7 +45,7 @@ public final class AppAmbit {
     private static int resumedActivities = 0;
     private static boolean foreground = false;
     private static boolean isWaitingPause = false;
-    private static boolean wasOffline = true;
+    private static boolean wasOffline;
     private static final long ACTIVITY_DELAY = 700;
     private static String lastPageClassName = null;
 
@@ -273,6 +273,8 @@ public final class AppAmbit {
         ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if (connectivityManager == null) return;
 
+        wasOffline = !hasInternetConnection(context);
+
         NetworkRequest request = new NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build();
@@ -281,9 +283,10 @@ public final class AppAmbit {
             @Override
             public void onAvailable(@NonNull Network network) {
                 super.onAvailable(network);
+                if (!wasOffline) return;
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
-                    if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled() || !wasOffline) {
+                    if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
                         return;
                     }
                     wasOffline = false;
