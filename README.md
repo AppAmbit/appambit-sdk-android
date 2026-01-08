@@ -57,7 +57,7 @@ Add the AppAmbit Android SDK to your app’s `build.gradle`.
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:0.2.1")
+    implementation("com.appambit:appambit:0.2.2")
 }
 ```
 
@@ -65,7 +65,7 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:0.2.1'
+    implementation 'com.appambit:appambit:0.2.2'
 }
 ```
 

@@ -44,8 +44,8 @@ Add the following dependencies to your app's `build.gradle` file. Your app is st
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:0.2.1")
-    implementation("com.appambit:appambit-push-notifications:0.2.1")
+    implementation("com.appambit:appambit:0.2.2")
+    implementation("com.appambit:appambit-push-notifications:0.2.2")
 
     // The Firebase BOM is required to align Firebase library versions.
     implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
@@ -56,8 +56,8 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:0.2.1'
-    implementation 'com.appambit:appambit-push-notifications:0.2.1'
+    implementation 'com.appambit:appambit:0.2.2'
+    implementation 'com.appambit:appambit-push-notifications:0.2.2'
 
     // The Firebase BOM is required to align Firebase library versions.
     implementation platform('com.google.firebase:firebase-bom:33.1.2')
