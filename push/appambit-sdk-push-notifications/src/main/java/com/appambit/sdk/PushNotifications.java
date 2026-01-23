@@ -28,11 +28,6 @@ public final class PushNotifications {
         PushKernel.setNotificationCustomizer(customizer);
     }
 
-    @Nullable
-    public static PushKernel.NotificationCustomizer getNotificationCustomizer() {
-        return PushKernel.getNotificationCustomizer();
-    }
-
     public static void start(@NonNull Context context) {
         if (!AppAmbit.isInitialized()) {
             Log.e(TAG, "AppAmbit SDK has not been started. Please call AppAmbit.start() before starting the Push SDK.");
