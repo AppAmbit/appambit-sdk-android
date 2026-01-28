@@ -1,5 +1,13 @@
 ___
 
+## Version 0.2.3
+
+### AppAmbit Push Notifications
+
+* **[Refactor]** - Removed deprecated function `getNotificationCustomizer` from the AppAmbit Push Notifications SDK.
+
+___
+
 ## Version 0.2.2
 
 ### AppAmbit
