@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <entry>
+        <key>data</key>
+        <value>from_xml_default</value>
+    </entry>
+    <entry>
+        <key>info</key>
+        <value>from_xml_info</value>
+    </entry>
+</defaultsMap>

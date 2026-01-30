@@ -45,7 +45,8 @@ public class AppAmbitTaskFuture<T> {
     }
 
     public synchronized void complete(T value) {
-        if (isCompleted) return;
+        if (isCompleted)
+            return;
 
         result = value;
         isCompleted = true;
@@ -61,7 +62,8 @@ public class AppAmbitTaskFuture<T> {
     }
 
     public synchronized void fail(Throwable throwable) {
-        if (isCompleted) return;
+        if (isCompleted)
+            return;
 
         error = throwable;
         isCompleted = true;
@@ -78,14 +80,17 @@ public class AppAmbitTaskFuture<T> {
 
     public T getBlocking() throws InterruptedException {
         mCountDownLatch.await();
-        if (error != null) throw new RuntimeException(error);
+        if (error != null)
+            throw new RuntimeException(error);
         return result;
     }
 
     public T getBlocking(long timeout, TimeUnit unit) throws InterruptedException {
         boolean finished = mCountDownLatch.await(timeout, unit);
-        if (!finished) throw new RuntimeException("Timeout waiting for future");
-        if (error != null) throw new RuntimeException(error);
+        if (!finished)
+            throw new RuntimeException("Timeout waiting for future");
+        if (error != null)
+            throw new RuntimeException(error);
         return result;
     }
 

@@ -172,6 +172,7 @@ public final class AppAmbit {
     private static void InitializeServices(Context context) {
         ServiceLocator.initialize(context);
         FileUtils.initialize(context);
+        RemoteConfig.initialize(context, ServiceLocator.getExecutorService(), ServiceLocator.getApiService());
         Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService(), ServiceLocator.getApiService());
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
