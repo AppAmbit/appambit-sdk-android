@@ -7,7 +7,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import com.appambit.sdk.enums.ApiErrorType;
-import com.appambit.sdk.models.remoteConfigs.RemoteConfigModel;
+import com.appambit.sdk.models.responses.RemoteConfigResponse;
 import com.appambit.sdk.models.responses.ApiResult;
 import com.appambit.sdk.services.endpoints.RemoteConfigEndpoint;
 import com.appambit.sdk.services.interfaces.ApiService;
@@ -32,7 +32,7 @@ public class RemoteConfig {
         mApiService = apiService;
     }
 
-    private static RemoteConfigModel mRemoteConfig;
+    private static RemoteConfigResponse mRemoteConfig;
     private static Map<String, Object> mDefaults;
 
     public static void setDefaultsAsync(Map<String, Object> defaults) {
@@ -87,21 +87,20 @@ public class RemoteConfig {
 
     }
 
-    public static void fetch() {
+    public static AppAmbitTaskFuture<Boolean> fetch() {
         final AppAmbitTaskFuture<Boolean> future = new AppAmbitTaskFuture<>();
 
         if (mExecutorService == null || mApiService == null) {
             Log.d(TAG, "No initialized services");
             future.complete(false);
-            return;
+            return future;
         }
 
         mExecutorService.execute(() -> {
             try {
-                ApiResult<RemoteConfigModel> result = mApiService.executeRequest(new RemoteConfigEndpoint(),
-                        RemoteConfigModel.class);
+                ApiResult<RemoteConfigResponse> result = mApiService.executeRequest(new RemoteConfigEndpoint(), RemoteConfigResponse.class);
 
-                if (result.errorType == ApiErrorType.None && result.data != null) {
+                if (result.errorType == ApiErrorType.None) {
                     mRemoteConfig = result.data;
                     future.complete(true);
                 } else {
@@ -112,6 +111,7 @@ public class RemoteConfig {
             }
         });
 
+        return future;
     }
 
     @Nullable
@@ -134,7 +134,7 @@ public class RemoteConfig {
         return false;
     }
 
-    public static int getInt(String key) {
+    public static int getNumber(String key) {
         Object value = getValue(key);
         if (value instanceof Number) {
             return ((Number) value).intValue();

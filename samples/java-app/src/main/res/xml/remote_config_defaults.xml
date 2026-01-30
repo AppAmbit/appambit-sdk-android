@@ -2,10 +2,14 @@
 <defaultsMap>
     <entry>
         <key>data</key>
-        <value>from_xml_default</value>
+        <value>Hello!</value>
     </entry>
     <entry>
-        <key>info</key>
-        <value>from_xml_info</value>
+        <key>banner</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>discount</key>
+        <value>5</value>
     </entry>
 </defaultsMap>

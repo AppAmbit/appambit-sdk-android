@@ -23,8 +23,6 @@ public class MainActivity extends AppCompatActivity {
         // Initialize Push SDK on app start
         PushNotifications.start(getApplicationContext());
 
-        RemoteConfig.fetch();
-
         RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
