@@ -2,6 +2,8 @@ package com.appambit.javaapp;
 
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
+import androidx.cardview.widget.CardView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,34 +13,55 @@ import com.appambit.sdk.RemoteConfig;
 
 public class RemoteConfigFragment extends Fragment {
 
-    TextView txtRemoteGetString;
+    private static final String TAG = "RemoteConfigFragment";
+    private TextView txtRemoteGetString;
+    private CardView cardBanner;
+    private CardView cardDiscount;
+    private TextView txtDiscount;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_remote_config, container, false);
 
-        txtRemoteGetString = view.findViewById(R.id.txtRemoteGetString);
-
-        RemoteConfig.fetch().then(success -> {
-            if (success) {
-                String data = RemoteConfig.getString("data");
-                boolean banner = RemoteConfig.getBoolean("banner");
-                int discount = RemoteConfig.getNumber("discount");
-
-                System.out.println("Info consumer remote config 1: " + data);
-                System.out.println("Info consumer remote config 2: " + banner);
-                System.out.println("Info consumer remote config 3: " + discount);
-                fetchData(data);
-            } else {
-                System.out.println("Remote Config fetch failed");
-            }
-        });
+        initializeViews(view);
+        fetchRemoteConfig();
 
         return view;
     }
 
-    private void fetchData(String data) {
+    private void initializeViews(View view) {
+        txtRemoteGetString = view.findViewById(R.id.txtRemoteGetString);
+        cardBanner = view.findViewById(R.id.cardBanner);
+        cardDiscount = view.findViewById(R.id.cardDiscount);
+        txtDiscount = view.findViewById(R.id.txtDiscount);
+    }
+
+    private void fetchRemoteConfig() {
+        RemoteConfig.fetch().then(success -> {
+            if (success) {
+                Log.d(TAG, "Fetch remotely");
+            } else {
+                Log.d(TAG, "Failed to fetch Remote Config");
+            }
+            applyRemoteConfig();
+        });
+    }
+
+    private void applyRemoteConfig() {
+        String data = RemoteConfig.getString("data");
+        boolean showBanner = RemoteConfig.getBoolean("banner");
+        int discountValue = RemoteConfig.getNumber("discount");
+
         txtRemoteGetString.setText(data);
+
+        cardBanner.setVisibility(showBanner ? View.VISIBLE : View.GONE);
+
+        if (discountValue > 0) {
+            cardDiscount.setVisibility(View.VISIBLE);
+            txtDiscount.setText(discountValue + "% OFF");
+        } else {
+            cardDiscount.setVisibility(View.GONE);
+        }
     }
 }
