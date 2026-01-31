@@ -120,6 +120,8 @@ Add these permissions to your `AndroidManifest.xml`:
 * **Session activity** – automatically tracks user session starts, stops, and durations
 * **Ambit Trail** – records detailed navigation of user and system actions leading up to an issue for easier debugging
 * **Track events** – send structured events with custom properties
+* **Remote Config** – dynamic configuration values fetched and applied at runtime
+
 ### Kotlin
 
 ```kotlin
@@ -160,6 +162,52 @@ try {
 }
 ```
 * **Crash Reporting**: uncaught crashes are automatically captured and uploaded on next launch
+
+### Kotlin
+
+```kotlin
+RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
+
+RemoteConfig.fetch().then { success ->
+    if (success) {
+        println("Remote Config fetch successful")
+    } else {
+        println("Remote Config fetch failed")
+    }
+    refreshData()
+}
+
+fun refreshData() {
+    // Put here your logic to read the values from Remote Config
+    // and manipulate your app accordingly
+    data = RemoteConfig.getString("data")
+    showBanner = RemoteConfig.getBoolean("banner")
+    discountValue = RemoteConfig.getNumber("discount")
+}
+```
+### Java
+
+```java
+RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
+
+RemoteConfig.fetch().then(success -> {
+    if (success) {
+        Log.d(TAG, "Remote Config fetched successfully");
+    } else {
+        Log.d(TAG, "Failed to fetch Remote Config");
+    }
+    loadSection();
+});
+
+private void applyRemoteConfig() {
+    // Put here your logic to read the values from Remote Config
+    // and manipulate your app accordingly
+    String data = RemoteConfig.getString("data");
+    boolean showBanner = RemoteConfig.getBoolean("banner");
+    int discountValue = RemoteConfig.getNumber("discount");
+}
+```
+* **Remote Config**: fetch and apply remote configuration values asynchronously
 
 ---
 
