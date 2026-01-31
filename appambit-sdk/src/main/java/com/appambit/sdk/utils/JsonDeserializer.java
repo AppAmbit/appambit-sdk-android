@@ -1,6 +1,7 @@
 package com.appambit.sdk.utils;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -10,13 +11,17 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
 
 @SuppressLint("NewApi")
 public class JsonDeserializer {
+    private static final String TAG = "JsonDeserializer";
     private static final SimpleDateFormat iso8601Format;
     static {
         iso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSX", Locale.US);
@@ -50,8 +55,26 @@ public class JsonDeserializer {
                         } catch (ParseException ex) {
                             throw new RuntimeException("Invalid date format for field: " + key, ex);
                         }
-                    } else {
+                    } else if (Map.class.isAssignableFrom(fieldType) && value instanceof JSONObject) {
+                        JSONObject jsonObject = (JSONObject) value;
+                        Map<String, Object> map = new HashMap<>();
 
+                        Iterator<String> keys = jsonObject.keys();
+                        while (keys.hasNext()) {
+                            String mapKey = keys.next();
+                            Object mapValue = jsonObject.get(mapKey);
+
+                            if (mapValue instanceof JSONObject) {
+                                map.put(mapKey, mapValue.toString());
+                            } else if (mapValue instanceof JSONArray) {
+                                map.put(mapKey, mapValue.toString());
+                            } else {
+                                map.put(mapKey, mapValue);
+                            }
+                        }
+                        field.set(instance, map);
+                    }else {
+                        Log.d(TAG, "Could not parse JSON. Data not serialized");
                     }
                 }
             }

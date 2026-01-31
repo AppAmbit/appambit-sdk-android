@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <entry>
+        <key>data</key>
+        <value>If you can see this message you are using local values</value>
+    </entry>
+    <entry>
+        <key>banner</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>discount</key>
+        <value>8</value>
+    </entry>
+</defaultsMap>

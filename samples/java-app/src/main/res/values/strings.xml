@@ -40,4 +40,5 @@
     <string name="send_500_token">Send 500 Token</string>
     <string name="send_500_sessions">Send 500 Sessions</string>
     <string name="change_to_second_activity">Change to Second Activity</string>
+    <string name="remote_config">Remote Config</string>
 </resources>
