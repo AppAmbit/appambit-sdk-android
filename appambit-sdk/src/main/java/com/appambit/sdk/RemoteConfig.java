@@ -134,18 +134,34 @@ public class RemoteConfig {
         return false;
     }
 
-    public static int getNumber(String key) {
+    public static int getInt(String key) {
         Object value = getValue(key);
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
+        if (value instanceof Integer) {
+            return (Integer) value;
         }
         if (value instanceof String) {
             try {
                 return Integer.parseInt((String) value);
             } catch (NumberFormatException ignored) {
+                Log.e(TAG, "Error: Integer number couldn't be parsed");
             }
         }
         return 0;
+    }
+
+    public static double getDouble(String key) {
+        Object value = getValue(key);
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Double.parseDouble((String) value);
+            } catch (NumberFormatException ignored) {
+                Log.e(TAG, "Error: Double number couldn't be parsed");
+            }
+        }
+        return 0.0;
     }
 
     @Nullable

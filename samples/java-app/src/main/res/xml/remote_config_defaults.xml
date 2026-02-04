@@ -12,4 +12,8 @@
         <key>discount</key>
         <value>8</value>
     </entry>
+    <entry>
+        <key>max_upload</key>
+        <value>15.6</value>
+    </entry>
 </defaultsMap>

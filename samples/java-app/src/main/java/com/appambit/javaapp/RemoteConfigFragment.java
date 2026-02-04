@@ -12,12 +12,12 @@ import android.widget.TextView;
 import com.appambit.sdk.RemoteConfig;
 
 public class RemoteConfigFragment extends Fragment {
-
     private static final String TAG = "RemoteConfigFragment";
     private TextView txtRemoteGetString;
     private CardView cardBanner;
     private CardView cardDiscount;
     private TextView txtDiscount;
+    private TextView txtMaxUpload;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -35,23 +35,14 @@ public class RemoteConfigFragment extends Fragment {
         cardBanner = view.findViewById(R.id.cardBanner);
         cardDiscount = view.findViewById(R.id.cardDiscount);
         txtDiscount = view.findViewById(R.id.txtDiscount);
+        txtMaxUpload = view.findViewById(R.id.txtMaxUpload);
     }
 
     private void fetchRemoteConfig() {
-        RemoteConfig.fetch().then(success -> {
-            if (success) {
-                Log.d(TAG, "Fetch remotely");
-            } else {
-                Log.d(TAG, "Failed to fetch Remote Config");
-            }
-            applyRemoteConfig();
-        });
-    }
-
-    private void applyRemoteConfig() {
         String data = RemoteConfig.getString("data");
         boolean showBanner = RemoteConfig.getBoolean("banner");
-        int discountValue = RemoteConfig.getNumber("discount");
+        int discountValue = RemoteConfig.getInt("discount");
+        double maxUpload = RemoteConfig.getDouble("max_upload");
 
         txtRemoteGetString.setText(data);
 
@@ -63,5 +54,7 @@ public class RemoteConfigFragment extends Fragment {
         } else {
             cardDiscount.setVisibility(View.GONE);
         }
+
+        txtMaxUpload.setText(String.format("%.1f MB", maxUpload));
     }
 }

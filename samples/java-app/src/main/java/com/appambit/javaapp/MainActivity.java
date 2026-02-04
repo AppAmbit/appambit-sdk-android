@@ -1,6 +1,8 @@
 package com.appambit.javaapp;
 
 import android.os.Bundle;
+import android.util.Log;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
@@ -10,6 +12,8 @@ import com.appambit.sdk.RemoteConfig;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +28,13 @@ public class MainActivity extends AppCompatActivity {
         PushNotifications.start(getApplicationContext());
 
         RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
+        RemoteConfig.fetch().then(success -> {
+            if (success) {
+                Log.d(TAG, "Fetch remotely");
+            } else {
+                Log.d(TAG, "Failed to fetch Remote Config");
+            }
+        });
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setOnItemSelectedListener(item -> {
