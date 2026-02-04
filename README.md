@@ -166,48 +166,59 @@ try {
 ### Kotlin
 
 ```kotlin
+// 1. Set default values
 RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
+```
 
+```kotlin
+// 2. Fetch and apply
 RemoteConfig.fetch().then { success ->
     if (success) {
         println("Remote Config fetch successful")
     } else {
         println("Remote Config fetch failed")
     }
-    refreshData()
-}
-
-fun refreshData() {
-    // Put here your logic to read the values from Remote Config
-    // and manipulate your app accordingly
-    data = RemoteConfig.getString("data")
-    showBanner = RemoteConfig.getBoolean("banner")
-    discountValue = RemoteConfig.getNumber("discount")
 }
 ```
+```kotlin
+// 3. Get values (using the correct type method)
+fun applyRemoteConfig() {
+    val message = RemoteConfig.getString("data")
+    val isFeatureEnabled = RemoteConfig.getBoolean("banner")
+    val discount = RemoteConfig.getInt("discount")
+    val maxUpload = RemoteConfig.getDouble("max_upload")
+}
+```
+
 ### Java
 
 ```java
+// 1. Set default values
 RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
+```
 
+```java
+// 2. Fetch and apply
 RemoteConfig.fetch().then(success -> {
     if (success) {
         Log.d(TAG, "Remote Config fetched successfully");
     } else {
         Log.d(TAG, "Failed to fetch Remote Config");
     }
-    loadSection();
 });
+```
 
+```java
+// 3. Get values (using the correct type method)
 private void applyRemoteConfig() {
-    // Put here your logic to read the values from Remote Config
-    // and manipulate your app accordingly
-    String data = RemoteConfig.getString("data");
-    boolean showBanner = RemoteConfig.getBoolean("banner");
-    int discountValue = RemoteConfig.getNumber("discount");
+    String message = RemoteConfig.getString("data");
+    boolean isFeatureEnabled = RemoteConfig.getBoolean("banner");
+    int discount = RemoteConfig.getInt("discount");
+    double maxUpload = RemoteConfig.getDouble("max_upload");
 }
 ```
-* **Remote Config**: fetch and apply remote configuration values asynchronously
+
+* **Remote Config**: fetch and apply remote configuration values asynchronously using type-safe methods (`getString`, `getBoolean`, `getInt`, `getDouble`).
 
 ---
 
