@@ -19,23 +19,18 @@ import com.appambit.sdk.RemoteConfig
 fun RemoteConfigActivity() {
     var data: String? by remember { mutableStateOf(RemoteConfig.getString("data")) }
     var showBanner by remember { mutableStateOf(RemoteConfig.getBoolean("banner")) }
-    var discountValue by remember { mutableIntStateOf(RemoteConfig.getNumber("discount")) }
+    var discountValue by remember { mutableIntStateOf(RemoteConfig.getInt("discount")) }
+    var maxUpload by remember { mutableDoubleStateOf(RemoteConfig.getDouble("max_upload")) }
 
     fun refreshData() {
         data = RemoteConfig.getString("data")
         showBanner = RemoteConfig.getBoolean("banner")
-        discountValue = RemoteConfig.getNumber("discount")
+        discountValue = RemoteConfig.getInt("discount")
+        maxUpload = RemoteConfig.getDouble("max_upload")
     }
 
     LaunchedEffect(Unit) {
-        RemoteConfig.fetch().then { success ->
-            if (success) {
-                println("Remote Config fetch successful")
-            } else {
-                println("Remote Config fetch failed")
-            }
-            refreshData()
-        }
+        refreshData()
     }
 
     Box(
@@ -152,6 +147,45 @@ fun RemoteConfigActivity() {
                             text = "$discountValue% OFF",
                             color = Color(0xFF2E7D32),
                             fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+                    Text(
+                        text = "UPLOAD LIMIT",
+                        color = Color(0xFF1565C0),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.1.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Max file size allowed:",
+                            color = Color(0xFF0D47A1),
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            text = String.format("%.1f MB", maxUpload),
+                            color = Color(0xFF1565C0),
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
