@@ -7,16 +7,22 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import com.appambit.sdk.enums.ApiErrorType;
+import com.appambit.sdk.models.remoteConfigs.RemoteConfigEntity;
 import com.appambit.sdk.models.responses.RemoteConfigResponse;
 import com.appambit.sdk.models.responses.ApiResult;
+import com.appambit.sdk.services.ConsumerService;
 import com.appambit.sdk.services.endpoints.RemoteConfigEndpoint;
 import com.appambit.sdk.services.interfaces.ApiService;
+import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 
 import org.xmlpull.v1.XmlPullParser;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 public class RemoteConfig {
@@ -24,12 +30,15 @@ public class RemoteConfig {
     private static ExecutorService mExecutorService;
     private static ApiService mApiService;
     private static Context mContext;
+    private static Storable mStorable;
     private static final String TAG = "RemoteConfig";
 
-    public static void initialize(Context context, ExecutorService executorService, ApiService apiService) {
+    public static void initialize(Context context, ExecutorService executorService, ApiService apiService,
+            Storable storable) {
         mContext = context;
         mExecutorService = executorService;
         mApiService = apiService;
+        mStorable = storable;
     }
 
     private static RemoteConfigResponse mRemoteConfig;
@@ -114,6 +123,54 @@ public class RemoteConfig {
         return future;
     }
 
+    public static AppAmbitTaskFuture<Boolean> activate() {
+        final AppAmbitTaskFuture<Boolean> future = new AppAmbitTaskFuture<>();
+
+        if (mExecutorService == null || mStorable == null) {
+            future.complete(false);
+            return future;
+        }
+
+        mExecutorService.execute(() -> {
+            boolean activated = false;
+            if (mRemoteConfig != null && mRemoteConfig.getConfigs() != null) {
+                try {
+                    List<RemoteConfigEntity> configList = new ArrayList<>();
+                    for (Map.Entry<String, Object> entry : mRemoteConfig.getConfigs().entrySet()) {
+                        RemoteConfigEntity entity = new RemoteConfigEntity();
+                        entity.setId(UUID.randomUUID());
+                        entity.setKey(entry.getKey());
+                        entity.setValue(String.valueOf(entry.getValue()));
+                        configList.add(entity);
+                    }
+                    mStorable.putConfigs(configList);
+                    activated = true;
+                } catch (Exception e) {
+                    Log.e(TAG, "Error activating remote configs", e);
+                }
+            }
+            future.complete(activated);
+        });
+
+        return future;
+    }
+
+    public static AppAmbitTaskFuture<Boolean> fetchAndActivate() {
+        final AppAmbitTaskFuture<Boolean> future = new AppAmbitTaskFuture<>();
+
+        AppAmbitTaskFuture<Boolean> fetchFuture = fetch();
+        fetchFuture.then(fetched -> {
+            if (fetched) {
+                activate().then(future::complete);
+            } else {
+                future.complete(false);
+            }
+        });
+        fetchFuture.onError(future::fail);
+
+        return future;
+    }
+
     @Nullable
     public static String getString(String key) {
         Object value = getValue(key);
@@ -166,9 +223,11 @@ public class RemoteConfig {
 
     @Nullable
     private static Object getValue(String key) {
-        if (mRemoteConfig != null && mRemoteConfig.getConfigs() != null
-                && mRemoteConfig.getConfigs().containsKey(key)) {
-            return mRemoteConfig.getConfigs().get(key);
+        if (mStorable != null) {
+            String dbValue = mStorable.getConfig(key);
+            if (dbValue != null) {
+                return dbValue;
+            }
         }
         if (mDefaults != null) {
             return mDefaults.get(key);

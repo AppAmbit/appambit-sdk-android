@@ -9,6 +9,7 @@ import com.appambit.sdk.models.analytics.SessionBatch;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.logs.LogEntity;
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
+import com.appambit.sdk.models.remoteConfigs.RemoteConfigEntity;
 
 public interface Storable extends Closeable {
 
@@ -77,4 +78,8 @@ public interface Storable extends Closeable {
     void deleteBreadcrumbs(List<BreadcrumbEntity> breadcrumbs);
 
     List<BreadcrumbEntity> getOldest100Breadcrumbs();
+
+    void putConfigs(List<RemoteConfigEntity> configs);
+
+    String getConfig(String key);
 }

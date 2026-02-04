@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
         RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
         RemoteConfig.fetch().then(success -> {
             if (success) {
-                Log.d(TAG, "Fetch remotely");
+                RemoteConfig.activate().then(success1 -> Log.d(TAG, "Fetch remotely"));
             } else {
                 Log.d(TAG, "Failed to fetch Remote Config");
             }

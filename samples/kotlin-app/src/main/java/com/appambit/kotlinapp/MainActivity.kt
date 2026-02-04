@@ -36,12 +36,8 @@ class MainActivity : ComponentActivity() {
         PushNotifications.start(applicationContext)
 
         RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
-        RemoteConfig.fetch().then { success ->
-            if (success) {
-                println("Remote Config fetch successful")
-            } else {
-                println("Remote Config fetch failed")
-            }
+        RemoteConfig.fetchAndActivate().then {
+            println("Data fetched and activated")
         }
 
         setContent {

@@ -18,12 +18,14 @@ import com.appambit.sdk.models.analytics.SessionBatch;
 import com.appambit.sdk.models.analytics.SessionData;
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity;
 import com.appambit.sdk.models.logs.LogEntity;
+import com.appambit.sdk.models.remoteConfigs.RemoteConfigEntity;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.services.storage.DataStore;
 import com.appambit.sdk.services.storage.contract.AppSecretContract;
 import com.appambit.sdk.services.storage.contract.BreadcrumbContract;
 import com.appambit.sdk.services.storage.contract.EventEntityContract;
 import com.appambit.sdk.services.storage.contract.LogEntityContract;
+import com.appambit.sdk.services.storage.contract.RemoteConfigContract;
 import com.appambit.sdk.services.storage.contract.SessionContract;
 import com.appambit.sdk.utils.DateUtils;
 
@@ -1037,6 +1039,99 @@ public class StorageService implements Storable {
         return items;
     }
 
+    @Override
+    public void putConfigs(List<RemoteConfigEntity> configs) {
+        if (configs == null)
+            return;
+
+        SQLiteDatabase db = null;
+        try {
+            db = dataStore.getWritableDatabase();
+            db.beginTransaction();
+
+            if (configs.isEmpty()) {
+                db.delete(RemoteConfigContract.TABLE_NAME, null, null);
+                Log.d(AppAmbit.class.getSimpleName(), "RemoteConfig cleared (empty list provided)");
+            } else {
+                List<String> currentKeys = new ArrayList<>();
+                for (RemoteConfigEntity config : configs) {
+                    currentKeys.add(config.getKey());
+                    Cursor cursor = null;
+                    try {
+                        cursor = db.query(RemoteConfigContract.TABLE_NAME,
+                                new String[] { RemoteConfigContract.Columns.ID, RemoteConfigContract.Columns.VALUE },
+                                RemoteConfigContract.Columns.KEY + " = ?",
+                                new String[] { config.getKey() },
+                                null, null, null);
+
+                        if (cursor != null && cursor.moveToFirst()) {
+                            String existingValue = cursor
+                                    .getString(cursor.getColumnIndexOrThrow(RemoteConfigContract.Columns.VALUE));
+                            String existingId = cursor
+                                    .getString(cursor.getColumnIndexOrThrow(RemoteConfigContract.Columns.ID));
+
+                            if (existingValue != null && existingValue.equals(config.getValue())) {
+                                Log.d(AppAmbit.class.getSimpleName(), "CONFIG UNCHANGED - " + config.getKey());
+                            } else {
+                                ContentValues cv = new ContentValues();
+                                cv.put(RemoteConfigContract.Columns.VALUE, config.getValue());
+                                db.update(RemoteConfigContract.TABLE_NAME, cv,
+                                        RemoteConfigContract.Columns.ID + " = ?",
+                                        new String[] { existingId });
+                                Log.d(AppAmbit.class.getSimpleName(), "CONFIG UPDATED - " + config.getKey());
+                            }
+                        } else {
+                            ContentValues cv = new ContentValues();
+                            cv.put(RemoteConfigContract.Columns.ID, config.getId().toString());
+                            cv.put(RemoteConfigContract.Columns.KEY, config.getKey());
+                            cv.put(RemoteConfigContract.Columns.VALUE, config.getValue());
+                            db.insert(RemoteConfigContract.TABLE_NAME, null, cv);
+                            Log.d(AppAmbit.class.getSimpleName(), "CONFIG INSERTED - " + config.getKey());
+                        }
+                    } finally {
+                        if (cursor != null) {
+                            cursor.close();
+                        }
+                    }
+                }
+            }
+            db.setTransactionSuccessful();
+            Log.d(AppAmbit.class.getSimpleName(), "RemoteConfig batch processed successfully");
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error inserting RemoteConfig batch", e);
+        } finally {
+            if (db != null) {
+                db.endTransaction();
+            }
+        }
+    }
+
+    @Override
+    public String getConfig(String key) {
+        String value = null;
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(
+                    RemoteConfigContract.TABLE_NAME,
+                    new String[] { RemoteConfigContract.Columns.VALUE },
+                    RemoteConfigContract.Columns.KEY + " = ?",
+                    new String[] { key },
+                    null, null,
+                    null,
+                    "1");
+            if (c.moveToFirst()) {
+                value = c.getString(c.getColumnIndexOrThrow(RemoteConfigContract.Columns.VALUE));
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error retrieving RemoteConfig value for key: " + key, e);
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        return value;
+    }
 
     @Override
     public void close() throws IOException {
