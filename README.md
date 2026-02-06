@@ -166,7 +166,7 @@ try {
 ### Kotlin
 
 ```kotlin
-// 1. Set default values
+// 1. Set default values (Optional, but recommended to avoid nulls before fetch)
 RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
 ```
 
@@ -187,7 +187,7 @@ val maxUpload = RemoteConfig.getDouble("max_upload")
 ### Java
 
 ```java
-// 1. Set default values
+// 1. Set default values (Optional, but recommended to avoid nulls before fetch)
 RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
 ```
 
