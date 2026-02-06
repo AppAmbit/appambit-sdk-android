@@ -172,22 +172,16 @@ RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
 
 ```kotlin
 // 2. Fetch and apply
-RemoteConfig.fetch().then { success ->
-    if (success) {
-        println("Remote Config fetch successful")
-    } else {
-        println("Remote Config fetch failed")
-    }
+RemoteConfig.fetchAndActivate().then {
+    println("Data fetched and activated")
 }
 ```
 ```kotlin
 // 3. Get values (using the correct type method)
-fun applyRemoteConfig() {
-    val message = RemoteConfig.getString("data")
-    val isFeatureEnabled = RemoteConfig.getBoolean("banner")
-    val discount = RemoteConfig.getInt("discount")
-    val maxUpload = RemoteConfig.getDouble("max_upload")
-}
+val message = RemoteConfig.getString("data")
+val isFeatureEnabled = RemoteConfig.getBoolean("banner")
+val discount = RemoteConfig.getInt("discount")
+val maxUpload = RemoteConfig.getDouble("max_upload")
 ```
 
 ### Java
@@ -199,9 +193,9 @@ RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
 
 ```java
 // 2. Fetch and apply
-RemoteConfig.fetch().then(success -> {
+RemoteConfig.fetchAndActivate().then(success -> {
     if (success) {
-        Log.d(TAG, "Remote Config fetched successfully");
+        Log.d(TAG, "Remote Config fetched and activated successfully");
     } else {
         Log.d(TAG, "Failed to fetch Remote Config");
     }
@@ -210,12 +204,10 @@ RemoteConfig.fetch().then(success -> {
 
 ```java
 // 3. Get values (using the correct type method)
-private void applyRemoteConfig() {
-    String message = RemoteConfig.getString("data");
-    boolean isFeatureEnabled = RemoteConfig.getBoolean("banner");
-    int discount = RemoteConfig.getInt("discount");
-    double maxUpload = RemoteConfig.getDouble("max_upload");
-}
+String message = RemoteConfig.getString("data");
+boolean isFeatureEnabled = RemoteConfig.getBoolean("banner");
+int discount = RemoteConfig.getInt("discount");
+double maxUpload = RemoteConfig.getDouble("max_upload");
 ```
 
 * **Remote Config**: fetch and apply remote configuration values asynchronously using type-safe methods (`getString`, `getBoolean`, `getInt`, `getDouble`).
