@@ -120,6 +120,8 @@ Add these permissions to your `AndroidManifest.xml`:
 * **Session activity** – automatically tracks user session starts, stops, and durations
 * **Ambit Trail** – records detailed navigation of user and system actions leading up to an issue for easier debugging
 * **Track events** – send structured events with custom properties
+* **Remote Config** – dynamic configuration values fetched and applied at runtime
+
 ### Kotlin
 
 ```kotlin
@@ -160,6 +162,55 @@ try {
 }
 ```
 * **Crash Reporting**: uncaught crashes are automatically captured and uploaded on next launch
+
+### Kotlin
+
+```kotlin
+// 1. Set default values (Optional, but recommended to avoid nulls before fetch)
+RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
+```
+
+```kotlin
+// 2. Fetch and apply
+RemoteConfig.fetchAndActivate().then {
+    println("Data fetched and activated")
+}
+```
+```kotlin
+// 3. Get values (using the correct type method)
+val message = RemoteConfig.getString("data")
+val isFeatureEnabled = RemoteConfig.getBoolean("banner")
+val discount = RemoteConfig.getInt("discount")
+val maxUpload = RemoteConfig.getDouble("max_upload")
+```
+
+### Java
+
+```java
+// 1. Set default values (Optional, but recommended to avoid nulls before fetch)
+RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
+```
+
+```java
+// 2. Fetch and apply
+RemoteConfig.fetchAndActivate().then(success -> {
+    if (success) {
+        Log.d(TAG, "Remote Config fetched and activated successfully");
+    } else {
+        Log.d(TAG, "Failed to fetch Remote Config");
+    }
+});
+```
+
+```java
+// 3. Get values (using the correct type method)
+String message = RemoteConfig.getString("data");
+boolean isFeatureEnabled = RemoteConfig.getBoolean("banner");
+int discount = RemoteConfig.getInt("discount");
+double maxUpload = RemoteConfig.getDouble("max_upload");
+```
+
+* **Remote Config**: fetch and apply remote configuration values asynchronously using type-safe methods (`getString`, `getBoolean`, `getInt`, `getDouble`).
 
 ---
 

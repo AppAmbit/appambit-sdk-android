@@ -1,15 +1,19 @@
 package com.appambit.javaapp;
 
 import android.os.Bundle;
+import android.util.Log;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 
 import com.appambit.sdk.AppAmbit;
 import com.appambit.sdk.PushNotifications;
+import com.appambit.sdk.RemoteConfig;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,6 +27,15 @@ public class MainActivity extends AppCompatActivity {
         // Initialize Push SDK on app start
         PushNotifications.start(getApplicationContext());
 
+        RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
+        RemoteConfig.fetch().then(success -> {
+            if (success) {
+                RemoteConfig.activate().then(success1 -> Log.d(TAG, "Fetch remotely"));
+            } else {
+                Log.d(TAG, "Failed to fetch Remote Config");
+            }
+        });
+
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
@@ -31,6 +44,10 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new CrashesFragment();
             } else if (itemId == R.id.nav_analytics) {
                 selectedFragment = new AnalyticsFragment();
+            }else if (itemId == R.id.nav_load) {
+                selectedFragment = new LoadFragment();
+            }else if (itemId == R.id.nav_remote_config) {
+                selectedFragment = new RemoteConfigFragment();
             }
 
             if (selectedFragment != null) {

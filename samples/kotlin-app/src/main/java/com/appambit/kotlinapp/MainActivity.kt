@@ -21,6 +21,7 @@ import com.appambit.kotlinapp.Analytics as AnalyticsScreen
 import com.appambit.kotlinapp.Crashes as CrashesScreen
 import com.appambit.sdk.PushNotifications
 import com.appambit.sdk.AppAmbit
+import com.appambit.sdk.RemoteConfig
 
 class MainActivity : ComponentActivity() {
 
@@ -34,6 +35,11 @@ class MainActivity : ComponentActivity() {
         // Initialize Push SDK on app start
         PushNotifications.start(applicationContext)
 
+        RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
+        RemoteConfig.fetchAndActivate().then {
+            println("Data fetched and activated")
+        }
+
         setContent {
             BottomBar()
         }
@@ -42,7 +48,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun BottomBar() {
         val navController = rememberNavController()
-        val items = listOf("Crashes", "Analytics")
+        val items = listOf("Crashes", "Analytics", "RemoteConfig")
 
         Scaffold(
             bottomBar = {
@@ -79,6 +85,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable("Analytics") {
                     AnalyticsScreen()
+                }
+                composable("RemoteConfig") {
+                    RemoteConfigActivity()
                 }
             }
         }

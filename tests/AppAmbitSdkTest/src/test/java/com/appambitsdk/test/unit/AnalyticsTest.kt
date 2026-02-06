@@ -21,6 +21,7 @@ import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity
 import com.appambit.sdk.models.logs.LogEntity
 import com.appambit.sdk.models.logs.LogResponse
 import com.appambit.sdk.models.responses.ApiResult
+import com.appambit.sdk.models.remoteConfigs.RemoteConfigEntity
 import com.appambit.sdk.models.responses.EndSessionResponse
 import com.appambit.sdk.models.responses.EventResponse
 import com.appambit.sdk.models.responses.EventsBatchResponse
@@ -412,6 +413,14 @@ class AnalyticsTest {
         
         override fun getUnpairedSessionEnd(): SessionData? {
              return sessions.firstOrNull { it.sessionType == SessionType.END }
+        }
+
+        override fun putConfigs(configs: List<RemoteConfigEntity>?) {
+            // No-op for analytics test
+        }
+
+        override fun getConfig(key: String?): String? {
+            return null
         }
     }
 
