@@ -13,6 +13,7 @@ import com.appambit.sdk.models.responses.ApiResult;
 import com.appambit.sdk.services.ConsumerService;
 import com.appambit.sdk.services.endpoints.RemoteConfigEndpoint;
 import com.appambit.sdk.services.interfaces.ApiService;
+import com.appambit.sdk.services.interfaces.AppInfoService;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 
@@ -31,14 +32,16 @@ public class RemoteConfig {
     private static ApiService mApiService;
     private static Context mContext;
     private static Storable mStorable;
+    private static AppInfoService mAppInfoService;
     private static final String TAG = "RemoteConfig";
 
     public static void initialize(Context context, ExecutorService executorService, ApiService apiService,
-            Storable storable) {
+            Storable storable, AppInfoService appInfoService) {
         mContext = context;
         mExecutorService = executorService;
         mApiService = apiService;
         mStorable = storable;
+        mAppInfoService = appInfoService;
     }
 
     private static RemoteConfigResponse mRemoteConfig;
@@ -107,7 +110,7 @@ public class RemoteConfig {
 
         mExecutorService.execute(() -> {
             try {
-                ApiResult<RemoteConfigResponse> result = mApiService.executeRequest(new RemoteConfigEndpoint(), RemoteConfigResponse.class);
+                ApiResult<RemoteConfigResponse> result = mApiService.executeRequest(new RemoteConfigEndpoint(mAppInfoService.getAppVersion()), RemoteConfigResponse.class);
 
                 if (result.errorType == ApiErrorType.None) {
                     mRemoteConfig = result.data;
