@@ -3,11 +3,12 @@ package com.appambit.javaapp;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.cardview.widget.CardView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.appambit.sdk.RemoteConfig;
 
@@ -18,6 +19,7 @@ public class RemoteConfigFragment extends Fragment {
     private CardView cardDiscount;
     private TextView txtDiscount;
     private TextView txtMaxUpload;
+    private Button btnFetch;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -26,6 +28,16 @@ public class RemoteConfigFragment extends Fragment {
 
         initializeViews(view);
         fetchRemoteConfig();
+
+        btnFetch.setOnClickListener(v ->
+            RemoteConfig.fetch().then(success -> {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        String message = success ? "Fetch Succeeded" : "Fetch Throttled";
+                        Toast.makeText(getContext(), message, android.widget.Toast.LENGTH_SHORT).show();
+                    });
+                }
+        }));
 
         return view;
     }
@@ -36,6 +48,7 @@ public class RemoteConfigFragment extends Fragment {
         cardDiscount = view.findViewById(R.id.cardDiscount);
         txtDiscount = view.findViewById(R.id.txtDiscount);
         txtMaxUpload = view.findViewById(R.id.txtMaxUpload);
+        btnFetch = view.findViewById(R.id.btnFetch);
     }
 
     private void fetchRemoteConfig() {

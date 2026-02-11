@@ -184,11 +184,16 @@ val discount = RemoteConfig.getInt("discount")
 val maxUpload = RemoteConfig.getDouble("max_upload")
 ```
 
+```kotlin
+// Setup fetch interval time for debug mode
+RemoteConfig.setMinimumFetchIntervalInSeconds(10)
+```
+
 ### Java
 
 ```java
 // 1. Set default values (Optional, but recommended to avoid nulls before fetch)
-RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
+RemoteConfig.setDefaults(R.xml.remote_config_defaults);
 ```
 
 ```java
@@ -208,6 +213,11 @@ String message = RemoteConfig.getString("data");
 boolean isFeatureEnabled = RemoteConfig.getBoolean("banner");
 int discount = RemoteConfig.getInt("discount");
 double maxUpload = RemoteConfig.getDouble("max_upload");
+```
+
+```java
+// Setup fetch interval time for debug mode
+RemoteConfig.setMinimumFetchIntervalInSeconds(10);
 ```
 
 * **Remote Config**: fetch and apply remote configuration values asynchronously using type-safe methods (`getString`, `getBoolean`, `getInt`, `getDouble`).

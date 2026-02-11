@@ -1053,9 +1053,24 @@ public class StorageService implements Storable {
                 db.delete(RemoteConfigContract.TABLE_NAME, null, null);
                 Log.d(AppAmbit.class.getSimpleName(), "RemoteConfig cleared (empty list provided)");
             } else {
-                List<String> currentKeys = new ArrayList<>();
+                List<String> newKeys = new ArrayList<>();
                 for (RemoteConfigEntity config : configs) {
-                    currentKeys.add(config.getKey());
+                    newKeys.add(config.getKey());
+                }
+
+                StringBuilder deleteWhere = new StringBuilder();
+                deleteWhere.append(RemoteConfigContract.Columns.KEY).append(" NOT IN (");
+                String[] deleteArgs = new String[newKeys.size()];
+                for (int i = 0; i < newKeys.size(); i++) {
+                    deleteWhere.append("?");
+                    deleteArgs[i] = newKeys.get(i);
+                    if (i < newKeys.size() - 1)
+                        deleteWhere.append(",");
+                }
+                deleteWhere.append(")");
+                db.delete(RemoteConfigContract.TABLE_NAME, deleteWhere.toString(), deleteArgs);
+
+                for (RemoteConfigEntity config : configs) {
                     Cursor cursor = null;
                     try {
                         cursor = db.query(RemoteConfigContract.TABLE_NAME,

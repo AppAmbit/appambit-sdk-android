@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
         // Initialize Push SDK on app start
         PushNotifications.start(applicationContext)
 
-        RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
+        RemoteConfig.setDefaults(R.xml.remote_config_defaults)
         RemoteConfig.fetchAndActivate().then {
             println("Data fetched and activated")
         }

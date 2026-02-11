@@ -46,57 +46,55 @@ public class RemoteConfig {
 
     private static RemoteConfigResponse mRemoteConfig;
     private static Map<String, Object> mDefaults;
+    private static long mMinimumFetchIntervalInSeconds = 60;
+    private static long mLastFetchTime = 0;
+
+    public static void setMinimumFetchIntervalInSeconds(long minimumFetchIntervalInSeconds) {
+        mMinimumFetchIntervalInSeconds = minimumFetchIntervalInSeconds;
+    }
 
     public static void setDefaultsAsync(Map<String, Object> defaults) {
         mDefaults = new HashMap<>(defaults);
     }
 
-    public static void setDefaultsAsync(int resourceId) {
-        final AppAmbitTaskFuture<Boolean> future = new AppAmbitTaskFuture<>();
-
-        if (mExecutorService == null || mContext == null) {
-            Log.d(TAG, "No initialized services or context");
-            future.complete(false);
+    public static void setDefaults(int resourceId) {
+        if (mContext == null) {
+            Log.d(TAG, "No initialized context");
             return;
         }
 
-        mExecutorService.execute(() -> {
-            try (XmlResourceParser parser = mContext.getResources().getXml(resourceId)) {
-                Map<String, Object> defaults = new HashMap<>();
-                int eventType = parser.getEventType();
-                String key = null;
-                String value = null;
+        try (XmlResourceParser parser = mContext.getResources().getXml(resourceId)) {
+            Map<String, Object> defaults = new HashMap<>();
+            int eventType = parser.getEventType();
+            String key = null;
+            String value = null;
 
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-                    if (eventType == XmlPullParser.START_TAG) {
-                        String tagName = parser.getName();
-                        if ("entry".equals(tagName)) {
-                            // Simplified for generic XML: matches
-                            // <entry><key>...</key><value>...</value></entry>
-                        } else if ("key".equals(tagName)) {
-                            key = parser.nextText();
-                        } else if ("value".equals(tagName)) {
-                            value = parser.nextText();
-                        }
-                    } else if (eventType == XmlPullParser.END_TAG) {
-                        if ("entry".equals(parser.getName())) {
-                            if (key != null && value != null) {
-                                defaults.put(key, value);
-                            }
-                            key = null;
-                            value = null;
-                        }
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_TAG) {
+                    String tagName = parser.getName();
+                    if ("entry".equals(tagName)) {
+                        // Simplified for generic XML: matches
+                        // <entry><key>...</key><value>...</value></entry>
+                    } else if ("key".equals(tagName)) {
+                        key = parser.nextText();
+                    } else if ("value".equals(tagName)) {
+                        value = parser.nextText();
                     }
-                    eventType = parser.next();
+                } else if (eventType == XmlPullParser.END_TAG) {
+                    if ("entry".equals(parser.getName())) {
+                        if (key != null && value != null) {
+                            defaults.put(key, value);
+                        }
+                        key = null;
+                        value = null;
+                    }
                 }
-                mDefaults = defaults;
-                future.complete(true);
-            } catch (Exception e) {
-                Log.e(TAG, "Error parsing XML defaults", e);
-                future.fail(e);
+                eventType = parser.next();
             }
-        });
-
+            mDefaults = defaults;
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing XML defaults", e);
+        }
     }
 
     public static AppAmbitTaskFuture<Boolean> fetch() {
@@ -110,10 +108,20 @@ public class RemoteConfig {
 
         mExecutorService.execute(() -> {
             try {
-                ApiResult<RemoteConfigResponse> result = mApiService.executeRequest(new RemoteConfigEndpoint(mAppInfoService.getAppVersion()), RemoteConfigResponse.class);
+                long currentTime = System.currentTimeMillis();
+                if ((currentTime - mLastFetchTime) < (mMinimumFetchIntervalInSeconds * 1000)) {
+                    Log.d(TAG, "Fetch throttled. Last fetch was less than " + mMinimumFetchIntervalInSeconds
+                            + " seconds ago.");
+                    future.complete(false);
+                    return;
+                }
+
+                ApiResult<RemoteConfigResponse> result = mApiService.executeRequest(
+                        new RemoteConfigEndpoint(mAppInfoService.getAppVersion()), RemoteConfigResponse.class);
 
                 if (result.errorType == ApiErrorType.None) {
                     mRemoteConfig = result.data;
+                    mLastFetchTime = System.currentTimeMillis();
                     future.complete(true);
                 } else {
                     future.complete(false);

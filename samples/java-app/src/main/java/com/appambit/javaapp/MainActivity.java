@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
         // Initialize Push SDK on app start
         PushNotifications.start(getApplicationContext());
 
-        RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
+        RemoteConfig.setDefaults(R.xml.remote_config_defaults);
         RemoteConfig.fetch().then(success -> {
             if (success) {
                 RemoteConfig.activate().then(success1 -> Log.d(TAG, "Fetch remotely"));

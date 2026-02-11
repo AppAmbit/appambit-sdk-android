@@ -14,9 +14,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appambit.sdk.RemoteConfig
+import android.widget.Toast
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun RemoteConfigActivity() {
+    val context = LocalContext.current
     var data: String? by remember { mutableStateOf(RemoteConfig.getString("data")) }
     var showBanner by remember { mutableStateOf(RemoteConfig.getBoolean("banner")) }
     var discountValue by remember { mutableIntStateOf(RemoteConfig.getInt("discount")) }
@@ -190,6 +194,24 @@ fun RemoteConfigActivity() {
                         )
                     }
                 }
+            }
+
+            Button(
+                onClick = {
+                    RemoteConfig.fetch().then { success ->
+                        (context as? Activity)?.runOnUiThread {
+                            val message = if (success) "Fetch Succeeded" else "Fetch Throttled"
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 24.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
+            ) {
+                Text("Fetch Remote Config", color = Color.White)
             }
         }
     }
