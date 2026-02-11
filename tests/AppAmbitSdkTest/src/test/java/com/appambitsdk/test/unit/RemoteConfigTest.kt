@@ -71,6 +71,16 @@ class RemoteConfigTest {
         }
 
         RemoteConfig.initialize(context, mockExecutorService, apiService, storable, appInfoService)
+
+        // Reset static state
+        setStaticField(RemoteConfig::class.java, "mLastFetchTime", 0L)
+        setStaticField(RemoteConfig::class.java, "mRemoteConfig", null)
+    }
+
+    private fun setStaticField(cls: Class<*>, fieldName: String, value: Any?) {
+        val field = cls.getDeclaredField(fieldName)
+        field.isAccessible = true
+        field.set(null, value)
     }
 
     @After
