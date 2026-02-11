@@ -164,7 +164,7 @@ class RemoteConfigTest {
     fun `getString should fallback to defaults if storable returns null`() {
         // Given
         every { storable.getConfig("banner_text") } returns null
-        RemoteConfig.setDefaultsAsync(mapOf("banner_text" to "Default Welcome"))
+        RemoteConfig.setDefaults(mapOf("banner_text" to "Default Welcome"))
 
         // When
         val value = RemoteConfig.getString("banner_text")

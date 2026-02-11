@@ -53,7 +53,7 @@ public class RemoteConfig {
         mMinimumFetchIntervalInSeconds = minimumFetchIntervalInSeconds;
     }
 
-    public static void setDefaultsAsync(Map<String, Object> defaults) {
+    public static void setDefaults(Map<String, Object> defaults) {
         mDefaults = new HashMap<>(defaults);
     }
 

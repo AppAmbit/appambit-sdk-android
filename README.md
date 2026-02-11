@@ -167,7 +167,7 @@ try {
 
 ```kotlin
 // 1. Set default values (Optional, but recommended to avoid nulls before fetch)
-RemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
+RemoteConfig.setDefaults(R.xml.remote_config_defaults)
 ```
 
 ```kotlin
