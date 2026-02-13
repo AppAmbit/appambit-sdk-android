@@ -167,7 +167,7 @@ try {
 
 ```kotlin
 // Enable remote config
-RemoteConfig.setEnable()
+RemoteConfig.enable()
 ```
 
 ```kotlin
