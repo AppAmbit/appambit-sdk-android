@@ -182,7 +182,7 @@ val maxUpload = RemoteConfig.getDouble("max_upload")
 
 ```kotlin
 // Enable remote config
-RemoteConfig.setEnable();
+RemoteConfig.enable();
 ```
 
 ```java
