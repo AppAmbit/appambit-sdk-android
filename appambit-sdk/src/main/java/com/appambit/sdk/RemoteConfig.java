@@ -42,7 +42,7 @@ public class RemoteConfig {
     private static boolean isEnable = false;
     private static boolean isFetchCompleted = false;
 
-    public static boolean setEnable() {
+    public static boolean enable() {
         return isEnable = true;
     }
 

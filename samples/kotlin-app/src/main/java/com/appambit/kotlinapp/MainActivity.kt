@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         //Analytics.enableManualSession()
-        RemoteConfig.setEnable()
+        RemoteConfig.enable()
         AppAmbit.start(this, "<YOUR-APPKEY>")
 
         // Initialize Push SDK on app start
