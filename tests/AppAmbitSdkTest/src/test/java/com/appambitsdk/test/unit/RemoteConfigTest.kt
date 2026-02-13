@@ -99,7 +99,7 @@ class RemoteConfigTest {
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
 
-        RemoteConfig.setEnable()
+        RemoteConfig.enable()
 
         // When
         RemoteConfig.fetchAndStoreConfig()
@@ -125,7 +125,7 @@ class RemoteConfigTest {
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
 
-        RemoteConfig.setEnable()
+        RemoteConfig.enable()
 
         // When
         RemoteConfig.fetchAndStoreConfig()
