@@ -13,7 +13,6 @@ import com.appambit.sdk.services.endpoints.RemoteConfigEndpoint
 import com.appambit.sdk.services.interfaces.ApiService
 import com.appambit.sdk.services.interfaces.AppInfoService
 import com.appambit.sdk.services.interfaces.Storable
-import com.appambit.sdk.utils.AppAmbitTaskFuture
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -73,8 +72,8 @@ class RemoteConfigTest {
         RemoteConfig.initialize(context, mockExecutorService, apiService, storable, appInfoService)
 
         // Reset static state
-        setStaticField(RemoteConfig::class.java, "mLastFetchTime", 0L)
-        setStaticField(RemoteConfig::class.java, "mRemoteConfig", null)
+        setStaticField(RemoteConfig::class.java, "isEnable", false)
+        setStaticField(RemoteConfig::class.java, "isFetchCompleted", false)
     }
 
     private fun setStaticField(cls: Class<*>, fieldName: String, value: Any?) {
@@ -89,7 +88,7 @@ class RemoteConfigTest {
     }
 
     @Test
-    fun `fetch success should store configs in memory and return true`() {
+    fun `fetch success should store configs to storable`() {
         // Given
         val mockResponse = RemoteConfigResponse()
         setInternalState(mockResponse, "configs", mapOf("welcome_msg" to "Hello"))
@@ -100,19 +99,25 @@ class RemoteConfigTest {
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
 
+        RemoteConfig.setEnable()
+
         // When
-        var result = false
-        val task = RemoteConfig.fetch()
-        task.then { result = it }
+        RemoteConfig.fetchAndStoreConfig()
 
         // Then
-        assertTrue(result)
         // Verify internal memory is updated (implicitly by checking no errors) or strict verify
         verify { apiService.executeRequest(any<RemoteConfigEndpoint>(), RemoteConfigResponse::class.java) }
+        
+        val slot = slot<List<RemoteConfigEntity>>()
+        verify { storable.putConfigs(capture(slot)) }
+        
+        assertEquals(1, slot.captured.size)
+        assertEquals("welcome_msg", slot.captured[0].key)
+        assertEquals("Hello", slot.captured[0].value)
     }
 
     @Test
-    fun `fetch failure should return false`() {
+    fun `fetch failure should not store configs`() {
         // Given
         every { 
             apiService.executeRequest(any<RemoteConfigEndpoint>(), RemoteConfigResponse::class.java) 
@@ -120,68 +125,16 @@ class RemoteConfigTest {
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
 
-        // When
-        var result = true
-        val task = RemoteConfig.fetch()
-        task.then { result = it }
-
-        // Then
-        assertFalse(result)
-    }
-
-    @Test
-    fun `activate should valid fetched config to storable`() {
-        // Given
-        // 1. Mock fetch first to populate mRemoteConfig
-        val mockResponse = RemoteConfigResponse()
-        setInternalState(mockResponse, "configs", mapOf("feature_enabled" to true))
-        
-        every { 
-            apiService.executeRequest(any<RemoteConfigEndpoint>(), RemoteConfigResponse::class.java) 
-        } returns ApiResult(mockResponse, ApiErrorType.None, null)
-        RemoteConfig.fetch()
+        RemoteConfig.setEnable()
 
         // When
-        var activated = false
-        val task = RemoteConfig.activate()
-        task.then { activated = it }
+        RemoteConfig.fetchAndStoreConfig()
 
         // Then
-        assertTrue(activated)
-        
-        val slot = slot<List<RemoteConfigEntity>>()
-        verify { storable.putConfigs(capture(slot)) }
-        
-        assertEquals(1, slot.captured.size)
-        assertEquals("feature_enabled", slot.captured[0].key)
-        assertEquals("true", slot.captured[0].value)
+        verify(exactly = 0) { storable.putConfigs(any()) }
     }
 
-    @Test
-    fun `getString should return value from storable`() {
-        // Given
-        every { storable.getConfig("banner_text") } returns "Welcome User"
 
-        // When
-        val value = RemoteConfig.getString("banner_text")
-
-        // Then
-        assertEquals("Welcome User", value)
-        verify { storable.getConfig("banner_text") }
-    }
-
-    @Test
-    fun `getString should fallback to defaults if storable returns null`() {
-        // Given
-        every { storable.getConfig("banner_text") } returns null
-        RemoteConfig.setDefaults(mapOf("banner_text" to "Default Welcome"))
-
-        // When
-        val value = RemoteConfig.getString("banner_text")
-
-        // Then
-        assertEquals("Default Welcome", value)
-    }
 
     @Test
     fun `getInt should return parsed integer from storable`() {

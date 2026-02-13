@@ -166,58 +166,31 @@ try {
 ### Kotlin
 
 ```kotlin
-// 1. Set default values (Optional, but recommended to avoid nulls before fetch)
-RemoteConfig.setDefaults(R.xml.remote_config_defaults)
+// Enable remote config
+RemoteConfig.setEnable()
 ```
 
 ```kotlin
-// 2. Fetch and apply
-RemoteConfig.fetchAndActivate().then {
-    println("Data fetched and activated")
-}
-```
-```kotlin
-// 3. Get values (using the correct type method)
+// Get remote config values with type-safe methods
 val message = RemoteConfig.getString("data")
 val isFeatureEnabled = RemoteConfig.getBoolean("banner")
 val discount = RemoteConfig.getInt("discount")
 val maxUpload = RemoteConfig.getDouble("max_upload")
 ```
 
-```kotlin
-// Setup fetch interval time for debug mode
-RemoteConfig.setMinimumFetchIntervalInSeconds(10)
-```
-
 ### Java
 
-```java
-// 1. Set default values (Optional, but recommended to avoid nulls before fetch)
-RemoteConfig.setDefaults(R.xml.remote_config_defaults);
+```kotlin
+// Enable remote config
+RemoteConfig.setEnable();
 ```
 
 ```java
-// 2. Fetch and apply
-RemoteConfig.fetchAndActivate().then(success -> {
-    if (success) {
-        Log.d(TAG, "Remote Config fetched and activated successfully");
-    } else {
-        Log.d(TAG, "Failed to fetch Remote Config");
-    }
-});
-```
-
-```java
-// 3. Get values (using the correct type method)
+// Get remote config values with type-safe methods
 String message = RemoteConfig.getString("data");
 boolean isFeatureEnabled = RemoteConfig.getBoolean("banner");
 int discount = RemoteConfig.getInt("discount");
 double maxUpload = RemoteConfig.getDouble("max_upload");
-```
-
-```java
-// Setup fetch interval time for debug mode
-RemoteConfig.setMinimumFetchIntervalInSeconds(10);
 ```
 
 * **Remote Config**: fetch and apply remote configuration values asynchronously using type-safe methods (`getString`, `getBoolean`, `getInt`, `getDouble`).

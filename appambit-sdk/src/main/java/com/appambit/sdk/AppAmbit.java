@@ -191,6 +191,7 @@ public final class AppAmbit {
             Crashes.sendBatchesLogs();
             BreadcrumbManager.sendBatchBreadcrumbs();
         };
+        RemoteConfig.fetchAndStoreConfig();
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
         BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> SessionManager.sendBatchSessions(batchesTasks));
@@ -299,6 +300,7 @@ public final class AppAmbit {
                             BreadcrumbManager.sendBatchBreadcrumbs();
                         };
                         final Runnable connectionTasks = () -> {
+                            RemoteConfig.fetchAndStoreConfig();
                             Crashes.loadCrashFileIfExists(context);
                             SessionManager.sendEndSessionFromDatabase(null);
                             SessionManager.sendStartSessionIfExist();

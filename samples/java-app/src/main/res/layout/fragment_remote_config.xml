@@ -198,14 +198,5 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <Button
-            android:id="@+id/btnFetch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Fetch Test"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            app:cornerRadius="8dp"/>
-
     </LinearLayout>
 </ScrollView>

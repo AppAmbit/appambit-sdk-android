@@ -30,15 +30,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         //Analytics.enableManualSession()
+        RemoteConfig.setEnable()
         AppAmbit.start(this, "<YOUR-APPKEY>")
 
         // Initialize Push SDK on app start
         PushNotifications.start(applicationContext)
-
-        RemoteConfig.setDefaults(R.xml.remote_config_defaults)
-        RemoteConfig.fetchAndActivate().then {
-            println("Data fetched and activated")
-        }
 
         setContent {
             BottomBar()

@@ -20,7 +20,6 @@ import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun RemoteConfigActivity() {
-    val context = LocalContext.current
     var data: String? by remember { mutableStateOf(RemoteConfig.getString("data")) }
     var showBanner by remember { mutableStateOf(RemoteConfig.getBoolean("banner")) }
     var discountValue by remember { mutableIntStateOf(RemoteConfig.getInt("discount")) }
@@ -88,28 +87,28 @@ fun RemoteConfigActivity() {
                 }
             }
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp)
+            if (!data.isNullOrEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
-                    Text(
-                        text = "MESSAGE OF THE DAY",
-                        color = Color(0xFF757575),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.1.sp,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    data?.let {
+                    Column(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
                         Text(
-                            text = it,
+                            text = "MESSAGE OF THE DAY",
+                            color = Color(0xFF757575),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.1.sp,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        Text(
+                            text = data!!,
                             color = Color(0xFF212121),
                             fontSize = 18.sp
                         )
@@ -187,31 +186,13 @@ fun RemoteConfigActivity() {
                             fontSize = 16.sp
                         )
                         Text(
-                            text = String.format("%.1f MB", maxUpload),
+                            text = if (maxUpload > 0) String.format("%.1f MB", maxUpload) else "100 MB",
                             color = Color(0xFF1565C0),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
-            }
-
-            Button(
-                onClick = {
-                    RemoteConfig.fetch().then { success ->
-                        (context as? Activity)?.runOnUiThread {
-                            val message = if (success) "Fetch Succeeded" else "Fetch Throttled"
-                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 24.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
-            ) {
-                Text("Fetch Remote Config", color = Color.White)
             }
         }
     }
