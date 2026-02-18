@@ -21,6 +21,7 @@ import com.appambit.kotlinapp.Analytics as AnalyticsScreen
 import com.appambit.kotlinapp.Crashes as CrashesScreen
 import com.appambit.sdk.PushNotifications
 import com.appambit.sdk.AppAmbit
+import com.appambit.sdk.RemoteConfig
 
 class MainActivity : ComponentActivity() {
 
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         //Analytics.enableManualSession()
+        RemoteConfig.enable()
         AppAmbit.start(this, "<YOUR-APPKEY>")
 
         // Initialize Push SDK on app start
@@ -42,7 +44,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun BottomBar() {
         val navController = rememberNavController()
-        val items = listOf("Crashes", "Analytics")
+        val items = listOf("Crashes", "Analytics", "RemoteConfig")
 
         Scaffold(
             bottomBar = {
@@ -79,6 +81,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable("Analytics") {
                     AnalyticsScreen()
+                }
+                composable("RemoteConfig") {
+                    RemoteConfigActivity()
                 }
             }
         }

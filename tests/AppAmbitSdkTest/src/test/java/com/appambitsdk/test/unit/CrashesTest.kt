@@ -17,6 +17,7 @@ import com.appambit.sdk.models.analytics.SessionData
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity
 import com.appambit.sdk.models.logs.ExceptionInfo
 import com.appambit.sdk.models.logs.LogEntity
+import com.appambit.sdk.models.remoteConfigs.RemoteConfigEntity
 import io.mockk.unmockkStatic
 import com.appambit.sdk.models.logs.LogResponse
 import com.appambit.sdk.models.responses.ApiResult
@@ -412,6 +413,14 @@ class CrashesTest {
 
         override fun getOldest100Breadcrumbs(): List<BreadcrumbEntity> {
             return ArrayList(breadcrumbs)
+        }
+
+        override fun putConfigs(configs: List<RemoteConfigEntity>?) {
+            // No-op
+        }
+
+        override fun getConfig(key: String?): String? {
+            return null
         }
     }
 

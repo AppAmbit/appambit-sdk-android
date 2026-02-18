@@ -1,12 +1,14 @@
 package com.appambit.javaapp;
 
 import android.os.Bundle;
+import android.util.Log;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 
 import com.appambit.sdk.AppAmbit;
 import com.appambit.sdk.PushNotifications;
+import com.appambit.sdk.RemoteConfig;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
@@ -18,6 +20,7 @@ public class MainActivity extends AppCompatActivity {
 
         //Comment the line for automatic session management
         //Analytics.enableManualSession();
+        RemoteConfig.enable();
         AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
 
         // Initialize Push SDK on app start
@@ -31,6 +34,10 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new CrashesFragment();
             } else if (itemId == R.id.nav_analytics) {
                 selectedFragment = new AnalyticsFragment();
+            }else if (itemId == R.id.nav_load) {
+                selectedFragment = new LoadFragment();
+            }else if (itemId == R.id.nav_remote_config) {
+                selectedFragment = new RemoteConfigFragment();
             }
 
             if (selectedFragment != null) {
