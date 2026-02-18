@@ -6,6 +6,10 @@ ___
 
 * **[Refactor]** - Removed deprecated function `getNotificationCustomizer` from the AppAmbit Push Notifications SDK.
 
+### AppAmbit
+
+* **[Feature]** - Added Remote Config support to AppAmbit, allowing dynamic configuration of app behavior without requiring app updates.
+
 ___
 
 ## Version 0.2.2
