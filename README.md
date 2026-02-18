@@ -57,7 +57,7 @@ Add the AppAmbit Android SDK to your app’s `build.gradle`.
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:0.2.2")
+    implementation("com.appambit:appambit:0.2.3")
 }
 ```
 
@@ -65,7 +65,7 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:0.2.2'
+    implementation 'com.appambit:appambit:0.2.3'
 }
 ```
 
@@ -120,6 +120,8 @@ Add these permissions to your `AndroidManifest.xml`:
 * **Session activity** – automatically tracks user session starts, stops, and durations
 * **Ambit Trail** – records detailed navigation of user and system actions leading up to an issue for easier debugging
 * **Track events** – send structured events with custom properties
+* **Remote Config** – dynamic configuration values fetched and applied at runtime
+
 ### Kotlin
 
 ```kotlin
@@ -160,6 +162,38 @@ try {
 }
 ```
 * **Crash Reporting**: uncaught crashes are automatically captured and uploaded on next launch
+
+### Kotlin
+
+```kotlin
+// Enable remote config
+RemoteConfig.enable()
+```
+
+```kotlin
+// Get remote config values with type-safe methods
+val message = RemoteConfig.getString("data")
+val isFeatureEnabled = RemoteConfig.getBoolean("banner")
+val discount = RemoteConfig.getInt("discount")
+val maxUpload = RemoteConfig.getDouble("max_upload")
+```
+
+### Java
+
+```kotlin
+// Enable remote config
+RemoteConfig.enable();
+```
+
+```java
+// Get remote config values with type-safe methods
+String message = RemoteConfig.getString("data");
+boolean isFeatureEnabled = RemoteConfig.getBoolean("banner");
+int discount = RemoteConfig.getInt("discount");
+double maxUpload = RemoteConfig.getDouble("max_upload");
+```
+
+* **Remote Config**: fetch and apply remote configuration values asynchronously using type-safe methods (`getString`, `getBoolean`, `getInt`, `getDouble`).
 
 ---
 

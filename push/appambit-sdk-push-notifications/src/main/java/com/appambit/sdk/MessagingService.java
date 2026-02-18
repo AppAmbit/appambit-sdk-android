@@ -38,6 +38,15 @@ public class MessagingService extends FirebaseMessagingService {
     private static final String TAG = "AppAmbitPushSDK";
 
     @Override
+    public void handleIntent(Intent intent) {
+        if (!PushKernel.isNotificationsEnabled(this)) {
+            Log.d(TAG, "Notification received but push is disabled locally. Skipping.");
+            return;
+        }
+        super.handleIntent(intent);
+    }
+
+    @Override
     public void onMessageReceived(@NonNull RemoteMessage message) {
         super.onMessageReceived(message);
         if (message.getNotification() != null) {

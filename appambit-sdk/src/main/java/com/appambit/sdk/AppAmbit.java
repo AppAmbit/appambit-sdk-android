@@ -176,6 +176,7 @@ public final class AppAmbit {
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
+        RemoteConfig.initialize(context, ServiceLocator.getExecutorService(), ServiceLocator.getApiService(), ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
         BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
     }
 
@@ -190,6 +191,7 @@ public final class AppAmbit {
             Crashes.sendBatchesLogs();
             BreadcrumbManager.sendBatchBreadcrumbs();
         };
+        RemoteConfig.fetchAndStoreConfig();
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
         BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> SessionManager.sendBatchSessions(batchesTasks));
@@ -298,6 +300,7 @@ public final class AppAmbit {
                             BreadcrumbManager.sendBatchBreadcrumbs();
                         };
                         final Runnable connectionTasks = () -> {
+                            RemoteConfig.fetchAndStoreConfig();
                             Crashes.loadCrashFileIfExists(context);
                             SessionManager.sendEndSessionFromDatabase(null);
                             SessionManager.sendStartSessionIfExist();
