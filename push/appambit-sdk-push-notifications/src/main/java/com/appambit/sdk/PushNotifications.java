@@ -17,6 +17,7 @@ import com.appambit.sdk.services.ConsumerService;
 public final class PushNotifications {
 
     private static final String TAG = "AppAmbitPushSDK";
+    private static boolean isInitialized = false;
 
     private PushNotifications() {}
 
@@ -34,24 +35,29 @@ public final class PushNotifications {
             return;
         }
 
-        Log.d(TAG, "Starting Push SDK and binding to AppAmbit Core.");
+        if (!isInitialized) {
+            isInitialized = true;
+            Log.d(TAG, "Starting Push SDK and binding to AppAmbit Core.");
 
-        PushKernel.setTokenListener(token -> {
+            PushKernel.setTokenListener(token -> {
+                if (PushKernel.isNotificationsEnabled(context)) {
+                    Log.d(TAG,
+                            "FCM token received and notifications are enabled, updating consumer via AppAmbit Core.");
+                    ConsumerService.updateConsumer(token, true);
+                } else {
+                    Log.d(TAG,
+                            "FCM token received, but notifications are disabled by the user. Skipping backend update.");
+                }
+            });
+
+            PushKernel.start(context);
+
             if (PushKernel.isNotificationsEnabled(context)) {
-                Log.d(TAG, "FCM token received and notifications are enabled, updating consumer via AppAmbit Core.");
-                ConsumerService.updateConsumer(token, true);
-            } else {
-                Log.d(TAG, "FCM token received, but notifications are disabled by the user. Skipping backend update.");
-            }
-        });
-
-        PushKernel.start(context);
-
-        if (PushKernel.isNotificationsEnabled(context)) {
-            String currentToken = PushKernel.getCurrentToken();
-            if (currentToken != null && !currentToken.isEmpty()) {
-                Log.d(TAG, "Push SDK started. Syncing current token with backend.");
-                ConsumerService.updateConsumer(currentToken, true);
+                String currentToken = PushKernel.getCurrentToken();
+                if (currentToken != null && !currentToken.isEmpty()) {
+                    Log.d(TAG, "Push SDK started. Syncing current token with backend.");
+                    ConsumerService.updateConsumer(currentToken, true);
+                }
             }
         }
     }
