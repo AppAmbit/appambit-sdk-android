@@ -90,6 +90,10 @@ public final class Analytics {
         isManualSessionEnabled = true;
     }
 
+    public static void enableAlwaysSendBreadcrumbs() {
+        BreadcrumbManager.isCrashOnlyMode = false;
+    }
+
     public static boolean isManualSessionEnabled() {
         return isManualSessionEnabled;
     }
@@ -176,7 +180,6 @@ public final class Analytics {
 
         return result;
     }
-
 
     private static AppAmbitTaskFuture<Void> saveEventLocally(EventEntity entity) {
         AppAmbitTaskFuture<Void> future = new AppAmbitTaskFuture<>();

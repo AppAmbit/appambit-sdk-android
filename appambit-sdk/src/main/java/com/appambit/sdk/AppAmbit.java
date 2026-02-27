@@ -194,7 +194,18 @@ public final class AppAmbit {
         RemoteConfig.fetchAndStoreConfig();
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
-        BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> SessionManager.sendBatchSessions(batchesTasks));
+
+        boolean hadCrash = CrashHandler.didCrashInLastSession();
+
+        if (hadCrash) {
+            BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> {
+                SessionManager.sendBatchSessions(batchesTasks);
+            });
+        } else {
+            BreadcrumbManager.clearAllCachedBreadcrumbs(() -> {
+                SessionManager.sendBatchSessions(batchesTasks);
+            });
+        }
     }
 
     private static void initializeConsumer() {
@@ -257,7 +268,9 @@ public final class AppAmbit {
 
             Crashes.sendBatchesLogs();
             Analytics.sendBatchesEvents();
-            BreadcrumbManager.loadBreadcrumbsFromFile();
+            if (!BreadcrumbManager.isCrashOnlyMode) {
+                BreadcrumbManager.loadBreadcrumbsFromFile();
+            }
             BreadcrumbManager.sendBatchBreadcrumbs();
         };
 
@@ -305,7 +318,9 @@ public final class AppAmbit {
                             SessionManager.sendEndSessionFromDatabase(null);
                             SessionManager.sendStartSessionIfExist();
                             SessionManager.sendBatchSessions(batchTasks);
-                            BreadcrumbManager.loadBreadcrumbsFromFile();
+                            if (!BreadcrumbManager.isCrashOnlyMode) {
+                                BreadcrumbManager.loadBreadcrumbsFromFile();
+                            }
                             BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
                         };
                         getNewToken(null);
@@ -423,7 +438,7 @@ public final class AppAmbit {
 
     private static boolean isDialogLike(@NonNull Activity activity) {
         try {
-            int[] attrs = new int[]{android.R.attr.windowIsTranslucent, android.R.attr.windowIsFloating};
+            int[] attrs = new int[] { android.R.attr.windowIsTranslucent, android.R.attr.windowIsFloating };
             TypedArray ta = activity.getTheme().obtainStyledAttributes(attrs);
             boolean translucent = ta.getBoolean(0, false);
             boolean floating = ta.getBoolean(1, false);
