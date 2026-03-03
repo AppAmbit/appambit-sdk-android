@@ -88,7 +88,6 @@ public final class AppAmbit {
             CrashHandler.initialize(context);
             registerLifecycleObserver(context);
             onStartApp(context);
-            BreadcrumbManager.isCrashOnlyMode = !RemoteConfig.getBoolean(AppConstants.LIVE_SESSION_STREAMING);
             isInitialized = true;
             Log.d(TAG, "onCreate (App Level)");
         }
@@ -192,7 +191,14 @@ public final class AppAmbit {
             Crashes.sendBatchesLogs();
             BreadcrumbManager.sendBatchBreadcrumbs();
         };
-        RemoteConfig.fetchAndStoreConfig();
+        AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
+        configFuture.then(success -> {
+            BreadcrumbManager.isCrashOnlyMode = !RemoteConfig.getBoolean(AppConstants.LIVE_SESSION_STREAMING);
+            Log.d(TAG, "Remote config fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+        });
+        configFuture.onError(error -> {
+            Log.e(TAG, "fetchAndStoreConfig failed, set default", error);
+        });
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
 
@@ -314,7 +320,16 @@ public final class AppAmbit {
                             BreadcrumbManager.sendBatchBreadcrumbs();
                         };
                         final Runnable connectionTasks = () -> {
-                            RemoteConfig.fetchAndStoreConfig();
+                            AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
+                            configFuture.then(success -> {
+                                BreadcrumbManager.isCrashOnlyMode = !RemoteConfig
+                                        .getBoolean(AppConstants.LIVE_SESSION_STREAMING);
+                                Log.d(TAG,
+                                        "Remote config fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+                            });
+                            configFuture.onError(error -> {
+                                Log.e(TAG, "fetchAndStoreConfig failed, set default value", error);
+                            });
                             Crashes.loadCrashFileIfExists(context);
                             SessionManager.sendEndSessionFromDatabase(null);
                             SessionManager.sendStartSessionIfExist();

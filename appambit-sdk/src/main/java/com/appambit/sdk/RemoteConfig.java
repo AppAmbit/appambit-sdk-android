@@ -46,16 +46,18 @@ public class RemoteConfig {
         return isEnable = false;
     }
 
-    public static void fetchAndStoreConfig() {
-        if (!isEnable || isFetchCompleted)
-            return;
-
+    public static AppAmbitTaskFuture<Boolean> fetchAndStoreConfig() {
         final AppAmbitTaskFuture<Boolean> future = new AppAmbitTaskFuture<>();
+
+        if (!isEnable || isFetchCompleted) {
+            future.complete(false);
+            return future;
+        }
 
         if (mExecutorService == null || mApiService == null) {
             Log.d(TAG, "No initialized services");
             future.complete(false);
-            return;
+            return future;
         }
 
         mExecutorService.execute(() -> {
@@ -85,6 +87,7 @@ public class RemoteConfig {
             }
         });
 
+        return future;
     }
 
     @Nullable

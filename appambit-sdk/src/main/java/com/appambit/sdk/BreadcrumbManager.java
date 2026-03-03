@@ -30,7 +30,7 @@ public class BreadcrumbManager {
     private static Storable mStorageService;
     private static ExecutorService mExecutorService;
 
-    static volatile boolean isCrashOnlyMode = true;
+    static volatile boolean isCrashOnlyMode = false;
 
     private static final Object SEND_LOCK = new Object();
     private static boolean isSending = false;
