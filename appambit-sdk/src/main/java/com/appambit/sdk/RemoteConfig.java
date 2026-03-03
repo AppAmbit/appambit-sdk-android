@@ -39,11 +39,11 @@ public class RemoteConfig {
         mAppInfoService = appInfoService;
     }
 
-    private static boolean isEnable = false;
+    private static boolean isEnable = true;
     private static boolean isFetchCompleted = false;
 
-    public static boolean enable() {
-        return isEnable = true;
+    public static boolean disable() {
+        return isEnable = false;
     }
 
     public static void fetchAndStoreConfig() {
@@ -104,7 +104,7 @@ public class RemoteConfig {
         if (value instanceof String) {
             return Boolean.parseBoolean((String) value);
         }
-        return false;
+        return true;
     }
 
     public static int getInt(String key) {

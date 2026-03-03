@@ -88,6 +88,7 @@ public final class AppAmbit {
             CrashHandler.initialize(context);
             registerLifecycleObserver(context);
             onStartApp(context);
+            BreadcrumbManager.isCrashOnlyMode = !RemoteConfig.getBoolean("live_session_streaming");
             isInitialized = true;
             Log.d(TAG, "onCreate (App Level)");
         }

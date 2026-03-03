@@ -17,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.appambit.sdk.Analytics
 import com.appambit.kotlinapp.Analytics as AnalyticsScreen
 import com.appambit.kotlinapp.Crashes as CrashesScreen
 import com.appambit.sdk.PushNotifications
@@ -30,7 +31,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         //Analytics.enableManualSession()
-        RemoteConfig.enable()
+        //RemoteConfig.disable()
         AppAmbit.start(this, "<YOUR-APPKEY>")
 
         // Initialize Push SDK on app start

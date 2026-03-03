@@ -90,10 +90,6 @@ public final class Analytics {
         isManualSessionEnabled = true;
     }
 
-    public static void enableAlwaysSendBreadcrumbs() {
-        BreadcrumbManager.isCrashOnlyMode = false;
-    }
-
     public static boolean isManualSessionEnabled() {
         return isManualSessionEnabled;
     }
