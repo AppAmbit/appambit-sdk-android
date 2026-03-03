@@ -71,8 +71,8 @@ class RemoteConfigTest {
 
         RemoteConfig.initialize(context, mockExecutorService, apiService, storable, appInfoService)
 
-        // Reset static state
-        setStaticField(RemoteConfig::class.java, "isEnable", false)
+        // Reset static state — isEnable must be true (SDK default) so fetch tests can run
+        setStaticField(RemoteConfig::class.java, "isEnable", true)
         setStaticField(RemoteConfig::class.java, "isFetchCompleted", false)
     }
 
@@ -99,8 +99,6 @@ class RemoteConfigTest {
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
 
-        RemoteConfig.enable()
-
         // When
         RemoteConfig.fetchAndStoreConfig()
 
@@ -124,8 +122,6 @@ class RemoteConfigTest {
         } returns ApiResult(null, ApiErrorType.NetworkUnavailable, "Error")
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
-
-        RemoteConfig.enable()
 
         // When
         RemoteConfig.fetchAndStoreConfig()
