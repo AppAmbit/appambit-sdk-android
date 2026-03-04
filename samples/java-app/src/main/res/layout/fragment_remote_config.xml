@@ -123,7 +123,9 @@
                         android:textSize="12sp"
                         android:letterSpacing="0.1"
                         android:textStyle="bold"
-                        android:layout_marginBottom="4dp"/>
+                        android:layout_marginBottom="4dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -131,7 +133,9 @@
                         android:text="Get your discount now!"
                         android:textColor="#1B5E20"
                         android:textSize="16sp"
-                        android:textStyle="bold"/>
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end"/>
                 </LinearLayout>
 
                 <TextView
@@ -141,7 +145,8 @@
                     android:text="0%"
                     android:textColor="#2E7D32"
                     android:textSize="32sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold"
+                    android:ellipsize="end"/>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>

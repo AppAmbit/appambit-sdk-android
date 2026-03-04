@@ -11,24 +11,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appambit.sdk.RemoteConfig
-import android.widget.Toast
-import android.app.Activity
-import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun RemoteConfigActivity() {
     var data: String? by remember { mutableStateOf(RemoteConfig.getString("data")) }
     var showBanner by remember { mutableStateOf(RemoteConfig.getBoolean("banner")) }
-    var discountValue by remember { mutableIntStateOf(RemoteConfig.getInt("discount")) }
+    var discountValue by remember { mutableLongStateOf(RemoteConfig.getLong("discount")) }
     var maxUpload by remember { mutableDoubleStateOf(RemoteConfig.getDouble("max_upload")) }
 
     fun refreshData() {
         data = RemoteConfig.getString("data")
         showBanner = RemoteConfig.getBoolean("banner")
-        discountValue = RemoteConfig.getInt("discount")
+        discountValue = RemoteConfig.getLong("discount")
         maxUpload = RemoteConfig.getDouble("max_upload")
     }
 
@@ -122,35 +121,28 @@ fun RemoteConfigActivity() {
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .padding(20.dp)
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.Start
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = "SPECIAL OFFER",
-                                color = Color(0xFF2E7D32),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            Text(
-                                text = "Get your discount now!",
-                                color = Color(0xFF1B5E20),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text(
+                            text = "SPECIAL OFFER",
+                            color = Color(0xFF2E7D32),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         Text(
                             text = "$discountValue% OFF",
                             color = Color(0xFF2E7D32),
                             fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

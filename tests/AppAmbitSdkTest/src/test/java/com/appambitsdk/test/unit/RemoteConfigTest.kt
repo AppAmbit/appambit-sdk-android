@@ -134,15 +134,13 @@ class RemoteConfigTest {
         verify(exactly = 0) { storable.putConfigs(any()) }
     }
 
-
-
     @Test
-    fun `getInt should return parsed integer from storable`() {
+    fun `getLong should return parsed integer from storable`() {
         // Given
         every { storable.getConfig("max_items") } returns "10"
 
         // When
-        val value = RemoteConfig.getInt("max_items")
+        val value = RemoteConfig.getLong("max_items")
 
         // Then
         assertEquals(10, value)
