@@ -108,9 +108,11 @@ class RemoteConfigTest {
         val slot = slot<List<RemoteConfigEntity>>()
         verify { storable.putConfigs(capture(slot)) }
         
-        assertEquals(1, slot.captured.size)
-        assertEquals("welcome_msg", slot.captured[0].key)
-        assertEquals("Hello", slot.captured[0].value)
+        assertEquals(2, slot.captured.size)
+        val welcomeEntity = slot.captured.find { it.key == "welcome_msg" }
+        assertEquals("Hello", welcomeEntity?.value)
+        val liveSessionEntity = slot.captured.find { it.key == com.appambit.sdk.AppConstants.LIVE_SESSION_STREAMING }
+        assertEquals("true", liveSessionEntity?.value)
     }
 
     @Test
