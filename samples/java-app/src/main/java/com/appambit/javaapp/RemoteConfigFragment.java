@@ -39,7 +39,7 @@ public class RemoteConfigFragment extends Fragment {
     private void loadSection() {
         String data = RemoteConfig.getString("data");
         boolean showBanner = RemoteConfig.getBoolean("banner");
-        int discountValue = RemoteConfig.getInt("discount");
+        long discountValue = RemoteConfig.getLong("discount");
         double maxUpload = RemoteConfig.getDouble("max_upload");
 
         if (data != null && !data.isEmpty()) {

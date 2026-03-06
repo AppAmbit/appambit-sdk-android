@@ -203,16 +203,16 @@ public class RemoteConfig {
         return false;
     }
 
-    public static int getInt(String key) {
+    public static long getLong(String key) {
         Object value = getValue(key);
-        if (value instanceof Integer) {
-            return (Integer) value;
+        if (value instanceof Long) {
+            return (Long) value;
         }
         if (value instanceof String) {
             try {
-                return Integer.parseInt((String) value);
+                return Long.parseLong((String) value);
             } catch (NumberFormatException ignored) {
-                Log.e(TAG, "Error: Integer number couldn't be parsed");
+                Log.e(TAG, "Error: Long number couldn't be parsed");
             }
         }
         return 0;
