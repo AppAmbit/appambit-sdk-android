@@ -29,7 +29,7 @@ public class RemoteConfig {
     private static final String TAG = "RemoteConfig";
 
     public static void initialize(ExecutorService executorService, ApiService apiService,
-                                  Storable storable, AppInfoService appInfoService) {
+            Storable storable, AppInfoService appInfoService) {
         mExecutorService = executorService;
         mApiService = apiService;
         mStorable = storable;
@@ -40,6 +40,9 @@ public class RemoteConfig {
 
     private static boolean isEnable = false;
     private static boolean isFetchCompleted = false;
+    private static boolean isFetching = false;
+    private static final List<AppAmbitTaskFuture<Boolean>> pendingFutures = new ArrayList<>();
+    private static final Object FETCH_LOCK = new Object();
 
     public static boolean isEnable() {
         return isEnable;
@@ -86,6 +89,16 @@ public class RemoteConfig {
             return future;
         }
 
+        synchronized (FETCH_LOCK) {
+            if (isFetching) {
+                Log.d(TAG, "RemoteConfig: fetch in progress, queuing future");
+                pendingFutures.add(future);
+                return future;
+            }
+            isFetching = true;
+            pendingFutures.add(future);
+        }
+
         mExecutorService.execute(() -> {
             try {
                 ApiResult<RemoteConfigResponse> result = mApiService.executeRequest(
@@ -112,8 +125,6 @@ public class RemoteConfig {
                             entity.setValue(String.valueOf(entry.getValue()));
                             configEntities.add(entity);
                         }
-
-                        // If liveSessionStreaming was absent from the response, default to true
                         if (!hasLiveStreamKey) {
                             RemoteConfigEntity entity = new RemoteConfigEntity();
                             entity.setId(UUID.randomUUID());
@@ -125,13 +136,11 @@ public class RemoteConfig {
 
                         mStorable.putConfigs(configEntities);
 
-                        // Apply the new liveSessionStreaming value immediately
                         String stringVal = String.valueOf(liveStreamVal);
                         boolean remoteValue = Boolean.parseBoolean(stringVal);
                         BreadcrumbManager.isCrashOnlyMode = !remoteValue;
 
                     } else {
-                        // Empty or null config response → default liveSessionStreaming to true
                         List<RemoteConfigEntity> configEntities = new ArrayList<>();
                         RemoteConfigEntity entity = new RemoteConfigEntity();
                         entity.setId(UUID.randomUUID());
@@ -143,18 +152,35 @@ public class RemoteConfig {
                     }
 
                     Log.d(TAG, "RemoteConfig: Fetch succeeded, isCrashOnlyMode = " + BreadcrumbManager.isCrashOnlyMode);
-                    future.complete(true);
+                    completePendingFutures(true, null);
                 } else {
                     Log.d(TAG, "RemoteConfig: Fetch failed: " + result.errorType);
-                    future.complete(false);
+                    completePendingFutures(false, null);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "fetchAndStoreConfig error", e);
-                future.fail(e);
+                completePendingFutures(false, e);
             }
         });
 
         return future;
+    }
+
+    private static void completePendingFutures(boolean success, Exception exception) {
+        List<AppAmbitTaskFuture<Boolean>> futuresToComplete;
+        synchronized (FETCH_LOCK) {
+            isFetching = false;
+            futuresToComplete = new ArrayList<>(pendingFutures);
+            pendingFutures.clear();
+        }
+
+        for (AppAmbitTaskFuture<Boolean> f : futuresToComplete) {
+            if (exception != null) {
+                f.fail(exception);
+            } else {
+                f.complete(success);
+            }
+        }
     }
 
     @Nullable
