@@ -61,11 +61,11 @@ public class RemoteConfig {
         if (configVal != null) {
             String stringVal = String.valueOf(configVal);
             boolean remoteValue = Boolean.parseBoolean(stringVal);
-            BreadcrumbManager.isCrashOnlyMode = !remoteValue;
+            BreadcrumbManager.streamCrashSessionsOnly = !remoteValue;
         } else {
-            BreadcrumbManager.isCrashOnlyMode = false;
+            BreadcrumbManager.streamCrashSessionsOnly = false;
         }
-        Log.d(TAG, "applyCachedConfigToBreadcrumbManager: isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+        Log.d(TAG, "applyCachedConfigToBreadcrumbManager: streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
     }
 
     public static AppAmbitTaskFuture<Boolean> fetchAndStoreConfig() {
@@ -138,7 +138,7 @@ public class RemoteConfig {
 
                         String stringVal = String.valueOf(liveStreamVal);
                         boolean remoteValue = Boolean.parseBoolean(stringVal);
-                        BreadcrumbManager.isCrashOnlyMode = !remoteValue;
+                        BreadcrumbManager.streamCrashSessionsOnly = !remoteValue;
 
                     } else {
                         List<RemoteConfigEntity> configEntities = new ArrayList<>();
@@ -148,10 +148,10 @@ public class RemoteConfig {
                         entity.setValue("true");
                         configEntities.add(entity);
                         mStorable.putConfigs(configEntities);
-                        BreadcrumbManager.isCrashOnlyMode = false;
+                        BreadcrumbManager.streamCrashSessionsOnly = false;
                     }
 
-                    Log.d(TAG, "RemoteConfig: Fetch succeeded, isCrashOnlyMode = " + BreadcrumbManager.isCrashOnlyMode);
+                    Log.d(TAG, "RemoteConfig: Fetch succeeded, streamCrashSessionsOnly = " + BreadcrumbManager.streamCrashSessionsOnly);
                     completePendingFutures(true, null);
                 } else {
                     Log.d(TAG, "RemoteConfig: Fetch failed: " + result.errorType);

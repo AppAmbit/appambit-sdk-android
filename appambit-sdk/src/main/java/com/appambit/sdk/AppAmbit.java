@@ -223,7 +223,7 @@ public final class AppAmbit {
                 sessionFuture.then(sessionId -> {
                     AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
                     configFuture.then(success -> {
-                        Log.d(TAG, "RemoteConfig fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+                        Log.d(TAG, "RemoteConfig fetched. streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
                         BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
                     });
                     configFuture.onError(error -> {
@@ -274,7 +274,7 @@ public final class AppAmbit {
             Runnable finalResumeTasks = () -> {
                 Crashes.sendBatchesLogs();
                 Analytics.sendBatchesEvents();
-                if (!BreadcrumbManager.isCrashOnlyMode) {
+                if (!BreadcrumbManager.streamCrashSessionsOnly) {
                     BreadcrumbManager.loadBreadcrumbsFromFile();
                 }
                 BreadcrumbManager.sendBatchBreadcrumbs();
@@ -282,7 +282,7 @@ public final class AppAmbit {
 
             AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
             configFuture.then(success -> {
-                Log.d(TAG, "onResume: RemoteConfig fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+                Log.d(TAG, "onResume: RemoteConfig fetched. streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
                 finalResumeTasks.run();
             });
             configFuture.onError(error -> {
@@ -335,15 +335,15 @@ public final class AppAmbit {
                                 SessionManager.sendEndSessionFromDatabase(null);
                                 SessionManager.sendStartSessionIfExist();
                                 SessionManager.sendBatchSessions(batchTasks);
-                                if (!BreadcrumbManager.isCrashOnlyMode) {
+                                if (!BreadcrumbManager.streamCrashSessionsOnly) {
                                     BreadcrumbManager.loadBreadcrumbsFromFile();
                                 }
                                 BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
                             };
                             AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
                             configFuture.then(success -> {
-                                Log.d(TAG, "onAvailable: RemoteConfig fetched. isCrashOnlyMode="
-                                        + BreadcrumbManager.isCrashOnlyMode);
+                                Log.d(TAG, "onAvailable: RemoteConfig fetched. streamCrashSessionsOnly="
+                                        + BreadcrumbManager.streamCrashSessionsOnly);
                                 finalConnectionTasks.run();
                             });
                             configFuture.onError(error -> {

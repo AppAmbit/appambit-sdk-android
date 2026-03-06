@@ -30,7 +30,7 @@ public class BreadcrumbManager {
     private static Storable mStorageService;
     private static ExecutorService mExecutorService;
 
-    static volatile boolean isCrashOnlyMode = false;
+    static volatile boolean streamCrashSessionsOnly = false;
 
     private static final Object SEND_LOCK = new Object();
     private static boolean isSending = false;
@@ -52,7 +52,7 @@ public class BreadcrumbManager {
         if (isDuplicate(name))
             return;
         BreadcrumbEntity entity = createEntity(name);
-        if (isCrashOnlyMode) {
+        if (streamCrashSessionsOnly) {
             BreadcrumbData data = BreadcrumbMappings.toData(entity);
             List<BreadcrumbData> saved = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, data,
                     BreadcrumbData.class);
