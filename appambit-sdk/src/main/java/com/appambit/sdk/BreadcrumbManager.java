@@ -17,6 +17,7 @@ import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.DateUtils;
 import com.appambit.sdk.utils.FileUtils;
+import com.appambit.sdk.utils.StringValidation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,8 @@ public class BreadcrumbManager {
     private static ApiService mApiService;
     private static Storable mStorageService;
     private static ExecutorService mExecutorService;
+
+    static volatile boolean streamCrashSessionsOnly = false;
 
     private static final Object SEND_LOCK = new Object();
     private static boolean isSending = false;
@@ -44,19 +47,29 @@ public class BreadcrumbManager {
 
     public static void addAsync(String name) {
         if (mApiService == null || mExecutorService == null || mStorageService == null
-            || Analytics.isManualSessionEnabled() || !SessionManager.isSessionActivate()) return;
-        if (isDuplicate(name)) return;
+                || Analytics.isManualSessionEnabled() || !SessionManager.isSessionActivate())
+            return;
+        if (isDuplicate(name))
+            return;
         BreadcrumbEntity entity = createEntity(name);
-        AppAmbitTaskFuture<Void> send = sendBreadcrumbEndpoint(entity);
-        send.then(r -> Log.d(TAG, "Send breadcrumbs"));
-        send.onError(error -> Log.d(TAG, "Error to Send breadcrumbs"));
+        if (streamCrashSessionsOnly) {
+            BreadcrumbData data = BreadcrumbMappings.toData(entity);
+            List<BreadcrumbData> saved = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, data,
+                    BreadcrumbData.class);
+            Log.d(TAG, "[Breadcrumb] Saved to disk (crash-only): '" + name + "' — total on disk: " + saved.size());
+        } else {
+            AppAmbitTaskFuture<Void> send = sendBreadcrumbEndpoint(entity);
+            send.then(r -> Log.d(TAG, "Send breadcrumbs"));
+            send.onError(error -> Log.d(TAG, "Error to Send breadcrumbs"));
+        }
     }
 
     public static void saveToFile(String name) {
         mExecutorService.execute(() -> {
             try {
                 Log.d(TAG, "Got to save breadcrumbs: " + name);
-                if (isDuplicate(name)) return;
+                if (isDuplicate(name))
+                    return;
                 BreadcrumbData data = BreadcrumbMappings.toData(createEntity(name));
                 FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, data, BreadcrumbData.class);
             } catch (Throwable t) {
@@ -67,11 +80,14 @@ public class BreadcrumbManager {
 
     public static void loadBreadcrumbsFromFile() {
         try {
-            List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, BreadcrumbData.class);
+            List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName,
+                    BreadcrumbData.class);
             List<BreadcrumbData> notSent = new ArrayList<>();
-            if (files.isEmpty()) return;
+            if (files.isEmpty())
+                return;
             for (BreadcrumbData item : files) {
-                if (item == null) continue;
+                if (item == null)
+                    continue;
                 try {
                     if (mStorageService != null) {
                         mStorageService.addBreadcrumb(BreadcrumbMappings.toEntity(item));
@@ -90,17 +106,22 @@ public class BreadcrumbManager {
         if (mExecutorService == null) {
             loadBreadcrumbsFromFile();
             if (onComplete != null) {
-                try { onComplete.run(); } catch (Throwable ignored) {}
+                try {
+                    onComplete.run();
+                } catch (Throwable ignored) {
+                }
             }
             return;
         }
         mExecutorService.execute(() -> {
             try {
-                List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, BreadcrumbData.class);
+                List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName,
+                        BreadcrumbData.class);
                 List<BreadcrumbData> notSent = new ArrayList<>();
                 if (!files.isEmpty()) {
                     for (BreadcrumbData item : files) {
-                        if (item == null) continue;
+                        if (item == null)
+                            continue;
                         try {
                             if (mStorageService != null) {
                                 mStorageService.addBreadcrumb(BreadcrumbMappings.toEntity(item));
@@ -115,16 +136,32 @@ public class BreadcrumbManager {
                 Log.d(TAG, t.toString());
             } finally {
                 if (onComplete != null) {
-                    try { onComplete.run(); } catch (Throwable ignored) {}
+                    try {
+                        onComplete.run();
+                    } catch (Throwable ignored) {
+                    }
                 }
             }
         });
     }
 
+    public static void clearAllCachedBreadcrumbs(@Nullable Runnable completion) {
+        FileUtils.updateJsonArray(BreadcrumbsConstants.fileName, new ArrayList<BreadcrumbData>());
+        Log.d(TAG, "Breadcrumbs disk cache cleared (no crash detected)");
+        if (completion != null) {
+            try {
+                completion.run();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
     public static void sendBatchBreadcrumbs() {
-        if (mApiService == null || mExecutorService == null || mStorageService == null) return;
+        if (mApiService == null || mExecutorService == null || mStorageService == null)
+            return;
         synchronized (SEND_LOCK) {
-            if (isSending) return;
+            if (isSending)
+                return;
             isSending = true;
         }
         mExecutorService.execute(() -> {
@@ -137,7 +174,8 @@ public class BreadcrumbManager {
                 AppAmbitTaskFuture<ApiResult<BatchResponse>> batchFuture = sendBatchEndpoint(items);
                 batchFuture.then(result -> {
                     if (result == null || result.errorType != ApiErrorType.None) {
-                        Log.d(TAG, "Batch not sent (kept for retry). ErrorType=" + (result != null ? result.errorType : "null"));
+                        Log.d(TAG, "Batch not sent (kept for retry). ErrorType="
+                                + (result != null ? result.errorType : "null"));
                         finishSend();
                         return;
                     }
@@ -173,7 +211,8 @@ public class BreadcrumbManager {
         AppAmbitTaskFuture<Void> result = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
-                ApiResult<Object> apiResponse = mApiService.executeRequest(new BreadcrumbEndpoint(entity), Object.class);
+                ApiResult<Object> apiResponse = mApiService.executeRequest(new BreadcrumbEndpoint(entity),
+                        Object.class);
                 if (apiResponse != null && apiResponse.errorType == ApiErrorType.None) {
                     result.complete(null);
                 } else {
@@ -192,8 +231,8 @@ public class BreadcrumbManager {
         AppAmbitTaskFuture<ApiResult<BatchResponse>> future = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
-                ApiResult<BatchResponse> apiResponse =
-                        mApiService.executeRequest(new BreadcrumbsBatchEndpoint(BreadcrumbMappings.toDataList(items)), BatchResponse.class);
+                ApiResult<BatchResponse> apiResponse = mApiService.executeRequest(
+                        new BreadcrumbsBatchEndpoint(BreadcrumbMappings.toDataList(items)), BatchResponse.class);
                 future.complete(apiResponse);
             } catch (Exception e) {
                 future.fail(e);

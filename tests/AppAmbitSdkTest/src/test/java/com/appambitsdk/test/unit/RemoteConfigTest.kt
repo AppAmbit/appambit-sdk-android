@@ -24,7 +24,6 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -69,10 +68,10 @@ class RemoteConfigTest {
             true
         }
 
-        RemoteConfig.initialize(context, mockExecutorService, apiService, storable, appInfoService)
+        RemoteConfig.initialize(mockExecutorService, apiService, storable, appInfoService)
 
-        // Reset static state
-        setStaticField(RemoteConfig::class.java, "isEnable", false)
+        // Reset static state — isEnable must be true (SDK default) so fetch tests can run
+        setStaticField(RemoteConfig::class.java, "isEnable", true)
         setStaticField(RemoteConfig::class.java, "isFetchCompleted", false)
     }
 
@@ -99,8 +98,6 @@ class RemoteConfigTest {
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
 
-        RemoteConfig.enable()
-
         // When
         RemoteConfig.fetchAndStoreConfig()
 
@@ -111,9 +108,11 @@ class RemoteConfigTest {
         val slot = slot<List<RemoteConfigEntity>>()
         verify { storable.putConfigs(capture(slot)) }
         
-        assertEquals(1, slot.captured.size)
-        assertEquals("welcome_msg", slot.captured[0].key)
-        assertEquals("Hello", slot.captured[0].value)
+        assertEquals(2, slot.captured.size)
+        val welcomeEntity = slot.captured.find { it.key == "welcome_msg" }
+        assertEquals("Hello", welcomeEntity?.value)
+        val liveSessionEntity = slot.captured.find { it.key == com.appambit.sdk.AppConstants.LIVE_SESSION_STREAMING }
+        assertEquals("true", liveSessionEntity?.value)
     }
 
     @Test
@@ -125,8 +124,6 @@ class RemoteConfigTest {
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
 
-        RemoteConfig.enable()
-
         // When
         RemoteConfig.fetchAndStoreConfig()
 
@@ -134,15 +131,13 @@ class RemoteConfigTest {
         verify(exactly = 0) { storable.putConfigs(any()) }
     }
 
-
-
     @Test
-    fun `getInt should return parsed integer from storable`() {
+    fun `getLong should return parsed integer from storable`() {
         // Given
         every { storable.getConfig("max_items") } returns "10"
 
         // When
-        val value = RemoteConfig.getInt("max_items")
+        val value = RemoteConfig.getLong("max_items")
 
         // Then
         assertEquals(10, value)

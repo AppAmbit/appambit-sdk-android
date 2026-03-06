@@ -177,7 +177,6 @@ public final class Analytics {
         return result;
     }
 
-
     private static AppAmbitTaskFuture<Void> saveEventLocally(EventEntity entity) {
         AppAmbitTaskFuture<Void> future = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {

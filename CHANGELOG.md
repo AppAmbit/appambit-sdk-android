@@ -1,5 +1,13 @@
 ___
 
+## Version 0.3.1
+
+### AppAmbit
+
+* **[Refactor]** Updated RemoteConfig method `getInt` to `getLong` to be more precise with the size of values that the method can handle
+
+___
+
 ## Version 0.3.0
 
 ### AppAmbit Push Notifications

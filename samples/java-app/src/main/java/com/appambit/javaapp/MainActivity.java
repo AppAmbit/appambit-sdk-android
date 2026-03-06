@@ -18,8 +18,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Comment the line for automatic session management
-        //Analytics.enableManualSession();
+        // Comment the line for automatic session management
+        // Analytics.enableManualSession();
         RemoteConfig.enable();
         AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
 
