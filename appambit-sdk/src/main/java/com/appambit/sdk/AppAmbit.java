@@ -176,7 +176,7 @@ public final class AppAmbit {
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
-        RemoteConfig.initialize(context, ServiceLocator.getExecutorService(), ServiceLocator.getApiService(), ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
+        RemoteConfig.initialize(ServiceLocator.getExecutorService(), ServiceLocator.getApiService(), ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
         BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
     }
 
@@ -191,10 +191,18 @@ public final class AppAmbit {
             Crashes.sendBatchesLogs();
             BreadcrumbManager.sendBatchBreadcrumbs();
         };
-        RemoteConfig.fetchAndStoreConfig();
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
-        BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> SessionManager.sendBatchSessions(batchesTasks));
+
+        boolean hadCrash = CrashHandler.hasCrashFiles(context);
+
+        if (hadCrash) {
+            BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> {
+                SessionManager.sendBatchSessions(batchesTasks);
+            });
+        } else {
+            BreadcrumbManager.clearAllCachedBreadcrumbs(() -> SessionManager.sendBatchSessions(batchesTasks));
+        }
     }
 
     private static void initializeConsumer() {
@@ -213,7 +221,15 @@ public final class AppAmbit {
                 AppAmbitTaskFuture<String> sessionFuture = SessionManager.startSession();
 
                 sessionFuture.then(sessionId -> {
-                    BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                    AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
+                    configFuture.then(success -> {
+                        Log.d(TAG, "RemoteConfig fetched. streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
+                        BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                    });
+                    configFuture.onError(error -> {
+                        Log.e(TAG, "fetchAndStoreConfig failed, using cached mode", error);
+                        BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                    });
                 });
 
                 sessionFuture.onError(error -> {
@@ -255,10 +271,24 @@ public final class AppAmbit {
                 SessionManager.removeSavedEndSession();
             }
 
-            Crashes.sendBatchesLogs();
-            Analytics.sendBatchesEvents();
-            BreadcrumbManager.loadBreadcrumbsFromFile();
-            BreadcrumbManager.sendBatchBreadcrumbs();
+            Runnable finalResumeTasks = () -> {
+                Crashes.sendBatchesLogs();
+                Analytics.sendBatchesEvents();
+                if (!BreadcrumbManager.streamCrashSessionsOnly) {
+                    BreadcrumbManager.loadBreadcrumbsFromFile();
+                }
+                BreadcrumbManager.sendBatchBreadcrumbs();
+            };
+
+            AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
+            configFuture.then(success -> {
+                Log.d(TAG, "onResume: RemoteConfig fetched. streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
+                finalResumeTasks.run();
+            });
+            configFuture.onError(error -> {
+                Log.e(TAG, "onResume: fetchAndStoreConfig failed, using cached mode", error);
+                finalResumeTasks.run();
+            });
         };
 
         if (!tokenIsValid()) {
@@ -300,13 +330,26 @@ public final class AppAmbit {
                             BreadcrumbManager.sendBatchBreadcrumbs();
                         };
                         final Runnable connectionTasks = () -> {
-                            RemoteConfig.fetchAndStoreConfig();
-                            Crashes.loadCrashFileIfExists(context);
-                            SessionManager.sendEndSessionFromDatabase(null);
-                            SessionManager.sendStartSessionIfExist();
-                            SessionManager.sendBatchSessions(batchTasks);
-                            BreadcrumbManager.loadBreadcrumbsFromFile();
-                            BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
+                            Runnable finalConnectionTasks = () -> {
+                                Crashes.loadCrashFileIfExists(context);
+                                SessionManager.sendEndSessionFromDatabase(null);
+                                SessionManager.sendStartSessionIfExist();
+                                SessionManager.sendBatchSessions(batchTasks);
+                                if (!BreadcrumbManager.streamCrashSessionsOnly) {
+                                    BreadcrumbManager.loadBreadcrumbsFromFile();
+                                }
+                                BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
+                            };
+                            AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
+                            configFuture.then(success -> {
+                                Log.d(TAG, "onAvailable: RemoteConfig fetched. streamCrashSessionsOnly="
+                                        + BreadcrumbManager.streamCrashSessionsOnly);
+                                finalConnectionTasks.run();
+                            });
+                            configFuture.onError(error -> {
+                                Log.e(TAG, "onAvailable: fetchAndStoreConfig failed, using cached mode", error);
+                                finalConnectionTasks.run();
+                            });
                         };
                         getNewToken(null);
                         connectionTasks.run();
@@ -423,7 +466,7 @@ public final class AppAmbit {
 
     private static boolean isDialogLike(@NonNull Activity activity) {
         try {
-            int[] attrs = new int[]{android.R.attr.windowIsTranslucent, android.R.attr.windowIsFloating};
+            int[] attrs = new int[] { android.R.attr.windowIsTranslucent, android.R.attr.windowIsFloating };
             TypedArray ta = activity.getTheme().obtainStyledAttributes(attrs);
             boolean translucent = ta.getBoolean(0, false);
             boolean floating = ta.getBoolean(1, false);

@@ -171,8 +171,10 @@ class AnalyticsTest {
     fun `manual mode start does not auto start session`() {
         // Given
         val mockApp = mockk<Application>(relaxed = true)
+        val mockFile = java.io.File(System.getProperty("java.io.tmpdir"))
         every { context.applicationContext } returns mockApp
         every { mockApp.registerActivityLifecycleCallbacks(any()) } just runs
+        every { mockApp.filesDir } returns mockFile
 
         val mockConnectivityManager = mockk<ConnectivityManager>(relaxed = true)
         every { context.getSystemService(Context.CONNECTIVITY_SERVICE) } returns mockConnectivityManager
