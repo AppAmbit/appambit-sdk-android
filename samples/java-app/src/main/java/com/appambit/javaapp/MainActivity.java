@@ -18,9 +18,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Comment the line for automatic session management
-        //Analytics.enableManualSession();
-        //RemoteConfig.disable();
+        // Comment the line for automatic session management
+        // Analytics.enableManualSession();
+        RemoteConfig.enable();
         AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
 
         // Initialize Push SDK on app start

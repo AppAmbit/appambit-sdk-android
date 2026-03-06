@@ -176,7 +176,7 @@ public final class AppAmbit {
         SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
-        RemoteConfig.initialize(context, ServiceLocator.getExecutorService(), ServiceLocator.getApiService(), ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
+        RemoteConfig.initialize(ServiceLocator.getExecutorService(), ServiceLocator.getApiService(), ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
         BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
     }
 
@@ -191,27 +191,17 @@ public final class AppAmbit {
             Crashes.sendBatchesLogs();
             BreadcrumbManager.sendBatchBreadcrumbs();
         };
-        AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
-        configFuture.then(success -> {
-            BreadcrumbManager.isCrashOnlyMode = !RemoteConfig.getBoolean(AppConstants.LIVE_SESSION_STREAMING);
-            Log.d(TAG, "Remote config fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
-        });
-        configFuture.onError(error -> {
-            Log.e(TAG, "fetchAndStoreConfig failed, set default", error);
-        });
         Crashes.Initialize();
         Crashes.loadCrashFileIfExists(context);
 
-        boolean hadCrash = CrashHandler.didCrashInLastSession();
+        boolean hadCrash = CrashHandler.hasCrashFiles(context);
 
         if (hadCrash) {
             BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> {
                 SessionManager.sendBatchSessions(batchesTasks);
             });
         } else {
-            BreadcrumbManager.clearAllCachedBreadcrumbs(() -> {
-                SessionManager.sendBatchSessions(batchesTasks);
-            });
+            BreadcrumbManager.clearAllCachedBreadcrumbs(() -> SessionManager.sendBatchSessions(batchesTasks));
         }
     }
 
@@ -231,7 +221,15 @@ public final class AppAmbit {
                 AppAmbitTaskFuture<String> sessionFuture = SessionManager.startSession();
 
                 sessionFuture.then(sessionId -> {
-                    BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                    AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
+                    configFuture.then(success -> {
+                        Log.d(TAG, "RemoteConfig fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+                        BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                    });
+                    configFuture.onError(error -> {
+                        Log.e(TAG, "fetchAndStoreConfig failed, using cached mode", error);
+                        BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
+                    });
                 });
 
                 sessionFuture.onError(error -> {
@@ -273,12 +271,24 @@ public final class AppAmbit {
                 SessionManager.removeSavedEndSession();
             }
 
-            Crashes.sendBatchesLogs();
-            Analytics.sendBatchesEvents();
-            if (!BreadcrumbManager.isCrashOnlyMode) {
-                BreadcrumbManager.loadBreadcrumbsFromFile();
-            }
-            BreadcrumbManager.sendBatchBreadcrumbs();
+            Runnable finalResumeTasks = () -> {
+                Crashes.sendBatchesLogs();
+                Analytics.sendBatchesEvents();
+                if (!BreadcrumbManager.isCrashOnlyMode) {
+                    BreadcrumbManager.loadBreadcrumbsFromFile();
+                }
+                BreadcrumbManager.sendBatchBreadcrumbs();
+            };
+
+            AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
+            configFuture.then(success -> {
+                Log.d(TAG, "onResume: RemoteConfig fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+                finalResumeTasks.run();
+            });
+            configFuture.onError(error -> {
+                Log.e(TAG, "onResume: fetchAndStoreConfig failed, using cached mode", error);
+                finalResumeTasks.run();
+            });
         };
 
         if (!tokenIsValid()) {
@@ -320,24 +330,26 @@ public final class AppAmbit {
                             BreadcrumbManager.sendBatchBreadcrumbs();
                         };
                         final Runnable connectionTasks = () -> {
+                            Runnable finalConnectionTasks = () -> {
+                                Crashes.loadCrashFileIfExists(context);
+                                SessionManager.sendEndSessionFromDatabase(null);
+                                SessionManager.sendStartSessionIfExist();
+                                SessionManager.sendBatchSessions(batchTasks);
+                                if (!BreadcrumbManager.isCrashOnlyMode) {
+                                    BreadcrumbManager.loadBreadcrumbsFromFile();
+                                }
+                                BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
+                            };
                             AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
                             configFuture.then(success -> {
-                                BreadcrumbManager.isCrashOnlyMode = !RemoteConfig
-                                        .getBoolean(AppConstants.LIVE_SESSION_STREAMING);
-                                Log.d(TAG,
-                                        "Remote config fetched. isCrashOnlyMode=" + BreadcrumbManager.isCrashOnlyMode);
+                                Log.d(TAG, "onAvailable: RemoteConfig fetched. isCrashOnlyMode="
+                                        + BreadcrumbManager.isCrashOnlyMode);
+                                finalConnectionTasks.run();
                             });
                             configFuture.onError(error -> {
-                                Log.e(TAG, "fetchAndStoreConfig failed, set default value", error);
+                                Log.e(TAG, "onAvailable: fetchAndStoreConfig failed, using cached mode", error);
+                                finalConnectionTasks.run();
                             });
-                            Crashes.loadCrashFileIfExists(context);
-                            SessionManager.sendEndSessionFromDatabase(null);
-                            SessionManager.sendStartSessionIfExist();
-                            SessionManager.sendBatchSessions(batchTasks);
-                            if (!BreadcrumbManager.isCrashOnlyMode) {
-                                BreadcrumbManager.loadBreadcrumbsFromFile();
-                            }
-                            BreadcrumbManager.addAsync(BreadcrumbsConstants.online);
                         };
                         getNewToken(null);
                         connectionTasks.run();

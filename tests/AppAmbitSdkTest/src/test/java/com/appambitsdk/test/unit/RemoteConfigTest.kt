@@ -24,7 +24,6 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -69,7 +68,7 @@ class RemoteConfigTest {
             true
         }
 
-        RemoteConfig.initialize(context, mockExecutorService, apiService, storable, appInfoService)
+        RemoteConfig.initialize(mockExecutorService, apiService, storable, appInfoService)
 
         // Reset static state — isEnable must be true (SDK default) so fetch tests can run
         setStaticField(RemoteConfig::class.java, "isEnable", true)

@@ -32,14 +32,7 @@ public final class BreadcrumbMappings {
             throw new IllegalArgumentException("entity");
         BreadcrumbData d = new BreadcrumbData();
         d.setId(entity.getId());
-
-        String sessionId = entity.getSessionId();
-        if (StringValidation.isUIntNumber(sessionId)) {
-            d.setSessionId(sessionId);
-        } else {
-            d.setSessionId(null);
-        }
-
+        d.setSessionId(entity.getSessionId());
         d.setTimestamp(entity.getCreatedAt());
         d.setName(entity.getName());
         return d;
