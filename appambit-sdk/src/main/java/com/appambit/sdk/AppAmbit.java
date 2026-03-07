@@ -75,10 +75,9 @@ public final class AppAmbit {
             callbacks = new ArrayList<>(tokenWaiters);
             tokenWaiters.clear();
         }
-        if (success) {
-            for (Runnable r : callbacks) safeRun(r);
-        } else {
-            Log.d(TAG, "Token operation failed; callbacks dropped");
+        for (Runnable r : callbacks) safeRun(r);
+        if (!success) {
+            Log.d(TAG, "Token operation failed; callbacks executed to allow offline operation");
         }
     }
 
@@ -239,8 +238,7 @@ public final class AppAmbit {
             SessionManager.sendEndSessionFromDatabase(initializeSession);
         };
         if (!tokenIsValid()) {
-            getNewToken(null);
-            initializeTasks.run();
+            getNewToken(initializeTasks);
         } else {
             initializeTasks.run();
         }
@@ -351,8 +349,7 @@ public final class AppAmbit {
                                 finalConnectionTasks.run();
                             });
                         };
-                        getNewToken(null);
-                        connectionTasks.run();
+                        getNewToken(connectionTasks);
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }
@@ -397,7 +394,6 @@ public final class AppAmbit {
         String consumerId = null;
         try {
             ConsumerService.updateAppKeyIfNeeded(mAppKey);
-            ConsumerService.updateConsumer(null, null);
             consumerId = storage.getConsumerId();
         } catch (Exception e) {
             Log.w(TAG, "Error reading consumerId", e);
