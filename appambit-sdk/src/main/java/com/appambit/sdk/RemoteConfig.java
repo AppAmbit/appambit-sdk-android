@@ -1,6 +1,5 @@
 package com.appambit.sdk;
 
-import android.content.Context;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -25,37 +24,79 @@ public class RemoteConfig {
 
     private static ExecutorService mExecutorService;
     private static ApiService mApiService;
-    private static Context mContext;
     private static Storable mStorable;
     private static AppInfoService mAppInfoService;
     private static final String TAG = "RemoteConfig";
 
-    public static void initialize(Context context, ExecutorService executorService, ApiService apiService,
+    public static void initialize(ExecutorService executorService, ApiService apiService,
             Storable storable, AppInfoService appInfoService) {
-        mContext = context;
         mExecutorService = executorService;
         mApiService = apiService;
         mStorable = storable;
         mAppInfoService = appInfoService;
+        isFetchCompleted = false;
+        applyCachedConfigToBreadcrumbManager();
     }
 
     private static boolean isEnable = false;
     private static boolean isFetchCompleted = false;
+    private static boolean isFetching = false;
+    private static final List<AppAmbitTaskFuture<Boolean>> pendingFutures = new ArrayList<>();
+    private static final Object FETCH_LOCK = new Object();
 
-    public static boolean enable() {
-        return isEnable = true;
+    public static boolean isEnable() {
+        return isEnable;
     }
 
-    public static void fetchAndStoreConfig() {
-        if (!isEnable || isFetchCompleted)
+    public static void enable() {
+        isEnable = true;
+        applyCachedConfigToBreadcrumbManager();
+    }
+
+    private static void applyCachedConfigToBreadcrumbManager() {
+        if (!isEnable)
             return;
 
+        Object configVal = getValue(AppConstants.LIVE_SESSION_STREAMING);
+        if (configVal != null) {
+            String stringVal = String.valueOf(configVal);
+            boolean remoteValue = Boolean.parseBoolean(stringVal);
+            BreadcrumbManager.streamCrashSessionsOnly = !remoteValue;
+        } else {
+            BreadcrumbManager.streamCrashSessionsOnly = false;
+        }
+        Log.d(TAG, "applyCachedConfigToBreadcrumbManager: streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
+    }
+
+    public static AppAmbitTaskFuture<Boolean> fetchAndStoreConfig() {
         final AppAmbitTaskFuture<Boolean> future = new AppAmbitTaskFuture<>();
+
+        if (!isEnable) {
+            Log.d(TAG, "RemoteConfig: fetchAndStoreConfig skipped -> !isEnable");
+            future.complete(false);
+            return future;
+        }
+
+        if (isFetchCompleted) {
+            Log.d(TAG, "RemoteConfig: fetchAndStoreConfig skipped -> isFetchCompleted");
+            future.complete(false);
+            return future;
+        }
 
         if (mExecutorService == null || mApiService == null) {
             Log.d(TAG, "No initialized services");
             future.complete(false);
-            return;
+            return future;
+        }
+
+        synchronized (FETCH_LOCK) {
+            if (isFetching) {
+                Log.d(TAG, "RemoteConfig: fetch in progress, queuing future");
+                pendingFutures.add(future);
+                return future;
+            }
+            isFetching = true;
+            pendingFutures.add(future);
         }
 
         mExecutorService.execute(() -> {
@@ -64,27 +105,82 @@ public class RemoteConfig {
                         new RemoteConfigEndpoint(mAppInfoService.getAppVersion()), RemoteConfigResponse.class);
 
                 if (result.errorType == ApiErrorType.None) {
-                    if (result.data != null && result.data.getConfigs() != null) {
+                    isFetchCompleted = true;
+                    if (result.data != null && result.data.getConfigs() != null
+                            && !result.data.getConfigs().isEmpty()) {
                         List<RemoteConfigEntity> configEntities = new ArrayList<>();
+                        boolean hasLiveStreamKey = false;
+                        Object liveStreamVal = null;
+
                         for (Map.Entry<String, Object> entry : result.data.getConfigs().entrySet()) {
+                            String key = entry.getKey();
+                            if (AppConstants.LIVE_SESSION_STREAMING.equals(key)) {
+                                hasLiveStreamKey = true;
+                                liveStreamVal = entry.getValue();
+                                key = AppConstants.LIVE_SESSION_STREAMING;
+                            }
                             RemoteConfigEntity entity = new RemoteConfigEntity();
                             entity.setId(UUID.randomUUID());
-                            entity.setKey(entry.getKey());
+                            entity.setKey(key);
                             entity.setValue(String.valueOf(entry.getValue()));
                             configEntities.add(entity);
                         }
+                        if (!hasLiveStreamKey) {
+                            RemoteConfigEntity entity = new RemoteConfigEntity();
+                            entity.setId(UUID.randomUUID());
+                            entity.setKey(AppConstants.LIVE_SESSION_STREAMING);
+                            entity.setValue("true");
+                            configEntities.add(entity);
+                            liveStreamVal = "true";
+                        }
+
                         mStorable.putConfigs(configEntities);
+
+                        String stringVal = String.valueOf(liveStreamVal);
+                        boolean remoteValue = Boolean.parseBoolean(stringVal);
+                        BreadcrumbManager.streamCrashSessionsOnly = !remoteValue;
+
+                    } else {
+                        List<RemoteConfigEntity> configEntities = new ArrayList<>();
+                        RemoteConfigEntity entity = new RemoteConfigEntity();
+                        entity.setId(UUID.randomUUID());
+                        entity.setKey(AppConstants.LIVE_SESSION_STREAMING);
+                        entity.setValue("true");
+                        configEntities.add(entity);
+                        mStorable.putConfigs(configEntities);
+                        BreadcrumbManager.streamCrashSessionsOnly = false;
                     }
-                    isFetchCompleted = true;
-                    future.complete(true);
+
+                    Log.d(TAG, "RemoteConfig: Fetch succeeded, streamCrashSessionsOnly = " + BreadcrumbManager.streamCrashSessionsOnly);
+                    completePendingFutures(true, null);
                 } else {
-                    future.complete(false);
+                    Log.d(TAG, "RemoteConfig: Fetch failed: " + result.errorType);
+                    completePendingFutures(false, null);
                 }
             } catch (Exception e) {
-                future.fail(e);
+                Log.e(TAG, "fetchAndStoreConfig error", e);
+                completePendingFutures(false, e);
             }
         });
 
+        return future;
+    }
+
+    private static void completePendingFutures(boolean success, Exception exception) {
+        List<AppAmbitTaskFuture<Boolean>> futuresToComplete;
+        synchronized (FETCH_LOCK) {
+            isFetching = false;
+            futuresToComplete = new ArrayList<>(pendingFutures);
+            pendingFutures.clear();
+        }
+
+        for (AppAmbitTaskFuture<Boolean> f : futuresToComplete) {
+            if (exception != null) {
+                f.fail(exception);
+            } else {
+                f.complete(success);
+            }
+        }
     }
 
     @Nullable

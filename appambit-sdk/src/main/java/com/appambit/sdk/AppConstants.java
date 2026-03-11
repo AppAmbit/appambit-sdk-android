@@ -10,4 +10,5 @@ public class AppConstants {
     public static final int TRACK_EVENT_MAX_PROPERTY_LIMIT = 20;
     public static final int TRACK_EVENT_PROPERTY_MAX_CHARACTERS = 80;
     public static final String DID_APP_CRASH = "did_app_crash.json";
+    public static final String LIVE_SESSION_STREAMING = "live_session_streaming";
 }

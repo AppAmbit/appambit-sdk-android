@@ -109,6 +109,12 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
         return flagFile.exists();
     }
 
+    public static boolean hasCrashFiles(@NonNull Context context) {
+        File[] files = context.getFilesDir().listFiles(
+                (dir, name) -> name.startsWith("crash_") && name.endsWith(".json"));
+        return files != null && files.length > 0;
+    }
+
     @NonNull
     public static File getCrashFile(@NonNull Context context) {
         return new File(context.getFilesDir(), DID_APP_CRASH);

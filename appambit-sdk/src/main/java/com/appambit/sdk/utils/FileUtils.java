@@ -116,50 +116,54 @@ public class FileUtils {
         return getSaveJsonArray(fileName, null, clazz);
     }
 
+    private static final Object FILE_LOCK = new Object();
+
     public static <T extends Identifiable> List<T> getSaveJsonArray(String fileName, T entry, Class<T> clazz) {
-        try {
-            String path = prepareFileSettings(fileName);
-            List<T> list = new ArrayList<>();
-            File f = new File(path);
-            if (f.exists()) {
-                String text = readFile(path);
-                if (!text.isEmpty()) {
-                    JSONArray arr = new JSONArray(text);
-                    for (int i = 0; i < arr.length(); i++) {
-                        JSONObject obj = arr.getJSONObject(i);
-                        T item = JsonConvertUtils.fromJson(clazz, obj);
-                        list.add(item);
+        String path = prepareFileSettings(fileName);
+        synchronized (FILE_LOCK) {
+            try {
+                List<T> list = new ArrayList<>();
+                File f = new File(path);
+                if (f.exists()) {
+                    String text = readFile(path);
+                    if (!text.isEmpty()) {
+                        JSONArray arr = new JSONArray(text);
+                        for (int i = 0; i < arr.length(); i++) {
+                            JSONObject obj = arr.getJSONObject(i);
+                            T item = JsonConvertUtils.fromJson(clazz, obj);
+                            list.add(item);
+                        }
                     }
                 }
-            }
 
-            if (entry != null) {
-                boolean exists = false;
-                for (T x : list) {
-                    if (x.getId() != null && x.getId().equals(entry.getId())) {
-                        exists = true;
-                        break;
+                if (entry != null) {
+                    boolean exists = false;
+                    for (T x : list) {
+                        if (x.getId() != null && x.getId().equals(entry.getId())) {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) {
+                        list.add(entry);
+                        Collections.sort(list, (a, b) -> {
+                            long ta = extractTimestamp(a);
+                            long tb = extractTimestamp(b);
+                            return Long.compare(ta, tb);
+                        });
+                        JSONArray out = new JSONArray();
+                        for (T it : list) {
+                            out.put(new JSONObject(JsonConvertUtils.toJson(it)));
+                        }
+                        writeFile(path, out.toString(2));
                     }
                 }
-                if (!exists) {
-                    list.add(entry);
-                    Collections.sort(list, (a, b) -> {
-                        long ta = extractTimestamp(a);
-                        long tb = extractTimestamp(b);
-                        return Long.compare(ta, tb);
-                    });
-                    JSONArray out = new JSONArray();
-                    for (T it : list) {
-                        out.put(new JSONObject(JsonConvertUtils.toJson(it)));
-                    }
-                    writeFile(path, out.toString(2));
-                }
-            }
 
-            return list;
-        } catch (Exception e) {
-            Log.d(TAG, "File Exception: " + e.getMessage());
-            return new ArrayList<>();
+                return list;
+            } catch (Exception e) {
+                Log.d(TAG, "File Exception: " + e.getMessage());
+                return new ArrayList<>();
+            }
         }
     }
 
