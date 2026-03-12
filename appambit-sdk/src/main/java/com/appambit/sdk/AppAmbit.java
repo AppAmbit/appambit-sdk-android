@@ -238,7 +238,8 @@ public final class AppAmbit {
             SessionManager.sendEndSessionFromDatabase(initializeSession);
         };
         if (!tokenIsValid()) {
-            getNewToken(initializeTasks);
+            getNewToken(null);
+            initializeTasks.run();
         } else {
             initializeTasks.run();
         }
@@ -408,7 +409,7 @@ public final class AppAmbit {
             });
             future.onError(error -> {
                 Log.e(TAG, "GetNewToken error", error);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
             });
             return;
         }
@@ -417,7 +418,7 @@ public final class AppAmbit {
         createFuture.then(createResult -> {
             if (createResult != ApiErrorType.None) {
                 Log.e(TAG, "CreateConsumer failed: " + createResult);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
                 return;
             }
             Log.d(TAG, "Consumer successfully created, requesting token...");
@@ -429,12 +430,12 @@ public final class AppAmbit {
             });
             ft.onError(err -> {
                 Log.e(TAG, "GetNewToken after create error", err);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
             });
         });
         createFuture.onError(err -> {
             Log.e(TAG, "CreateConsumer error", err);
-            finishTokenOperation(false);
+            finishTokenOperation(true);
         });
     }
 
