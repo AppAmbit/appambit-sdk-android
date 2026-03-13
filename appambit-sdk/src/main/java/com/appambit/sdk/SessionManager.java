@@ -171,21 +171,7 @@ public class SessionManager {
             Log.e(TAG, "Error in saveEndSession: " + ex.getMessage(), ex);
         }
     }
-
-    public static void saveEndSessionSync() {
-        try {
-            SessionData endSession = new SessionData();
-            endSession.setId(UUID.randomUUID());
-            endSession.setSessionId(isUIntNumber(sessionId) ? sessionId : "");
-            endSession.setTimestamp(DateUtils.getUtcNow());
-            endSession.setSessionType(SessionType.END);
-            FileUtils.saveToFile(endSession);
-            Log.d(TAG, "End session saved synchronously (crash path)");
-        } catch (Exception ex) {
-            Log.e(TAG, "Error in saveEndSessionSync: " + ex.getMessage(), ex);
-        }
-    }
-
+    
     public static boolean isSessionActivate() {
         return isSessionActivate;
     }
@@ -349,8 +335,6 @@ public class SessionManager {
                 mStorageService.deleteSessionById(sessionData.getId());
                 Crashes.sendBatchesLogs();
                 Analytics.sendBatchesEvents();
-                // Bug 6 fix: breadcrumbs also need to be flushed after their session IDs
-                // are updated to the remote ID — previously this call was missing here.
                 BreadcrumbManager.sendBatchBreadcrumbs();
             }
         });
