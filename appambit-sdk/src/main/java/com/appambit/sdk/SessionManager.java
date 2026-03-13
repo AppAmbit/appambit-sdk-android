@@ -37,10 +37,12 @@ public class SessionManager {
     private static ExecutorService mExecutorService;
     private static final Object SESSION_LOCK = new Object();
     private static boolean isSendingBatch = false;
-    private static String sessionId;
+    private static volatile String sessionId;
     private static final List<Runnable> sessionWaiters = new ArrayList<>();
     private static Storable mStorageService;
-    public static boolean isSessionActivate = false;
+    public static volatile boolean isSessionActivate = false;
+    private static boolean isSessionStarting = false;
+    private static final List<AppAmbitTaskFuture<String>> pendingSessionFutures = new ArrayList<>();
 
     public static void initialize(ApiService apiService, ExecutorService executorService, Storable storageService) {
         mApiService = apiService;
@@ -53,30 +55,37 @@ public class SessionManager {
 
         AppAmbitTaskFuture<String> sessionFuture = new AppAmbitTaskFuture<>();
 
-        if (isSessionActivate) {
-            Log.d(TAG, "Session already active. Completing future with existing session ID.");
-            sessionFuture.complete(sessionId);
-            return sessionFuture;
+        synchronized (SESSION_LOCK) {
+            if (isSessionActivate) {
+                // sessionId is guaranteed non-null whenever isSessionActivate is true
+                Log.d(TAG, "Session already active. Completing future with existing session ID.");
+                sessionFuture.complete(sessionId);
+                return sessionFuture;
+            }
+            if (isSessionStarting) {
+                Log.d(TAG, "Session start already in progress, queuing future.");
+                pendingSessionFutures.add(sessionFuture);
+                return sessionFuture;
+            }
+            isSessionStarting = true;
         }
 
         final Date utcNow = DateUtils.getUtcNow();
-        isSessionActivate = true;
 
         AppAmbitTaskFuture<ApiResult<StartSessionResponse>> apiResponseFuture = sendStartSessionEndpoint(utcNow);
-
-
 
         apiResponseFuture.then(result -> {
             try {
                 if (result.errorType != ApiErrorType.None || result.data == null) {
                     sessionId = UUID.randomUUID().toString();
-                    Log.d(TAG, "Start Session failed, saving locally. with ID:  " + sessionId);
+                    Log.d(TAG, "Start Session failed, saving locally. with ID: " + sessionId);
                     saveLocallyStartSession(utcNow);
                 } else {
                     sessionId = result.data.getSessionId();
                     Log.d(TAG, "Start Session successful. Session ID: " + sessionId);
                 }
-
+                isSessionActivate = true;
+                completePendingSessionFutures(sessionId);
                 sessionFuture.complete(sessionId);
             } catch (Exception e) {
                 sessionFuture.fail(e);
@@ -89,6 +98,7 @@ public class SessionManager {
                 sessionId = UUID.randomUUID().toString();
                 saveLocallyStartSession(utcNow);
                 isSessionActivate = true;
+                completePendingSessionFutures(sessionId);
                 sessionFuture.complete(sessionId);
             } catch (Exception e) {
                 sessionFuture.fail(e);
@@ -98,6 +108,17 @@ public class SessionManager {
         return sessionFuture;
     }
 
+    private static void completePendingSessionFutures(String resolvedSessionId) {
+        List<AppAmbitTaskFuture<String>> pending;
+        synchronized (SESSION_LOCK) {
+            isSessionStarting = false;
+            pending = new ArrayList<>(pendingSessionFutures);
+            pendingSessionFutures.clear();
+        }
+        for (AppAmbitTaskFuture<String> f : pending) {
+            f.complete(resolvedSessionId);
+        }
+    }
 
     public static void endSession() {
         if (!isSessionActivate) {
@@ -105,6 +126,7 @@ public class SessionManager {
             return;
         }
 
+        String currentSessionId = sessionId;
         isSessionActivate = false;
         sessionId = null;
 
@@ -112,10 +134,9 @@ public class SessionManager {
         endSession.setId(UUID.randomUUID());
         endSession.setSessionType(SessionType.END);
         endSession.setTimestamp(DateUtils.getUtcNow());
-        endSession.setSessionId(sessionId);
+        endSession.setSessionId(isUIntNumber(currentSessionId) ? currentSessionId : null);
 
-        sendSessionEndOrSaveLocally(endSession);
-
+        sendSession(endSession);
     }
 
     public static void sendEndSessionFromFile() {
@@ -151,6 +172,20 @@ public class SessionManager {
         }
     }
 
+    public static void saveEndSessionSync() {
+        try {
+            SessionData endSession = new SessionData();
+            endSession.setId(UUID.randomUUID());
+            endSession.setSessionId(isUIntNumber(sessionId) ? sessionId : "");
+            endSession.setTimestamp(DateUtils.getUtcNow());
+            endSession.setSessionType(SessionType.END);
+            FileUtils.saveToFile(endSession);
+            Log.d(TAG, "End session saved synchronously (crash path)");
+        } catch (Exception ex) {
+            Log.e(TAG, "Error in saveEndSessionSync: " + ex.getMessage(), ex);
+        }
+    }
+
     public static boolean isSessionActivate() {
         return isSessionActivate;
     }
@@ -162,12 +197,14 @@ public class SessionManager {
     public static void sendBatchSessions(@Nullable Runnable onSuccess) {
         synchronized (SESSION_LOCK) {
             if (isSendingBatch) {
-                if (onSuccess != null) sessionWaiters.add(onSuccess);
+                if (onSuccess != null)
+                    sessionWaiters.add(onSuccess);
                 Log.d(TAG, "Session batch already in progress, callback queued");
                 return;
             }
             isSendingBatch = true;
-            if (onSuccess != null) sessionWaiters.add(onSuccess);
+            if (onSuccess != null)
+                sessionWaiters.add(onSuccess);
         }
 
         Log.d(TAG, "Send session batch...");
@@ -218,7 +255,7 @@ public class SessionManager {
 
         SessionData isOpen = mStorageService.getUnpairedSessionStart();
 
-        if(sessionData == null || isOpen == null) {
+        if (sessionData == null || isOpen == null) {
             return;
         }
 
@@ -234,7 +271,8 @@ public class SessionManager {
 
         if (unpairedSessions == null) {
             Log.d(TAG, "No unpaired sessions to send");
-            if (onComplete != null) safeRun(onComplete);
+            if (onComplete != null)
+                safeRun(onComplete);
             return;
         }
 
@@ -247,18 +285,21 @@ public class SessionManager {
             } else {
                 Log.d(TAG, "Failed to send unpaired session, will retry later");
             }
-            if (onComplete != null) safeRun(onComplete);
+            if (onComplete != null)
+                safeRun(onComplete);
         });
 
         Log.d(TAG, "All unpaired sessions sent successfully");
-        if (onComplete != null) safeRun(onComplete);
+        if (onComplete != null)
+            safeRun(onComplete);
     }
 
     private static void sendSession(SessionData sessionData) {
 
-        if(sessionData.getSessionType() == SessionType.START) {
+        if (sessionData.getSessionType() == SessionType.START) {
 
-            AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(sessionData.getTimestamp());
+            AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(
+                    sessionData.getTimestamp());
 
             response.then(result -> {
                 if (result.errorType != ApiErrorType.None) {
@@ -271,7 +312,7 @@ public class SessionManager {
                 Log.d(TAG, "Error to Call End Session");
             });
 
-        }else {
+        } else {
             AppAmbitTaskFuture<ApiResult<EndSessionResponse>> response = sendEndSessionEndpoint(sessionData);
 
             response.then(result -> {
@@ -291,11 +332,12 @@ public class SessionManager {
 
         SessionData sessionData = mStorageService.getUnpairedSessionStart();
 
-        if(sessionData == null) {
+        if (sessionData == null || (sessionId != null && sessionId.equals(sessionData.getId().toString()))) {
             return;
         }
 
-        AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(sessionData.getTimestamp());
+        AppAmbitTaskFuture<ApiResult<StartSessionResponse>> response = sendStartSessionEndpoint(
+                sessionData.getTimestamp());
 
         response.then(result -> {
             if (result.errorType == ApiErrorType.None) {
@@ -305,13 +347,17 @@ public class SessionManager {
                 mStorageService.deleteSessionById(sessionData.getId());
                 Crashes.sendBatchesLogs();
                 Analytics.sendBatchesEvents();
+                // Bug 6 fix: breadcrumbs also need to be flushed after their session IDs
+                // are updated to the remote ID — previously this call was missing here.
+                BreadcrumbManager.sendBatchBreadcrumbs();
             }
         });
 
         response.onError(error -> Log.d(TAG, "Error to Call Start Session"));
     }
 
-    private static void updateOfflineSessionsLogsEvents(@NonNull List<SessionBatch> sorted, List<SessionBatch> sessions) {
+    private static void updateOfflineSessionsLogsEvents(@NonNull List<SessionBatch> sorted,
+            List<SessionBatch> sessions) {
 
         if (sorted.isEmpty()) {
             Log.d(TAG, "No session batches to send");
@@ -339,7 +385,7 @@ public class SessionManager {
                 mStorageService.updateSessionIdsForAllTrackingData(localId, remoteId);
             }
         }
-        if(!sessions.isEmpty()) {
+        if (!sessions.isEmpty()) {
             AppAmbitTaskFuture<Void> deleteFuture = deleteSessions(sessions);
             deleteFuture.complete(null);
             deleteFuture.then(result -> Log.d(TAG, "Sessions deleted successfully"));
@@ -372,9 +418,9 @@ public class SessionManager {
         sessionData.setSessionType(SessionType.START);
         sessionData.setTimestamp(dateUtc);
 
-        if(isUIntNumber(sessionId)) {
+        if (isUIntNumber(sessionId)) {
             sessionData.setSessionId(sessionId);
-        }else {
+        } else {
             sessionData.setSessionId(null);
         }
 
@@ -408,8 +454,8 @@ public class SessionManager {
         AppAmbitTaskFuture<ApiResult<StartSessionResponse>> result = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
-                ApiResult<StartSessionResponse> apiResponse =
-                        mApiService.executeRequest(new StartSessionEndpoint(utcNow), StartSessionResponse.class);
+                ApiResult<StartSessionResponse> apiResponse = mApiService
+                        .executeRequest(new StartSessionEndpoint(utcNow), StartSessionResponse.class);
 
                 result.complete(apiResponse);
             } catch (Exception e) {
@@ -424,7 +470,8 @@ public class SessionManager {
         AppAmbitTaskFuture<ApiResult<EndSessionResponse>> result = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
-                ApiResult<EndSessionResponse> apiResponse = mApiService.executeRequest(new EndSessionEndpoint(sessionData), EndSessionResponse.class);
+                ApiResult<EndSessionResponse> apiResponse = mApiService
+                        .executeRequest(new EndSessionEndpoint(sessionData), EndSessionResponse.class);
                 result.complete(apiResponse);
             } catch (Exception e) {
                 result.fail(e);
@@ -459,7 +506,8 @@ public class SessionManager {
             sessionWaiters.clear();
         }
         if (success) {
-            for (Runnable r : callbacks) safeRun(r);
+            for (Runnable r : callbacks)
+                safeRun(r);
         } else {
             Log.d(TAG, "Session batch operation failed; callbacks dropped");
         }
