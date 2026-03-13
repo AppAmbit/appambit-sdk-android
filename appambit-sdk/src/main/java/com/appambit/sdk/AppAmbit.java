@@ -75,10 +75,9 @@ public final class AppAmbit {
             callbacks = new ArrayList<>(tokenWaiters);
             tokenWaiters.clear();
         }
-        if (success) {
-            for (Runnable r : callbacks) safeRun(r);
-        } else {
-            Log.d(TAG, "Token operation failed; callbacks dropped");
+        for (Runnable r : callbacks) safeRun(r);
+        if (!success) {
+            Log.d(TAG, "Token operation failed; callbacks executed to allow offline operation");
         }
     }
 
@@ -351,8 +350,7 @@ public final class AppAmbit {
                                 finalConnectionTasks.run();
                             });
                         };
-                        getNewToken(null);
-                        connectionTasks.run();
+                        getNewToken(connectionTasks);
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }
@@ -397,7 +395,6 @@ public final class AppAmbit {
         String consumerId = null;
         try {
             ConsumerService.updateAppKeyIfNeeded(mAppKey);
-            ConsumerService.updateConsumer(null, null);
             consumerId = storage.getConsumerId();
         } catch (Exception e) {
             Log.w(TAG, "Error reading consumerId", e);
@@ -412,7 +409,7 @@ public final class AppAmbit {
             });
             future.onError(error -> {
                 Log.e(TAG, "GetNewToken error", error);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
             });
             return;
         }
@@ -421,7 +418,7 @@ public final class AppAmbit {
         createFuture.then(createResult -> {
             if (createResult != ApiErrorType.None) {
                 Log.e(TAG, "CreateConsumer failed: " + createResult);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
                 return;
             }
             Log.d(TAG, "Consumer successfully created, requesting token...");
@@ -433,12 +430,12 @@ public final class AppAmbit {
             });
             ft.onError(err -> {
                 Log.e(TAG, "GetNewToken after create error", err);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
             });
         });
         createFuture.onError(err -> {
             Log.e(TAG, "CreateConsumer error", err);
-            finishTokenOperation(false);
+            finishTokenOperation(true);
         });
     }
 

@@ -288,10 +288,12 @@ public class SessionManager {
             if (onComplete != null)
                 safeRun(onComplete);
         });
-
         Log.d(TAG, "All unpaired sessions sent successfully");
-        if (onComplete != null)
-            safeRun(onComplete);
+        if (onComplete != null) safeRun(onComplete);
+        response.onError(error -> {
+            Log.d(TAG, "Failed to send unpaired session due to error, will retry later", error);
+            if (onComplete != null) safeRun(onComplete);
+        });
     }
 
     private static void sendSession(SessionData sessionData) {
