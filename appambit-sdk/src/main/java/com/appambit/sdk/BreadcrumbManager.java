@@ -147,6 +147,9 @@ public class BreadcrumbManager {
 
     public static void clearAllCachedBreadcrumbs(@Nullable Runnable completion) {
         FileUtils.updateJsonArray(BreadcrumbsConstants.fileName, new ArrayList<BreadcrumbData>());
+        if (streamCrashSessionsOnly && mStorageService != null) {
+            mStorageService.deleteAllBreadcrumbs();
+        }
         Log.d(TAG, "Breadcrumbs disk cache cleared (no crash detected)");
         if (completion != null) {
             try {

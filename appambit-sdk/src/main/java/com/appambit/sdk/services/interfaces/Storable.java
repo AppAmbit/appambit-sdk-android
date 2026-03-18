@@ -77,6 +77,8 @@ public interface Storable extends Closeable {
 
     void deleteBreadcrumbs(List<BreadcrumbEntity> breadcrumbs);
 
+    void deleteAllBreadcrumbs();
+
     List<BreadcrumbEntity> getOldest100Breadcrumbs();
 
     void putConfigs(List<RemoteConfigEntity> configs);

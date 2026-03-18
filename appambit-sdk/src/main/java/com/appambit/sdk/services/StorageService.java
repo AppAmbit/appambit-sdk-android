@@ -1008,6 +1008,17 @@ public class StorageService implements Storable {
     }
 
     @Override
+    public void deleteAllBreadcrumbs() {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            db.delete(BreadcrumbContract.TABLE_NAME, null, null);
+            Log.d(AppAmbit.class.getSimpleName(), "All breadcrumbs deleted from database");
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error deleting all breadcrumbs", e);
+        }
+    }
+
+    @Override
     public List<BreadcrumbEntity> getOldest100Breadcrumbs() {
         List<BreadcrumbEntity> items = new ArrayList<>();
         SQLiteDatabase db = dataStore.getReadableDatabase();
@@ -1047,13 +1058,18 @@ public class StorageService implements Storable {
 
     @Override
     public void putConfigs(List<RemoteConfigEntity> configs) {
-        if (configs == null || configs.isEmpty())
-            return;
-
         SQLiteDatabase db = null;
         try {
             db = dataStore.getWritableDatabase();
             db.beginTransaction();
+
+            if (configs == null || configs.isEmpty()) {
+                db.delete(RemoteConfigContract.TABLE_NAME, null, null);
+                db.setTransactionSuccessful();
+                Log.d(AppAmbit.class.getSimpleName(), "RemoteConfig cleared (empty list received)");
+                return;
+            }
+
 
             // 1. Get all current keys from the database
             Set<String> existingKeys = new HashSet<>();
