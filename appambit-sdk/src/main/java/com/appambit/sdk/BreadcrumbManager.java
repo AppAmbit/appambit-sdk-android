@@ -59,7 +59,6 @@ public class BreadcrumbManager {
                     BreadcrumbData.class);
             Log.d(TAG, "[DEBUG] addAsync: SAVED TO JSON (crash-only): '" + name + "' total=" + saved.size());
         } else {
-            Log.d(TAG, "[DEBUG] addAsync: SENDING LIVE: '" + name + "'", new Throwable("LIVE SEND CALLER"));
             AppAmbitTaskFuture<Void> send = sendBreadcrumbEndpoint(entity);
             send.then(r -> Log.d(TAG, "Send breadcrumbs"));
             send.onError(error -> Log.d(TAG, "Error to Send breadcrumbs"));
@@ -81,7 +80,8 @@ public class BreadcrumbManager {
     }
 
     public static void loadBreadcrumbsFromFile() {
-        Log.d(TAG, "[DEBUG] loadBreadcrumbsFromFile: LOADING TO DB, streamCrashSessionsOnly=" + streamCrashSessionsOnly);
+        Log.d(TAG,
+                "[DEBUG] loadBreadcrumbsFromFile: LOADING TO DB, streamCrashSessionsOnly=" + streamCrashSessionsOnly);
         try {
             List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName,
                     BreadcrumbData.class);
