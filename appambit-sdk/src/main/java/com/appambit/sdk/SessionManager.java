@@ -57,7 +57,6 @@ public class SessionManager {
 
         synchronized (SESSION_LOCK) {
             if (isSessionActivate) {
-                // sessionId is guaranteed non-null whenever isSessionActivate is true
                 Log.d(TAG, "Session already active. Completing future with existing session ID.");
                 sessionFuture.complete(sessionId);
                 return sessionFuture;
@@ -429,11 +428,6 @@ public class SessionManager {
             Log.d(TAG, "Error to Call End Session");
         });
 
-    }
-
-    private static void sendSessionEndOrSaveLocally(SessionData sessionData) {
-        sessionData.setSessionId(isUIntNumber(sessionId) ? sessionId : null);
-        sendSession(sessionData);
     }
 
     private static AppAmbitTaskFuture<ApiResult<StartSessionResponse>> sendStartSessionEndpoint(Date utcNow) {
