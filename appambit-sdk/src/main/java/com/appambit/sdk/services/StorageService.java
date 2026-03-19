@@ -1008,17 +1008,6 @@ public class StorageService implements Storable {
     }
 
     @Override
-    public void deleteAllBreadcrumbs() {
-        try {
-            SQLiteDatabase db = dataStore.getWritableDatabase();
-            db.delete(BreadcrumbContract.TABLE_NAME, null, null);
-            Log.d(AppAmbit.class.getSimpleName(), "All breadcrumbs deleted from database");
-        } catch (Exception e) {
-            Log.e(AppAmbit.class.getSimpleName(), "Error deleting all breadcrumbs", e);
-        }
-    }
-
-    @Override
     public List<BreadcrumbEntity> getOldest100Breadcrumbs() {
         List<BreadcrumbEntity> items = new ArrayList<>();
         SQLiteDatabase db = dataStore.getReadableDatabase();

@@ -98,9 +98,6 @@ public class Crashes {
         ServiceLocator.getExecutorService().execute(() -> {
             try {
                 ensureFileLocked.acquire();
-                if(!SessionManager.isSessionActivate()) {
-                    return;
-                }
                 File crashDir = context.getFilesDir();
                 File[] crashFiles = crashDir.listFiles((dir, name) -> name.startsWith("crash_") && name.endsWith(".json"));
 

@@ -52,12 +52,14 @@ public class BreadcrumbManager {
         if (isDuplicate(name))
             return;
         BreadcrumbEntity entity = createEntity(name);
+        Log.d(TAG, "[DEBUG] addAsync: '" + name + "' streamCrashSessionsOnly=" + streamCrashSessionsOnly);
         if (streamCrashSessionsOnly) {
             BreadcrumbData data = BreadcrumbMappings.toData(entity);
             List<BreadcrumbData> saved = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName, data,
                     BreadcrumbData.class);
-            Log.d(TAG, "[Breadcrumb] Saved to disk (crash-only): '" + name + "' — total on disk: " + saved.size());
+            Log.d(TAG, "[DEBUG] addAsync: SAVED TO JSON (crash-only): '" + name + "' total=" + saved.size());
         } else {
+            Log.d(TAG, "[DEBUG] addAsync: SENDING LIVE: '" + name + "'", new Throwable("LIVE SEND CALLER"));
             AppAmbitTaskFuture<Void> send = sendBreadcrumbEndpoint(entity);
             send.then(r -> Log.d(TAG, "Send breadcrumbs"));
             send.onError(error -> Log.d(TAG, "Error to Send breadcrumbs"));
@@ -79,10 +81,12 @@ public class BreadcrumbManager {
     }
 
     public static void loadBreadcrumbsFromFile() {
+        Log.d(TAG, "[DEBUG] loadBreadcrumbsFromFile: LOADING TO DB, streamCrashSessionsOnly=" + streamCrashSessionsOnly);
         try {
             List<BreadcrumbData> files = FileUtils.getSaveJsonArray(BreadcrumbsConstants.fileName,
                     BreadcrumbData.class);
             List<BreadcrumbData> notSent = new ArrayList<>();
+            Log.d(TAG, "[DEBUG] loadBreadcrumbsFromFile: found " + files.size() + " breadcrumbs in JSON");
             if (files.isEmpty())
                 return;
             for (BreadcrumbData item : files) {
@@ -96,6 +100,7 @@ public class BreadcrumbManager {
                     notSent.add(item);
                 }
             }
+            Log.d(TAG, "[DEBUG] loadBreadcrumbsFromFile: loaded " + (files.size() - notSent.size()) + " to DB");
             FileUtils.updateJsonArray(BreadcrumbsConstants.fileName, notSent);
         } catch (Throwable t) {
             Log.d(TAG, t.toString());
@@ -147,9 +152,6 @@ public class BreadcrumbManager {
 
     public static void clearAllCachedBreadcrumbs(@Nullable Runnable completion) {
         FileUtils.updateJsonArray(BreadcrumbsConstants.fileName, new ArrayList<BreadcrumbData>());
-        if (streamCrashSessionsOnly && mStorageService != null) {
-            mStorageService.deleteAllBreadcrumbs();
-        }
         Log.d(TAG, "Breadcrumbs disk cache cleared (no crash detected)");
         if (completion != null) {
             try {
@@ -160,6 +162,8 @@ public class BreadcrumbManager {
     }
 
     public static void sendBatchBreadcrumbs() {
+        Log.d(TAG, "[DEBUG] sendBatchBreadcrumbs CALLED, streamCrashSessionsOnly=" + streamCrashSessionsOnly,
+                new Throwable("BATCH SEND CALLER"));
         if (mApiService == null || mExecutorService == null || mStorageService == null)
             return;
         synchronized (SEND_LOCK) {
@@ -219,8 +223,10 @@ public class BreadcrumbManager {
                 if (apiResponse != null && apiResponse.errorType == ApiErrorType.None) {
                     result.complete(null);
                 } else {
-                    entity.setSessionId(SessionManager.getSessionId());
-                    mStorageService.addBreadcrumb(entity);
+                    if (!streamCrashSessionsOnly) {
+                        entity.setSessionId(SessionManager.getSessionId());
+                        mStorageService.addBreadcrumb(entity);
+                    }
                     result.fail(new RuntimeException("Breadcrumb send failed"));
                 }
             } catch (Exception e) {
