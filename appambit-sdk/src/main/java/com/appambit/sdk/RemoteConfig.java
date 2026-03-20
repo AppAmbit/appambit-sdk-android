@@ -54,9 +54,6 @@ public class RemoteConfig {
     }
 
     private static void applyCachedConfigToBreadcrumbManager() {
-        if (!isEnable)
-            return;
-
         Object configVal = getValue(AppConstants.LIVE_SESSION_STREAMING);
         if (configVal != null) {
             String stringVal = String.valueOf(configVal);
@@ -126,11 +123,6 @@ public class RemoteConfig {
                             configEntities.add(entity);
                         }
                         if (!hasLiveStreamKey) {
-                            RemoteConfigEntity entity = new RemoteConfigEntity();
-                            entity.setId(UUID.randomUUID());
-                            entity.setKey(AppConstants.LIVE_SESSION_STREAMING);
-                            entity.setValue("true");
-                            configEntities.add(entity);
                             liveStreamVal = "true";
                         }
 
@@ -141,13 +133,7 @@ public class RemoteConfig {
                         BreadcrumbManager.streamCrashSessionsOnly = !remoteValue;
 
                     } else {
-                        List<RemoteConfigEntity> configEntities = new ArrayList<>();
-                        RemoteConfigEntity entity = new RemoteConfigEntity();
-                        entity.setId(UUID.randomUUID());
-                        entity.setKey(AppConstants.LIVE_SESSION_STREAMING);
-                        entity.setValue("true");
-                        configEntities.add(entity);
-                        mStorable.putConfigs(configEntities);
+                        mStorable.putConfigs(new ArrayList<>());
                         BreadcrumbManager.streamCrashSessionsOnly = false;
                     }
 
