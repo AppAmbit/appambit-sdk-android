@@ -634,7 +634,7 @@ public class StorageService implements Storable {
         where.append(")");
 
         try {
-            SQLiteDatabase db = dataStore.getReadableDatabase();
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             db.delete(
                     LogEntityContract.TABLE_NAME,
                     where.toString(),
@@ -752,7 +752,7 @@ public class StorageService implements Storable {
     }
 
     public void updateSessionIdsForAllTrackingData(String localId, String remoteId) {
-        SQLiteDatabase db = dataStore.getReadableDatabase();
+        SQLiteDatabase db = dataStore.getWritableDatabase();
 
         String updateLogsSql = "UPDATE " + LogEntityContract.TABLE_NAME + " SET " +
                 LogEntityContract.Columns.SESSION_ID + " = ? WHERE " +
@@ -766,16 +766,18 @@ public class StorageService implements Storable {
                 BreadcrumbContract.Columns.SESSION_ID + " = ? WHERE " +
                 BreadcrumbContract.Columns.SESSION_ID + " = ?";
 
+        db.beginTransaction();
         try {
             db.execSQL(updateLogsSql, new String[]{remoteId, localId});
             db.execSQL(updateEventsSql, new String[]{remoteId, localId});
             db.execSQL(updateBreadcrumbsSql, new String[]{remoteId, localId});
-        }catch (Exception e) {
+            db.setTransactionSuccessful();
+            Log.d(AppAmbit.class.getSimpleName(), "Updated logs and events with new session ID: " + remoteId);
+        } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error updating logs and events with new session ID", e);
-            return;
+        } finally {
+            db.endTransaction();
         }
-
-        Log.d(AppAmbit.class.getSimpleName(), "Updated logs and events with new session ID: " + remoteId);
     }
 
     @Override
@@ -806,7 +808,7 @@ public class StorageService implements Storable {
                     log.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow(LogEntityContract.Columns.CREATED_AT))));
 
                     String sessionId = c.getString(c.getColumnIndexOrThrow(LogEntityContract.Columns.SESSION_ID));
-                    if (sessionId == null || isUIntNumber(sessionId)) {
+                    if (isUIntNumber(sessionId)) {
                         logs.add(log);
                     }
 
@@ -872,7 +874,7 @@ public class StorageService implements Storable {
         where.append(")");
 
         try {
-            SQLiteDatabase db = dataStore.getReadableDatabase();
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             db.delete(
                     EventEntityContract.TABLE_NAME,
                     where.toString(),
@@ -900,7 +902,7 @@ public class StorageService implements Storable {
         where.append(")");
 
         try {
-            SQLiteDatabase db = dataStore.getReadableDatabase();
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             db.delete(
                     SessionContract.TABLE_NAME,
                     where.toString(),
@@ -913,7 +915,7 @@ public class StorageService implements Storable {
     }
 
     public void deleteSessionById(UUID sessionId) {
-        SQLiteDatabase db = dataStore.getReadableDatabase();
+        SQLiteDatabase db = dataStore.getWritableDatabase();
 
         String sqlDeleteSession = "DELETE FROM " + SessionContract.TABLE_NAME +
                 " WHERE " + SessionContract.Columns.ID + " = ?";
@@ -998,7 +1000,7 @@ public class StorageService implements Storable {
         }
         where.append(")");
         try {
-            SQLiteDatabase db = dataStore.getReadableDatabase();
+            SQLiteDatabase db = dataStore.getWritableDatabase();
             db.delete(BreadcrumbContract.TABLE_NAME, where.toString(), args);
         } catch (Exception e) {
             Log.e(AppAmbit.class.getSimpleName(), "Error deleting breadcrumbs", e);
@@ -1031,7 +1033,9 @@ public class StorageService implements Storable {
                     b.setName(name);
                     b.setCreatedAt(new Date(createdAt));
 
-                    items.add(b);
+                    if (isUIntNumber(sessionId)) {
+                        items.add(b);
+                    }
                 } while (c.moveToNext());
             }
         } finally {
@@ -1043,13 +1047,18 @@ public class StorageService implements Storable {
 
     @Override
     public void putConfigs(List<RemoteConfigEntity> configs) {
-        if (configs == null || configs.isEmpty())
-            return;
-
         SQLiteDatabase db = null;
         try {
             db = dataStore.getWritableDatabase();
             db.beginTransaction();
+
+            if (configs == null || configs.isEmpty()) {
+                db.delete(RemoteConfigContract.TABLE_NAME, null, null);
+                db.setTransactionSuccessful();
+                Log.d(AppAmbit.class.getSimpleName(), "RemoteConfig cleared (empty list received)");
+                return;
+            }
+
 
             // 1. Get all current keys from the database
             Set<String> existingKeys = new HashSet<>();

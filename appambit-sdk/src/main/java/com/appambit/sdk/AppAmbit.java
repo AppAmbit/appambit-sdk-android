@@ -49,7 +49,8 @@ public final class AppAmbit {
     private static final long ACTIVITY_DELAY = 700;
     private static String lastPageClassName = null;
 
-    private AppAmbit() {}
+    private AppAmbit() {
+    }
 
     public static String getAppKey() {
         return mAppKey;
@@ -60,7 +61,8 @@ public final class AppAmbit {
     }
 
     static void safeRun(@Nullable Runnable r) {
-        if (r == null) return;
+        if (r == null)
+            return;
         try {
             r.run();
         } catch (Throwable t) {
@@ -75,10 +77,10 @@ public final class AppAmbit {
             callbacks = new ArrayList<>(tokenWaiters);
             tokenWaiters.clear();
         }
-        if (success) {
-            for (Runnable r : callbacks) safeRun(r);
-        } else {
-            Log.d(TAG, "Token operation failed; callbacks dropped");
+        for (Runnable r : callbacks)
+            safeRun(r);
+        if (!success) {
+            Log.d(TAG, "Token operation failed; callbacks executed to allow offline operation");
         }
     }
 
@@ -172,12 +174,17 @@ public final class AppAmbit {
     private static void InitializeServices(Context context) {
         ServiceLocator.initialize(context);
         FileUtils.initialize(context);
-        Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService(), ServiceLocator.getApiService());
-        SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
-        ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(), ServiceLocator.getApiService());
+        Analytics.Initialize(ServiceLocator.getStorageService(), ServiceLocator.getExecutorService(),
+                ServiceLocator.getApiService());
+        SessionManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(),
+                ServiceLocator.getStorageService());
+        ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(),
+                ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
-        RemoteConfig.initialize(ServiceLocator.getExecutorService(), ServiceLocator.getApiService(), ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
-        BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(), ServiceLocator.getStorageService());
+        RemoteConfig.initialize(ServiceLocator.getExecutorService(), ServiceLocator.getApiService(),
+                ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
+        BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(),
+                ServiceLocator.getStorageService());
     }
 
     private static void onStartApp(Context context) {
@@ -195,6 +202,7 @@ public final class AppAmbit {
         Crashes.loadCrashFileIfExists(context);
 
         boolean hadCrash = CrashHandler.hasCrashFiles(context);
+        Log.d(TAG, "[DEBUG] onStartApp: hadCrash=" + hadCrash + " streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
 
         if (hadCrash) {
             BreadcrumbManager.loadBreadcrumbsFromFileAsync(() -> {
@@ -223,7 +231,8 @@ public final class AppAmbit {
                 sessionFuture.then(sessionId -> {
                     AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
                     configFuture.then(success -> {
-                        Log.d(TAG, "RemoteConfig fetched. streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
+                        Log.d(TAG, "RemoteConfig fetched. streamCrashSessionsOnly="
+                                + BreadcrumbManager.streamCrashSessionsOnly);
                         BreadcrumbManager.addAsync(BreadcrumbsConstants.onStart);
                     });
                     configFuture.onError(error -> {
@@ -282,7 +291,8 @@ public final class AppAmbit {
 
             AppAmbitTaskFuture<Boolean> configFuture = RemoteConfig.fetchAndStoreConfig();
             configFuture.then(success -> {
-                Log.d(TAG, "onResume: RemoteConfig fetched. streamCrashSessionsOnly=" + BreadcrumbManager.streamCrashSessionsOnly);
+                Log.d(TAG, "onResume: RemoteConfig fetched. streamCrashSessionsOnly="
+                        + BreadcrumbManager.streamCrashSessionsOnly);
                 finalResumeTasks.run();
             });
             configFuture.onError(error -> {
@@ -302,8 +312,10 @@ public final class AppAmbit {
     }
 
     private static void registerNetworkCallback(@NonNull Context context) {
-        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (connectivityManager == null) return;
+        ConnectivityManager connectivityManager = (ConnectivityManager) context
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null)
+            return;
 
         wasOffline = !hasInternetConnection(context);
 
@@ -315,7 +327,8 @@ public final class AppAmbit {
             @Override
             public void onAvailable(@NonNull Network network) {
                 super.onAvailable(network);
-                if (!wasOffline) return;
+                if (!wasOffline)
+                    return;
                 Log.d(TAG, "Internet connection available");
                 new Handler().postDelayed(() -> {
                     if (!hasInternetConnection(context) || Analytics.isManualSessionEnabled()) {
@@ -351,8 +364,7 @@ public final class AppAmbit {
                                 finalConnectionTasks.run();
                             });
                         };
-                        getNewToken(null);
-                        connectionTasks.run();
+                        getNewToken(connectionTasks);
                     } catch (Exception e) {
                         Log.d(TAG, "Error on connectivity restored " + e);
                     }
@@ -377,12 +389,14 @@ public final class AppAmbit {
     private static void getNewToken(@Nullable Runnable onSuccess) {
         synchronized (TOKEN_LOCK) {
             if (isRefreshingToken) {
-                if (onSuccess != null) tokenWaiters.add(onSuccess);
+                if (onSuccess != null)
+                    tokenWaiters.add(onSuccess);
                 Log.d(TAG, "Token operation in progress, callback queued");
                 return;
             }
             isRefreshingToken = true;
-            if (onSuccess != null) tokenWaiters.add(onSuccess);
+            if (onSuccess != null)
+                tokenWaiters.add(onSuccess);
         }
 
         if (tokenIsValid()) {
@@ -397,7 +411,6 @@ public final class AppAmbit {
         String consumerId = null;
         try {
             ConsumerService.updateAppKeyIfNeeded(mAppKey);
-            ConsumerService.updateConsumer(null, null);
             consumerId = storage.getConsumerId();
         } catch (Exception e) {
             Log.w(TAG, "Error reading consumerId", e);
@@ -412,7 +425,7 @@ public final class AppAmbit {
             });
             future.onError(error -> {
                 Log.e(TAG, "GetNewToken error", error);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
             });
             return;
         }
@@ -421,7 +434,7 @@ public final class AppAmbit {
         createFuture.then(createResult -> {
             if (createResult != ApiErrorType.None) {
                 Log.e(TAG, "CreateConsumer failed: " + createResult);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
                 return;
             }
             Log.d(TAG, "Consumer successfully created, requesting token...");
@@ -433,17 +446,18 @@ public final class AppAmbit {
             });
             ft.onError(err -> {
                 Log.e(TAG, "GetNewToken after create error", err);
-                finishTokenOperation(false);
+                finishTokenOperation(true);
             });
         });
         createFuture.onError(err -> {
             Log.e(TAG, "CreateConsumer error", err);
-            finishTokenOperation(false);
+            finishTokenOperation(true);
         });
     }
 
     private static void trackPageChange(@NonNull Activity activity) {
-        if (isDialogLike(activity)) return;
+        if (isDialogLike(activity))
+            return;
         String className = activity.getClass().getName();
         if (lastPageClassName == null) {
             lastPageClassName = className;
