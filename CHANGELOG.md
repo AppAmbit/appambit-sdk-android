@@ -1,5 +1,13 @@
 ___
 
+## Version 0.4.1
+
+### AppAmbit
+
+* **[Fix]** Fixed issue with race conditions with breadcrumbs and remote config to ensure that breadcrumbs are sent only on crashes when the option `live_session_streaming` is false.
+
+___
+
 ## Version 0.4.0
 
 ### AppAmbit
