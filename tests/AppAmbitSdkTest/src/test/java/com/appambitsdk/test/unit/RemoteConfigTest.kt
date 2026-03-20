@@ -97,6 +97,8 @@ class RemoteConfigTest {
         } returns ApiResult(mockResponse, ApiErrorType.None, null)
 
         every { appInfoService.getAppVersion() } returns "1.0.0"
+        
+        every { storable.getConfig(com.appambit.sdk.AppConstants.LIVE_SESSION_STREAMING) } returns null
 
         // When
         RemoteConfig.fetchAndStoreConfig()
@@ -108,11 +110,11 @@ class RemoteConfigTest {
         val slot = slot<List<RemoteConfigEntity>>()
         verify { storable.putConfigs(capture(slot)) }
         
-        assertEquals(2, slot.captured.size)
+        assertEquals(1, slot.captured.size)
         val welcomeEntity = slot.captured.find { it.key == "welcome_msg" }
         assertEquals("Hello", welcomeEntity?.value)
         val liveSessionEntity = slot.captured.find { it.key == com.appambit.sdk.AppConstants.LIVE_SESSION_STREAMING }
-        assertEquals("true", liveSessionEntity?.value)
+        assertEquals(null, liveSessionEntity)
     }
 
     @Test
