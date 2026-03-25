@@ -21,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
         // Comment the line for automatic session management
         // Analytics.enableManualSession();
         RemoteConfig.enable();
-        AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
+        AppAmbit.start(getApplicationContext(), "4487a302-8f7a-4be7-8358-7b5d0e54e6cf");
 
         // Initialize Push SDK on app start
         PushNotifications.start(getApplicationContext());
@@ -38,6 +38,8 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new LoadFragment();
             }else if (itemId == R.id.nav_remote_config) {
                 selectedFragment = new RemoteConfigFragment();
+            }else if (itemId == R.id.nav_cms) {
+                selectedFragment = new CmsFragment();
             }
 
             if (selectedFragment != null) {

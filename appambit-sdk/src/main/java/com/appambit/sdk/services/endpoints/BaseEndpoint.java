@@ -7,7 +7,8 @@ import java.util.Map;
 public class BaseEndpoint implements IEndpoint {
 
     private String url;
-    private String baseUrl = "https://appambit.com/api";
+    private String baseUrl = "https://staging-appambit.com/api";
+    protected String baseUrlCms = "https://cms.staging-appambit.com/api/v1";
     private boolean skipAuthorization;
     private Object payload;
     private Map<String, String> customHeader;

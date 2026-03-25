@@ -80,6 +80,9 @@ public interface Storable extends Closeable {
     List<BreadcrumbEntity> getOldest100Breadcrumbs();
 
     void putConfigs(List<RemoteConfigEntity> configs);
-
     String getConfig(String key);
+
+    default void putCmsData(String contentType, String jsonData) {}
+    default String getCmsData(String contentType) { return null; }
+    default List<String> queryCmsData(String contentType, String filterClause, String[] selectionArgs, String orderBy, int limit, int offset) { return null; }
 }

@@ -39,11 +39,13 @@ public class JsonDeserializer {
                     Object value = json.get(key);
                     Class<?> fieldType = field.getType();
                     if (fieldType == int.class || fieldType == Integer.class) {
-                        field.set(instance, ((Number) value).intValue());
+                        field.set(instance, value instanceof Number ? ((Number) value).intValue() : (int) Double.parseDouble(value.toString()));
                     } else if (fieldType == long.class || fieldType == Long.class) {
-                        field.set(instance, ((Number) value).longValue());
+                        field.set(instance, value instanceof Number ? ((Number) value).longValue() : (long) Double.parseDouble(value.toString()));
                     } else if (fieldType == double.class || fieldType == Double.class) {
-                        field.set(instance, ((Number) value).doubleValue());
+                        field.set(instance, value instanceof Number ? ((Number) value).doubleValue() : Double.parseDouble(value.toString()));
+                    } else if (fieldType == float.class || fieldType == Float.class) {
+                        field.set(instance, value instanceof Number ? ((Number) value).floatValue() : Float.parseFloat(value.toString()));    
                     } else if (fieldType == boolean.class || fieldType == Boolean.class) {
                         field.set(instance, value instanceof Boolean ? value : Boolean.parseBoolean(value.toString()));
                     } else if (fieldType == String.class) {
@@ -53,7 +55,12 @@ public class JsonDeserializer {
                             Date parsedDate = iso8601Format.parse(value.toString());
                             field.set(instance, parsedDate);
                         } catch (ParseException ex) {
-                            throw new RuntimeException("Invalid date format for field: " + key, ex);
+                            try {
+                                SimpleDateFormat fallback = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US);
+                                field.set(instance, fallback.parse(value.toString()));
+                            } catch (ParseException ex2) {
+                                throw new RuntimeException("Invalid date format for field: " + key, ex2);
+                            }
                         }
                     } else if (Map.class.isAssignableFrom(fieldType) && value instanceof JSONObject) {
                         JSONObject jsonObject = (JSONObject) value;
@@ -98,8 +105,12 @@ public class JsonDeserializer {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static <T> T deserializeFromJSONResponse(String jsonString, Class<T> cls) {
         try {
+            if (cls == String.class) {
+                return (T) jsonString;
+            }
             String trimmedJson = jsonString.trim();
 
             if (trimmedJson.startsWith("[")) {
