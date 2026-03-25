@@ -7,6 +7,7 @@ import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.JsonDeserializer;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -172,11 +173,52 @@ public class Cms {
             return results;
         }
 
+        private String fetchAllRemoteDataSync() {
+            try {
+                int page = 1;
+                int perPage = 20;
+                ApiResult<String> firstResult = mApiService.executeRequest(new CmsEndpoint(contentType, page, perPage), String.class);
+
+                if (firstResult == null || firstResult.data == null) return null;
+
+                JSONObject firstJsonResponse = new JSONObject(firstResult.data);
+                if (!firstJsonResponse.has("data")) return firstResult.data;
+
+                JSONArray allData = firstJsonResponse.getJSONArray("data");
+
+                if (firstJsonResponse.has("meta")) {
+                    JSONObject meta = firstJsonResponse.getJSONObject("meta");
+                    int total = meta.optInt("total", 0);
+                    int totalPages = (int) Math.ceil((double) total / perPage);
+
+                    for (int p = 2; p <= totalPages; p++) {
+                        Log.d(TAG, "Fetching parallel/next page " + p + " for " + contentType);
+                        ApiResult<String> nextPageResult = mApiService.executeRequest(new CmsEndpoint(contentType, p, perPage), String.class);
+                        if (nextPageResult != null && nextPageResult.data != null) {
+                            JSONObject nextPageJson = new JSONObject(nextPageResult.data);
+                            if (nextPageJson.has("data")) {
+                                JSONArray nextPageData = nextPageJson.getJSONArray("data");
+                                for (int i = 0; i < nextPageData.length(); i++) {
+                                    allData.put(nextPageData.get(i));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                firstJsonResponse.put("data", allData);
+                return firstJsonResponse.toString();
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error fetching all remote data for: " + contentType, e);
+                return null;
+            }
+        }
+
         private void fetchRemoteDataSync() {
             try {
-                ApiResult<String> result = mApiService.executeRequest(new CmsEndpoint(contentType), String.class);
-                if (result != null && result.data != null) {
-                    String remoteJson = result.data;
+                String remoteJson = fetchAllRemoteDataSync();
+                if (remoteJson != null) {
                     String localJson = mStorageService.getCmsData(contentType);
                     if (localJson == null || !localJson.equals(remoteJson)) {
                         mStorageService.putCmsData(contentType, remoteJson);
@@ -199,9 +241,8 @@ public class Cms {
         private void refreshCacheInBackground() {
             mExecutorService.execute(() -> {
                 try {
-                    ApiResult<String> result = mApiService.executeRequest(new CmsEndpoint(contentType), String.class);
-                    if (result != null && result.data != null) {
-                        String remoteJson = result.data;
+                    String remoteJson = fetchAllRemoteDataSync();
+                    if (remoteJson != null) {
                         String localJson = mStorageService.getCmsData(contentType);
                         if (localJson == null || !localJson.equals(remoteJson)) {
                             mStorageService.putCmsData(contentType, remoteJson);
