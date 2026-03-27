@@ -1,7 +1,6 @@
 package com.appambit.javaapp.models;
 
 import com.appambit.sdk.utils.JsonKey;
-import java.util.Date;
 
 public class Post {
     public String id;

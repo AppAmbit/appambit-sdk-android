@@ -1275,6 +1275,30 @@ public class StorageService implements Storable {
     }
 
     @Override
+    public void deleteCmsEntry(String contentType) {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            db.delete(CmsCacheContract.TABLE_NAME,
+                    CmsCacheContract.Columns.CONTENT_TYPE + " = ?",
+                    new String[]{contentType});
+            Log.d(AppAmbit.class.getSimpleName(), "CMS cache cleared for: " + contentType);
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error clearing CMS cache for: " + contentType, e);
+        }
+    }
+
+    @Override
+    public void deleteAllCmsEntries() {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            db.delete(CmsCacheContract.TABLE_NAME, null, null);
+            Log.d(AppAmbit.class.getSimpleName(), "All CMS cache cleared");
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error clearing all CMS cache", e);
+        }
+    }
+
+    @Override
     public void close() throws IOException {
         dataStore.close();
     }

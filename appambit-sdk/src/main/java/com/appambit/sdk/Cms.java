@@ -29,8 +29,24 @@ public class Cms {
         mStorageService = storageService;
     }
 
+    public static CmsQuery<JSONObject> content(String contentType) {
+        return new CmsQuery<>(contentType, JSONObject.class);
+    }
+
     public static <T> CmsQuery<T> content(String contentType, Class<T> modelClass) {
         return new CmsQuery<>(contentType, modelClass);
+    }
+
+    public static void clear(String contentType) {
+        if (mStorageService != null) {
+            mStorageService.deleteCmsEntry(contentType);
+        }
+    }
+
+    public static void clearAll() {
+        if (mStorageService != null) {
+            mStorageService.deleteAllCmsEntries();
+        }
     }
 
     public static class CmsQueryResult<T> {
