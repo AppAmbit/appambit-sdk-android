@@ -9,13 +9,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.appambit.kotlinapp.models.Post
 import com.appambit.sdk.Cms
+import com.appambit.sdk.services.interfaces.ICmsQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -26,7 +26,7 @@ fun Cms() {
     val scope = rememberCoroutineScope()
     var posts by remember { mutableStateOf(emptyList<Post>()) }
 
-    fun loadPosts(query: Cms.CmsQuery<Post>) {
+    fun loadPosts(query: ICmsQuery<Post>) {
         scope.launch(Dispatchers.IO) {
             try {
                 query.getList().then { result ->
@@ -66,7 +66,7 @@ fun Cms() {
 }
 
 @Composable
-fun FilterButtons(onQuery: (Cms.CmsQuery<Post>) -> Unit) {
+fun FilterButtons(onQuery: (ICmsQuery<Post>) -> Unit) {
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -87,7 +87,7 @@ fun FilterButtons(onQuery: (Cms.CmsQuery<Post>) -> Unit) {
         item { FilterButton("Reading Time ≤ 15m") { onQuery(Cms.content("blog_posts", Post::class.java).lessThanOrEqual("reading_time", 15)) } }
         item { FilterButton("Sort Title ↑") { onQuery(Cms.content("blog_posts", Post::class.java).orderByAscending("title")) } }
         item { FilterButton("Sort Title ↓") { onQuery(Cms.content("blog_posts", Post::class.java).orderByDescending("title")) } }
-        item { FilterButton("Page 1 (2 per page)") { onQuery(Cms.content("blog_posts", Post::class.java).setPage(1).setPerPage(2)) } }
+        item { FilterButton("Page 1 (2 per page)") { onQuery(Cms.content("blog_posts", Post::class.java).getPage(1).getPerPage(2)) } }
     }
 }
 

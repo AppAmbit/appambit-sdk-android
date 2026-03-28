@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.appambit.javaapp.models.Post;
 import com.appambit.sdk.Cms;
+import com.appambit.sdk.services.interfaces.ICmsQuery;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -95,10 +96,10 @@ public class CmsFragment extends Fragment {
             loadPosts(Cms.content("blog_posts", Post.class).orderByDescending("title")));
 
         view.findViewById(R.id.btn_filter_limit).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).setPage(1).setPerPage(2)));
+            loadPosts(Cms.content("blog_posts", Post.class).getPage(1).getPerPage(2)));
     }
 
-    private void loadPosts(Cms.CmsQuery<Post> query) {
+    private void loadPosts(ICmsQuery<Post> query) {
         executor.execute(() -> {
             try {
                 query.getList()
