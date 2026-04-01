@@ -2,29 +2,49 @@ package com.appambit.sdk;
 
 import android.util.Log;
 
+import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.interfaces.ICmsQuery;
 import com.appambit.sdk.models.responses.ApiResult;
 import com.appambit.sdk.services.endpoints.CmsEndpoint;
+import com.appambit.sdk.services.interfaces.Storable;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.JsonDeserializer;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 public class CmsQuery<T> implements ICmsQuery<T> {
     private static final String TAG = "AppAmbitCMS";
 
+    private static ApiService mApiService;
+    private static Storable mStorageService;
+    private static ExecutorService mExecutorService;
+    private static final Set<String> mFetchedContentTypes = Collections.synchronizedSet(new HashSet<>());
+
     private final String contentType;
     private final Class<T> modelClass;
+    
+    static final Set<String> mRefreshInProgress = Collections.synchronizedSet(new HashSet<>());
 
     private final StringBuilder sqlClause = new StringBuilder();
     private final List<String> selectionArgs = new ArrayList<>();
     private String orderByClause;
-    private int page = 1;
-    private int perPage = 20;
+    private int page = -1;
+    private int perPage = -1;
+
+    public static void initialize(ApiService apiService, ExecutorService executorService, Storable storageService) {
+        mApiService = apiService;
+        mExecutorService = executorService;
+        mStorageService = storageService;
+    }
 
     public CmsQuery(String contentType, Class<T> modelClass) {
         this.contentType = contentType;
@@ -103,13 +123,13 @@ public class CmsQuery<T> implements ICmsQuery<T> {
 
     @Override
     public ICmsQuery<T> orderByAscending(String field) {
-        this.orderByClause = "json_extract(value, '$." + field + "') ASC";
+        this.orderByClause = "lower(json_extract(value, '$." + field + "')) ASC";
         return this;
     }
 
     @Override
     public ICmsQuery<T> orderByDescending(String field) {
-        this.orderByClause = "json_extract(value, '$." + field + "') DESC";
+        this.orderByClause = "lower(json_extract(value, '$." + field + "')) DESC";
         return this;
     }
 
@@ -119,39 +139,47 @@ public class CmsQuery<T> implements ICmsQuery<T> {
     public ICmsQuery<T> getPerPage(int perPage) { this.perPage = perPage; return this; }
 
     @Override
-    public CmsQueryResult<T> getList() throws Exception {
-        int limit = perPage;
-        int offset = (page - 1) * perPage;
+    public CmsQueryResult<T> getList() {
+        int limit = perPage > 0 ? perPage : Integer.MAX_VALUE;
+        int offset = (page > 0 && perPage > 0) ? (page - 1) * perPage : 0;
 
-        synchronized (Cms.mFetchedContentTypes) {
-            if (Cms.mFetchedContentTypes.contains(contentType)) {
-                Log.d(TAG, "Session cache hit for: " + contentType + " – skipping remote fetch");
-                List<T> cached = queryLocalCache(orderByClause, limit, offset);
-                AppAmbitTaskFuture<List<T>> done = new AppAmbitTaskFuture<>();
-                done.complete(cached != null ? cached : new ArrayList<>());
-                return new CmsQueryResult<>(done);
-            }
-            Cms.mFetchedContentTypes.add(contentType);
-        }
-
-        List<T> cached = queryLocalCache(orderByClause, limit, offset);
         AppAmbitTaskFuture<List<T>> future = new AppAmbitTaskFuture<>();
 
-        if (cached == null || cached.isEmpty()) {
-            Log.d(TAG, "Cache empty for: " + contentType + " – fetching synchronously");
-            List<T> freshData = fetchAndReturn(orderByClause, limit, offset);
-            future.complete(freshData);
-        } else {
-            Log.d(TAG, "Cache hit for: " + contentType + " – silent background refresh");
-            future.complete(cached);
-            refreshCacheInBackground();
+        boolean alreadyFetched;
+        synchronized (mFetchedContentTypes) {
+            alreadyFetched = mFetchedContentTypes.contains(contentType);
+            if (!alreadyFetched) {
+                mFetchedContentTypes.add(contentType);
+            }
         }
+
+        mExecutorService.execute(() -> {
+            try {
+                if (alreadyFetched) {
+                    List<T> cached = queryLocalCache(orderByClause, limit, offset);
+                    future.complete(cached != null ? cached : new ArrayList<>());
+                    return;
+                }
+                List<T> cached = queryLocalCache(orderByClause, limit, offset);
+                if (cached == null || cached.isEmpty()) {
+                    fetchRemoteDataSync();
+                    List<T> fresh = queryLocalCache(orderByClause, limit, offset);
+                    future.complete(fresh != null ? fresh : new ArrayList<>());
+                } else {
+                    future.complete(cached);
+                    refreshCacheInBackground();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error in getList for: " + contentType, e);
+                future.complete(new ArrayList<>());
+            }
+        });
 
         return new CmsQueryResult<>(future);
     }
 
-    private List<T> queryLocalCache(String orderByClause, int limit, int offset) throws Exception {
-        List<String> jsonResults = Cms.mStorageService.queryCmsData(
+    private List<T> queryLocalCache(String orderByClause, int limit, int offset) throws JSONException {
+        List<String> jsonResults = mStorageService.queryCmsData(
                 contentType,
                 sqlClause.toString(),
                 selectionArgs.toArray(new String[0]),
@@ -177,14 +205,17 @@ public class CmsQuery<T> implements ICmsQuery<T> {
         try {
             int page = 1;
             int perPage = 20;
-            ApiResult<String> firstResult = Cms.mApiService.executeRequest(new CmsEndpoint(contentType, page, perPage), String.class);
+            ApiResult<String> firstResult = mApiService.executeRequest(new CmsEndpoint(contentType, page, perPage), String.class);
 
             if (firstResult == null || firstResult.data == null) return null;
 
             JSONObject firstJsonResponse = new JSONObject(firstResult.data);
             if (!firstJsonResponse.has("data")) return firstResult.data;
 
-            JSONArray allData = firstJsonResponse.getJSONArray("data");
+            JSONArray allData = firstJsonResponse.optJSONArray("data");
+            if (allData == null) {
+                return firstResult.data;
+            }
 
             if (firstJsonResponse.has("meta")) {
                 JSONObject meta = firstJsonResponse.getJSONObject("meta");
@@ -193,7 +224,7 @@ public class CmsQuery<T> implements ICmsQuery<T> {
 
                 for (int p = 2; p <= totalPages; p++) {
                     Log.d(TAG, "Fetching parallel/next page " + p + " for " + contentType);
-                    ApiResult<String> nextPageResult = Cms.mApiService.executeRequest(new CmsEndpoint(contentType, p, perPage), String.class);
+                    ApiResult<String> nextPageResult = mApiService.executeRequest(new CmsEndpoint(contentType, p, perPage), String.class);
                     if (nextPageResult != null && nextPageResult.data != null) {
                         JSONObject nextPageJson = new JSONObject(nextPageResult.data);
                         if (nextPageJson.has("data")) {
@@ -219,9 +250,9 @@ public class CmsQuery<T> implements ICmsQuery<T> {
         try {
             String remoteJson = fetchAllRemoteDataSync();
             if (remoteJson != null) {
-                String localJson = Cms.mStorageService.getCmsData(contentType);
+                String localJson = mStorageService.getCmsData(contentType);
                 if (localJson == null || !localJson.equals(remoteJson)) {
-                    Cms.mStorageService.putCmsData(contentType, remoteJson);
+                    mStorageService.putCmsData(contentType, remoteJson);
                     Log.d(TAG, "CMS data stored (sync) for: " + contentType);
                 }
             } else {
@@ -232,29 +263,35 @@ public class CmsQuery<T> implements ICmsQuery<T> {
         }
     }
 
-    private List<T> fetchAndReturn(String orderByClause, int limit, int offset) throws Exception {
+    private List<T> fetchAndReturn(String orderByClause, int limit, int offset) throws JSONException {
         fetchRemoteDataSync();
         List<T> result = queryLocalCache(orderByClause, limit, offset);
         return result != null ? result : new ArrayList<>();
     }
 
     private void refreshCacheInBackground() {
-        Cms.mExecutorService.execute(() -> {
+        synchronized (mRefreshInProgress) {
+            if (mRefreshInProgress.contains(contentType)) {
+                Log.d(TAG, "Refresh already running for: " + contentType + " — skip");
+                return;
+            }
+            mRefreshInProgress.add(contentType);
+        }
+        mExecutorService.execute(() -> {
             try {
                 String remoteJson = fetchAllRemoteDataSync();
                 if (remoteJson != null) {
-                    String localJson = Cms.mStorageService.getCmsData(contentType);
+                    String localJson = mStorageService.getCmsData(contentType);
                     if (localJson == null || !localJson.equals(remoteJson)) {
-                        Cms.mStorageService.putCmsData(contentType, remoteJson);
-                        Log.d(TAG, "CMS cache updated for: " + contentType);
-                    } else {
-                        Log.d(TAG, "CMS cache unchanged for: " + contentType);
+                        mStorageService.putCmsData(contentType, remoteJson);
                     }
-                } else {
-                    Log.w(TAG, "Empty response on background refresh for: " + contentType);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error on background refresh for: " + contentType, e);
+                Log.e(TAG, "Error on refresh for: " + contentType, e);
+            } finally {
+                synchronized (mRefreshInProgress) {
+                    mRefreshInProgress.remove(contentType);
+                }
             }
         });
     }

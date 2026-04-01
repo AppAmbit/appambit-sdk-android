@@ -9,15 +9,9 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 public class Cms {
-    static ApiService mApiService;
-    static Storable mStorageService;
-    static ExecutorService mExecutorService;
+    private static Storable mStorageService;
 
-    static final Set<String> mFetchedContentTypes = new HashSet<>();
-
-    public static void initialize(ApiService apiService, ExecutorService executorService, Storable storageService) {
-        mApiService = apiService;
-        mExecutorService = executorService;
+    public static void initialize(Storable storageService) {
         mStorageService = storageService;
     }
 

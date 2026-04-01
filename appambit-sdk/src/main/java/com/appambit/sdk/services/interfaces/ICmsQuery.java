@@ -19,5 +19,5 @@ public interface ICmsQuery<T> {
     ICmsQuery<T> orderByDescending(String field);
     ICmsQuery<T> getPage(int page);
     ICmsQuery<T> getPerPage(int perPage);
-    CmsQueryResult<T> getList() throws Exception;
+    CmsQueryResult<T> getList();
 }
