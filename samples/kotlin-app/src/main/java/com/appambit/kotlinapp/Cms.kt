@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.appambit.kotlinapp.models.Post
+import com.appambit.kotlinapp.models.CmsExampleModel
 import com.appambit.sdk.Cms
 import com.appambit.sdk.services.interfaces.ICmsQuery
 import kotlinx.coroutines.Dispatchers
@@ -24,9 +24,9 @@ import java.net.URL
 @Composable
 fun Cms() {
     val scope = rememberCoroutineScope()
-    var posts by remember { mutableStateOf(emptyList<Post>()) }
+    var posts by remember { mutableStateOf(emptyList<CmsExampleModel>()) }
 
-    fun loadPosts(query: ICmsQuery<Post>) {
+    fun loadPosts(query: ICmsQuery<CmsExampleModel>) {
         scope.launch(Dispatchers.IO) {
             try {
                 query.getList().then { result ->
@@ -42,7 +42,7 @@ fun Cms() {
 
     // Initial load
     LaunchedEffect(Unit) {
-        loadPosts(Cms.content("blog_posts", Post::class.java))
+        loadPosts(Cms.content("blog_posts", CmsExampleModel::class.java))
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -66,28 +66,28 @@ fun Cms() {
 }
 
 @Composable
-fun FilterButtons(onQuery: (ICmsQuery<Post>) -> Unit) {
+fun FilterButtons(onQuery: (ICmsQuery<CmsExampleModel>) -> Unit) {
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item { FilterButton("All Posts") { onQuery(Cms.content("blog_posts", Post::class.java)) } }
-        item { FilterButton("Category = technology") { onQuery(Cms.content("blog_posts", Post::class.java).equals("category", "technology")) } }
-        item { FilterButton("Category ≠ test") { onQuery(Cms.content("blog_posts", Post::class.java).notEquals("category", "test")) } }
-        item { FilterButton("Search 'test'") { onQuery(Cms.content("blog_posts", Post::class.java).search("test")) } }
-        item { FilterButton("Title contains 'st'") { onQuery(Cms.content("blog_posts", Post::class.java).contains("title", "st")) } }
-        item { FilterButton("Body starts with 'orem'") { onQuery(Cms.content("blog_posts", Post::class.java).startsWith("body", "orem")) } }
-        item { FilterButton("Category IN [science, technology]") { onQuery(Cms.content("blog_posts", Post::class.java).inList("category", listOf("science", "technology"))) } }
-        item { FilterButton("Category NOT IN [technology, test]") { onQuery(Cms.content("blog_posts", Post::class.java).notInList("category", listOf("technology", "test"))) } }
-        item { FilterButton("Likes > 1000") { onQuery(Cms.content("blog_posts", Post::class.java).greaterThan("likes", 1000)) } }
-        item { FilterButton("Rating ≥ 4.3") { onQuery(Cms.content("blog_posts", Post::class.java).greaterThanOrEqual("rating", 4.3)) } }
-        item { FilterButton("Reading Time < 15m") { onQuery(Cms.content("blog_posts", Post::class.java).lessThan("reading_time", 15)) } }
-        item { FilterButton("Reading Time ≤ 15m") { onQuery(Cms.content("blog_posts", Post::class.java).lessThanOrEqual("reading_time", 15)) } }
-        item { FilterButton("Sort Title ↑") { onQuery(Cms.content("blog_posts", Post::class.java).orderByAscending("title")) } }
-        item { FilterButton("Sort Title ↓") { onQuery(Cms.content("blog_posts", Post::class.java).orderByDescending("title")) } }
-        item { FilterButton("Page 1 (2 per page)") { onQuery(Cms.content("blog_posts", Post::class.java).getPage(1).getPerPage(2)) } }
+        item { FilterButton("All Posts") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java)) } }
+        item { FilterButton("Category = technology") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).equals("category", "technology")) } }
+        item { FilterButton("Category ≠ test") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).notEquals("category", "test")) } }
+        item { FilterButton("Search 'test'") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).search("test")) } }
+        item { FilterButton("Title contains 'st'") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).contains("title", "st")) } }
+        item { FilterButton("Body starts with 'orem'") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).startsWith("body", "orem")) } }
+        item { FilterButton("Category IN [science, technology]") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).inList("category", listOf("science", "technology"))) } }
+        item { FilterButton("Category NOT IN [technology, test]") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).notInList("category", listOf("technology", "test"))) } }
+        item { FilterButton("Likes > 1000") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).greaterThan("likes", 1000)) } }
+        item { FilterButton("Rating ≥ 4.3") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).greaterThanOrEqual("rating", 4.3)) } }
+        item { FilterButton("Reading Time < 15m") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).lessThan("reading_time", 15)) } }
+        item { FilterButton("Reading Time ≤ 15m") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).lessThanOrEqual("reading_time", 15)) } }
+        item { FilterButton("Sort Title ↑") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).orderByAscending("title")) } }
+        item { FilterButton("Sort Title ↓") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).orderByDescending("title")) } }
+        item { FilterButton("Page 1 (2 per page)") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).getPage(1).getPerPage(2)) } }
     }
 }
 
@@ -99,7 +99,7 @@ fun FilterButton(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun PostItem(post: Post) {
+fun PostItem(post: CmsExampleModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp)

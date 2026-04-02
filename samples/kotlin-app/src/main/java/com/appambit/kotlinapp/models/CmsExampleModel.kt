@@ -2,7 +2,7 @@ package com.appambit.kotlinapp.models
 
 import com.appambit.sdk.utils.JsonKey
 
-class Post {
+class CmsExampleModel {
     var id: String? = null
     var title: String? = null
     var body: String? = null
