@@ -4,12 +4,13 @@ import com.appambit.sdk.services.interfaces.ICmsQuery;
 import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.interfaces.Storable;
 import org.json.JSONObject;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 
 public class Cms {
     private static Storable mStorageService;
+    static final Set<String> mFetchedContentTypes = Collections.synchronizedSet(new HashSet<>());
 
     public static void initialize(Storable storageService) {
         mStorageService = storageService;
@@ -23,15 +24,25 @@ public class Cms {
         return new CmsQuery<>(contentType, modelClass);
     }
 
+    private static void resetFetchState(String contentType) {
+        if (contentType != null) {
+            mFetchedContentTypes.remove(contentType);
+        } else {
+            mFetchedContentTypes.clear();
+        }
+    }
+
     public static void clearCache(String contentType) {
         if (mStorageService != null) {
             mStorageService.deleteCmsEntry(contentType);
+            resetFetchState(contentType);
         }
     }
 
     public static void clearAllCache() {
         if (mStorageService != null) {
             mStorageService.deleteAllCmsEntries();
+            resetFetchState(null);
         }
     }
 }

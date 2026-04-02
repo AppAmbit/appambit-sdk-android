@@ -27,7 +27,6 @@ public class CmsQuery<T> implements ICmsQuery<T> {
     private static ApiService mApiService;
     private static Storable mStorageService;
     private static ExecutorService mExecutorService;
-    private static final Set<String> mFetchedContentTypes = Collections.synchronizedSet(new HashSet<>());
 
     private final String contentType;
     private final Class<T> modelClass;
@@ -146,11 +145,8 @@ public class CmsQuery<T> implements ICmsQuery<T> {
         AppAmbitTaskFuture<List<T>> future = new AppAmbitTaskFuture<>();
 
         boolean alreadyFetched;
-        synchronized (mFetchedContentTypes) {
-            alreadyFetched = mFetchedContentTypes.contains(contentType);
-            if (!alreadyFetched) {
-                mFetchedContentTypes.add(contentType);
-            }
+        synchronized (Cms.mFetchedContentTypes) {
+            alreadyFetched = Cms.mFetchedContentTypes.contains(contentType);
         }
 
         mExecutorService.execute(() -> {
@@ -250,6 +246,7 @@ public class CmsQuery<T> implements ICmsQuery<T> {
         try {
             String remoteJson = fetchAllRemoteDataSync();
             if (remoteJson != null) {
+                Cms.mFetchedContentTypes.add(contentType);
                 String localJson = mStorageService.getCmsData(contentType);
                 if (localJson == null || !localJson.equals(remoteJson)) {
                     mStorageService.putCmsData(contentType, remoteJson);
@@ -281,6 +278,7 @@ public class CmsQuery<T> implements ICmsQuery<T> {
             try {
                 String remoteJson = fetchAllRemoteDataSync();
                 if (remoteJson != null) {
+                    Cms.mFetchedContentTypes.add(contentType);
                     String localJson = mStorageService.getCmsData(contentType);
                     if (localJson == null || !localJson.equals(remoteJson)) {
                         mStorageService.putCmsData(contentType, remoteJson);
