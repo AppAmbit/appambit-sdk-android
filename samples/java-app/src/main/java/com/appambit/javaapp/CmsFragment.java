@@ -17,7 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.appambit.javaapp.models.Post;
+import com.appambit.javaapp.models.CmsExampleModel;
 import com.appambit.sdk.Cms;
 import com.appambit.sdk.services.interfaces.ICmsQuery;
 
@@ -49,57 +49,57 @@ public class CmsFragment extends Fragment {
         recyclerView.setAdapter(adapter);
 
         setupFilters(view);
-        loadPosts(Cms.content("blog_posts", Post.class));
+        loadPosts(Cms.content("blog_posts", CmsExampleModel.class));
     }
 
     private void setupFilters(View view) {
         view.findViewById(R.id.btn_filter_all).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class)));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class)));
 
         view.findViewById(R.id.btn_filter_tech).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).equals("category", "technology")));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).equals("category", "technology")));
 
         view.findViewById(R.id.btn_filter_not_equals).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).notEquals("category", "test")));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).notEquals("category", "test")));
 
         view.findViewById(R.id.btn_filter_search).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).search("test")));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).search("test")));
 
         view.findViewById(R.id.btn_filter_contains).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).contains("title", "st")));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).contains("title", "st")));
 
         view.findViewById(R.id.btn_filter_starts_with).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).startsWith("body", "orem")));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).startsWith("body", "orem")));
 
         view.findViewById(R.id.btn_filter_in).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).inList("category", List.of("science", "technology"))));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).inList("category", List.of("science", "technology"))));
 
         view.findViewById(R.id.btn_filter_not_in).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).notInList("category", List.of("technology", "test"))));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).notInList("category", List.of("technology", "test"))));
 
         view.findViewById(R.id.btn_filter_id).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).greaterThan("likes", 1000)));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).greaterThan("likes", 1000)));
 
         view.findViewById(R.id.btn_filter_gte).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).greaterThanOrEqual("rating", 4.3)));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).greaterThanOrEqual("rating", 4.3)));
 
         view.findViewById(R.id.btn_filter_less).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).lessThan("reading_time", 15)));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).lessThan("reading_time", 15)));
 
         view.findViewById(R.id.btn_filter_lte).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).lessThanOrEqual("reading_time", 15)));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).lessThanOrEqual("reading_time", 15)));
 
         view.findViewById(R.id.btn_filter_sort_asc).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).orderByAscending("title")));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).orderByAscending("title")));
 
         view.findViewById(R.id.btn_filter_sort).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).orderByDescending("title")));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).orderByDescending("title")));
 
         view.findViewById(R.id.btn_filter_limit).setOnClickListener(v ->
-            loadPosts(Cms.content("blog_posts", Post.class).getPage(1).getPerPage(2)));
+            loadPosts(Cms.content("blog_posts", CmsExampleModel.class).getPage(1).getPerPage(2)));
     }
 
-    private void loadPosts(ICmsQuery<Post> query) {
+    private void loadPosts(ICmsQuery<CmsExampleModel> query) {
         executor.execute(() -> {
             try {
                 query.getList()
@@ -115,13 +115,13 @@ public class CmsFragment extends Fragment {
     }
 
     private class CmsAdapter extends RecyclerView.Adapter<CmsAdapter.CmsViewHolder> {
-        private final List<Post> posts;
+        private final List<CmsExampleModel> posts;
 
-        public CmsAdapter(List<Post> posts) {
+        public CmsAdapter(List<CmsExampleModel> posts) {
             this.posts = posts;
         }
 
-        public void updatePosts(List<Post> newPosts) {
+        public void updatePosts(List<CmsExampleModel> newPosts) {
             this.posts.clear();
             this.posts.addAll(newPosts);
             notifyDataSetChanged();
@@ -136,7 +136,7 @@ public class CmsFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(@NonNull CmsViewHolder holder, int position) {
-            Post post = posts.get(position);
+            CmsExampleModel post = posts.get(position);
             holder.txtTitle.setText(post.title);
             holder.txtBody.setText(post.body);
             holder.txtAuthorCategory.setText(post.author + " in " + post.category);

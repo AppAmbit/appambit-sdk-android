@@ -2,7 +2,7 @@ package com.appambit.javaapp.models;
 
 import com.appambit.sdk.utils.JsonKey;
 
-public class Post {
+public class CmsExampleModel {
     public String id;
     public String title;
     public String body;
