@@ -100,18 +100,16 @@ public class CmsFragment extends Fragment {
     }
 
     private void loadPosts(ICmsQuery<CmsExampleModel> query) {
-        executor.execute(() -> {
-            try {
-                query.getList()
-                     .then(posts -> {
-                        if (posts != null && !posts.isEmpty()) {
-                        adapter.updatePosts(posts);
-                        }
-                     });
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        try {
+            query.getList()
+                 .then(posts -> {
+                    if (posts != null && !posts.isEmpty()) {
+                    adapter.updatePosts(posts);
+                    }
+                 });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private class CmsAdapter extends RecyclerView.Adapter<CmsAdapter.CmsViewHolder> {

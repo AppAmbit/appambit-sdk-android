@@ -27,16 +27,14 @@ fun Cms() {
     var posts by remember { mutableStateOf(emptyList<CmsExampleModel>()) }
 
     fun loadPosts(query: ICmsQuery<CmsExampleModel>) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                query.getList().then { result ->
-                    if (result != null) {
-                        posts = result
-                    }
+        try {
+            query.getList().then { result ->
+                if (result != null) {
+                    posts = result
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
