@@ -19,6 +19,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 public class CmsQuery<T> implements ICmsQuery<T> {
@@ -32,6 +34,7 @@ public class CmsQuery<T> implements ICmsQuery<T> {
     private final Class<T> modelClass;
     
     static final Set<String> mRefreshInProgress = Collections.synchronizedSet(new HashSet<>());
+    static final Map<String, Object> mFetchLocks = new HashMap<>();
 
     private final StringBuilder sqlClause = new StringBuilder();
     private final List<String> selectionArgs = new ArrayList<>();
@@ -122,13 +125,13 @@ public class CmsQuery<T> implements ICmsQuery<T> {
 
     @Override
     public ICmsQuery<T> orderByAscending(String field) {
-        this.orderByClause = "lower(json_extract(value, '$." + field + "')) ASC";
+        this.orderByClause = "CASE WHEN CAST(json_extract(value, '$." + field + "') AS REAL) != 0 OR json_extract(value, '$." + field + "') IN (0, '0', '0.0') THEN CAST(json_extract(value, '$." + field + "') AS REAL) ELSE NULL END ASC, lower(json_extract(value, '$." + field + "')) ASC";
         return this;
     }
 
     @Override
     public ICmsQuery<T> orderByDescending(String field) {
-        this.orderByClause = "lower(json_extract(value, '$." + field + "')) DESC";
+        this.orderByClause = "CASE WHEN CAST(json_extract(value, '$." + field + "') AS REAL) != 0 OR json_extract(value, '$." + field + "') IN (0, '0', '0.0') THEN CAST(json_extract(value, '$." + field + "') AS REAL) ELSE NULL END DESC, lower(json_extract(value, '$." + field + "')) DESC";
         return this;
     }
 
@@ -139,6 +142,12 @@ public class CmsQuery<T> implements ICmsQuery<T> {
 
     @Override
     public CmsQueryResult<T> getList() {
+        if (this.page == 0 || this.perPage == 0) {
+            AppAmbitTaskFuture<List<T>> future = new AppAmbitTaskFuture<>();
+            future.complete(new ArrayList<>());
+            return new CmsQueryResult<>(future);
+        }
+
         int limit = perPage > 0 ? perPage : Integer.MAX_VALUE;
         int offset = (page > 0 && perPage > 0) ? (page - 1) * perPage : 0;
 
@@ -156,14 +165,39 @@ public class CmsQuery<T> implements ICmsQuery<T> {
                     future.complete(cached != null ? cached : new ArrayList<>());
                     return;
                 }
-                List<T> cached = queryLocalCache(orderByClause, limit, offset);
-                if (cached == null || cached.isEmpty()) {
-                    fetchRemoteDataSync();
-                    List<T> fresh = queryLocalCache(orderByClause, limit, offset);
-                    future.complete(fresh != null ? fresh : new ArrayList<>());
-                } else {
-                    future.complete(cached);
-                    refreshCacheInBackground();
+
+                Object lock;
+                synchronized (mFetchLocks) {
+                    lock = mFetchLocks.get(contentType);
+                    if (lock == null) {
+                        lock = new Object();
+                        mFetchLocks.put(contentType, lock);
+                    }
+                }
+                
+                synchronized (lock) {
+                    boolean reFetched;
+                    synchronized (Cms.mFetchedContentTypes) {
+                        reFetched = Cms.mFetchedContentTypes.contains(contentType);
+                    }
+                    if (reFetched) {
+                        List<T> cached = queryLocalCache(orderByClause, limit, offset);
+                        future.complete(cached != null ? cached : new ArrayList<>());
+                        return;
+                    }
+
+                    List<T> cached = queryLocalCache(orderByClause, limit, offset);
+                    if (cached == null || cached.isEmpty()) {
+                        fetchRemoteDataSync();
+                        List<T> fresh = queryLocalCache(orderByClause, limit, offset);
+                        future.complete(fresh != null ? fresh : new ArrayList<>());
+                    } else {
+                        synchronized (Cms.mFetchedContentTypes) {
+                            Cms.mFetchedContentTypes.add(contentType);
+                        }
+                        future.complete(cached);
+                        refreshCacheInBackground();
+                    }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error in getList for: " + contentType, e);
