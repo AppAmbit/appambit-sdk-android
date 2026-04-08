@@ -110,18 +110,98 @@ public class CmsQuery<T> implements ICmsQuery<T> {
     @Override
     public ICmsQuery<T> inList(String field, List<String> values) {
         if (sqlClause.length() > 0) sqlClause.append(" AND ");
-        sqlClause.append("json_extract(value, '$.").append(field).append("') IN (");
-        for (int i = 0; i < values.size(); i++) { sqlClause.append("?"); if (i < values.size() - 1) sqlClause.append(","); selectionArgs.add(values.get(i)); }
-        sqlClause.append(")"); return this;
+        appendListCondition(field, values, false);
+        return this;
     }
 
     @Override
     public ICmsQuery<T> notInList(String field, List<String> values) {
         if (sqlClause.length() > 0) sqlClause.append(" AND ");
-        sqlClause.append("json_extract(value, '$.").append(field).append("') NOT IN (");
-        for (int i = 0; i < values.size(); i++) { sqlClause.append("?"); if (i < values.size() - 1) sqlClause.append(","); selectionArgs.add(values.get(i)); }
-        sqlClause.append(")"); return this;
+        appendListCondition(field, values, true);
+        return this;
     }
+
+    private void appendListCondition(String field, List<String> values, boolean negate) {
+        List<String> plainValues = new ArrayList<>();
+        List<JSONObject> jsonValues = new ArrayList<>();
+
+        for (String val : values) {
+            try {
+                jsonValues.add(new JSONObject(val));
+            } catch (JSONException e) {
+                plainValues.add(val);
+            }
+        }
+
+        if (!negate) {
+            List<String> orClauses = new ArrayList<>();
+
+            if (!plainValues.isEmpty()) {
+                StringBuilder inClause = new StringBuilder("json_extract(value, '$.")
+                        .append(field).append("') IN (");
+                for (int i = 0; i < plainValues.size(); i++) {
+                    inClause.append("?");
+                    if (i < plainValues.size() - 1) inClause.append(",");
+                    selectionArgs.add(plainValues.get(i));
+                }
+                inClause.append(")");
+                orClauses.add(inClause.toString());
+            }
+
+            for (JSONObject jsonObj : jsonValues) {
+                orClauses.add("json_extract(value, '$." + field + "') = json(?)");
+                selectionArgs.add(jsonObj.toString());
+            }
+
+            if (orClauses.isEmpty()) { sqlClause.append("1 = 0"); return; }
+
+            if (orClauses.size() == 1) {
+                sqlClause.append(orClauses.get(0));
+            } else {
+                sqlClause.append("(");
+                for (int i = 0; i < orClauses.size(); i++) {
+                    if (i > 0) sqlClause.append(" OR ");
+                    sqlClause.append(orClauses.get(i));
+                }
+                sqlClause.append(")");
+            }
+
+        } else {
+            List<String> andClauses = new ArrayList<>();
+
+            if (!plainValues.isEmpty()) {
+                StringBuilder notInClause = new StringBuilder("json_extract(value, '$.")
+                        .append(field).append("') NOT IN (");
+                for (int i = 0; i < plainValues.size(); i++) {
+                    notInClause.append("?");
+                    if (i < plainValues.size() - 1) notInClause.append(",");
+                    selectionArgs.add(plainValues.get(i));
+                }
+                notInClause.append(")");
+                andClauses.add(notInClause.toString());
+            }
+
+            for (JSONObject jsonObj : jsonValues) {
+                String extracted = "json_extract(value, '$." + field + "')";
+                andClauses.add("(" + extracted + " IS NULL OR " + extracted + " != json(?))");
+                selectionArgs.add(jsonObj.toString());
+            }
+
+            if (andClauses.isEmpty()) { sqlClause.append("1 = 1"); return; }
+
+            if (andClauses.size() == 1) {
+                sqlClause.append(andClauses.get(0));
+            } else {
+                sqlClause.append("(");
+                for (int i = 0; i < andClauses.size(); i++) {
+                    if (i > 0) sqlClause.append(" AND ");
+                    sqlClause.append(andClauses.get(i));
+                }
+                sqlClause.append(")");
+            }
+        }
+    }
+
 
     @Override
     public ICmsQuery<T> orderByAscending(String field) {
