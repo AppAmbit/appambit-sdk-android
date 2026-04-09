@@ -314,8 +314,7 @@ public class CmsQuery<T> implements ICmsQuery<T> {
     private String fetchAllRemoteDataSync() {
         try {
             int page = 1;
-            int perPage = 20;
-            ApiResult<String> firstResult = mApiService.executeRequest(new CmsEndpoint(contentType, page, perPage), String.class);
+            ApiResult<String> firstResult = mApiService.executeRequest(new CmsEndpoint(contentType, page), String.class);
 
             if (firstResult == null || firstResult.data == null) return null;
 
@@ -329,12 +328,11 @@ public class CmsQuery<T> implements ICmsQuery<T> {
 
             if (firstJsonResponse.has("meta")) {
                 JSONObject meta = firstJsonResponse.getJSONObject("meta");
-                int total = meta.optInt("total", 0);
-                int totalPages = (int) Math.ceil((double) total / perPage);
+                int lastPage = meta.optInt("last_page", 1);
 
-                for (int p = 2; p <= totalPages; p++) {
+                for (int p = 2; p <= lastPage; p++) {
                     Log.d(TAG, "Fetching parallel/next page " + p + " for " + contentType);
-                    ApiResult<String> nextPageResult = mApiService.executeRequest(new CmsEndpoint(contentType, p, perPage), String.class);
+                    ApiResult<String> nextPageResult = mApiService.executeRequest(new CmsEndpoint(contentType, p), String.class);
                     if (nextPageResult != null && nextPageResult.data != null) {
                         JSONObject nextPageJson = new JSONObject(nextPageResult.data);
                         if (nextPageJson.has("data")) {

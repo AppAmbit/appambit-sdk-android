@@ -9,8 +9,8 @@ public class CmsEndpoint extends BaseEndpoint implements IEndpoint {
         this.setMethod(HttpMethodEnum.GET);
     }
 
-    public CmsEndpoint(String contentType, int page, int perPage) {
-        this.setUrl("/" + contentType + "/?per_page=" + perPage + "&page=" + page);
+    public CmsEndpoint(String contentType, int page) {
+        this.setUrl("/" + contentType + "/?page=" + page);
         this.setMethod(HttpMethodEnum.GET);
     }
 
