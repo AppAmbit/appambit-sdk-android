@@ -5,11 +5,14 @@ import static com.appambit.sdk.utils.JsonDeserializer.deserializeFromJSONRespons
 import android.content.Context;
 import android.util.Log;
 import androidx.annotation.NonNull;
+
+import com.appambit.sdk.AppAmbit;
 import com.appambit.sdk.enums.ApiErrorType;
 import com.appambit.sdk.models.logs.LogBatch;
 import com.appambit.sdk.models.logs.LogEntity;
 import com.appambit.sdk.models.responses.ApiResult;
 import com.appambit.sdk.models.responses.TokenResponse;
+import com.appambit.sdk.services.endpoints.CmsEndpoint;
 import com.appambit.sdk.services.endpoints.TokenEndpoint;
 import com.appambit.sdk.services.exceptionsCustom.HttpRequestException;
 import com.appambit.sdk.services.exceptionsCustom.UnauthorizedException;
@@ -258,7 +261,7 @@ public class HttpApiService implements ApiService {
             connection.setRequestProperty("Content-Type", "application/json");
         }
 
-        addAuthorizationHeaderIfNeeded(connection);
+        addAuthorizationHeaderIfNeeded(connection, endpoint);
 
         if (!"GET".equals(endpoint.getMethod().name()) && !"DELETE".equals(endpoint.getMethod().name())) {
             connection.setDoOutput(true);
@@ -300,7 +303,12 @@ public class HttpApiService implements ApiService {
         return connection;
     }
 
-    private void addAuthorizationHeaderIfNeeded(HttpURLConnection connection) {
+    private void addAuthorizationHeaderIfNeeded(HttpURLConnection connection, IEndpoint endpoint) {
+        if (endpoint instanceof CmsEndpoint) {
+            connection.setRequestProperty("X-App-Key", AppAmbit.getAppKey());
+            return;
+        }
+
         String token = getToken();
         if (token != null && !token.isEmpty()) {
             connection.setRequestProperty("Authorization", "Bearer " + token);

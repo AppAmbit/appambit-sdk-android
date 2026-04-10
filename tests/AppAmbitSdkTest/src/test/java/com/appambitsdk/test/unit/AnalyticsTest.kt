@@ -20,8 +20,8 @@ import com.appambit.sdk.models.analytics.SessionData
 import com.appambit.sdk.models.breadcrumbs.BreadcrumbEntity
 import com.appambit.sdk.models.logs.LogEntity
 import com.appambit.sdk.models.logs.LogResponse
-import com.appambit.sdk.models.responses.ApiResult
 import com.appambit.sdk.models.remoteConfigs.RemoteConfigEntity
+import com.appambit.sdk.models.responses.ApiResult
 import com.appambit.sdk.models.responses.EndSessionResponse
 import com.appambit.sdk.models.responses.EventResponse
 import com.appambit.sdk.models.responses.EventsBatchResponse
@@ -424,6 +424,29 @@ class AnalyticsTest {
         override fun getConfig(key: String?): String? {
             return null
         }
+
+        override fun putCmsData(contentType: String?, jsonData: String?) {
+
+        }
+
+        override fun getCmsData(contentType: String?): String? {
+            return null
+        }
+
+        override fun queryCmsData(
+            contentType: String?,
+            filterClause: String?,
+            selectionArgs: Array<String?>?,
+            orderBy: String?,
+            limit: Int,
+            offset: Int
+        ): MutableList<String?>? {
+            return null
+        }
+
+        override fun deleteCmsEntry(contentType: String?) {}
+
+        override fun deleteAllCmsEntries() {}
     }
 
     class FakeApiService : ApiService {

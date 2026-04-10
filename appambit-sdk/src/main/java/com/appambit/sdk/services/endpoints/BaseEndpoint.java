@@ -1,5 +1,6 @@
 package com.appambit.sdk.services.endpoints;
 
+import com.appambit.sdk.AppConstants;
 import com.appambit.sdk.enums.HttpMethodEnum;
 import com.appambit.sdk.services.interfaces.IEndpoint;
 import java.util.Map;
@@ -7,7 +8,8 @@ import java.util.Map;
 public class BaseEndpoint implements IEndpoint {
 
     private String url;
-    private String baseUrl = "https://appambit.com/api";
+    private String baseUrl = AppConstants.baseUrlSdk;
+    protected String baseUrlCms = AppConstants.baseUrlCms;
     private boolean skipAuthorization;
     private Object payload;
     private Map<String, String> customHeader;

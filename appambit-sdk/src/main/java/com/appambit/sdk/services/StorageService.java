@@ -24,10 +24,14 @@ import com.appambit.sdk.services.storage.DataStore;
 import com.appambit.sdk.services.storage.contract.AppSecretContract;
 import com.appambit.sdk.services.storage.contract.BreadcrumbContract;
 import com.appambit.sdk.services.storage.contract.EventEntityContract;
+import com.appambit.sdk.services.storage.contract.CmsCacheContract;
 import com.appambit.sdk.services.storage.contract.LogEntityContract;
 import com.appambit.sdk.services.storage.contract.RemoteConfigContract;
 import com.appambit.sdk.services.storage.contract.SessionContract;
 import com.appambit.sdk.utils.DateUtils;
+import com.appambit.sdk.utils.StringUtils;
+import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1185,8 +1189,117 @@ public class StorageService implements Storable {
     }
 
     @Override
-    public void close() throws IOException {
+    public void putCmsData(String contentType, String jsonData) {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(CmsCacheContract.Columns.CONTENT_TYPE, contentType);
+            cv.put(CmsCacheContract.Columns.JSON_DATA, jsonData);
+            cv.put(CmsCacheContract.Columns.LAST_UPDATED, DateUtils.toIsoUtcWithMillis(new Date()));
 
+            db.insertWithOnConflict(CmsCacheContract.TABLE_NAME, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error inserting CMS cache", e);
+        }
     }
 
+    @Override
+    public String getCmsData(String contentType) {
+        String data = null;
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            c = db.query(CmsCacheContract.TABLE_NAME,
+                    new String[] { CmsCacheContract.Columns.JSON_DATA },
+                    CmsCacheContract.Columns.CONTENT_TYPE + " = ?",
+                    new String[] { contentType },
+                    null, null, null, "1");
+            if (c.moveToFirst()) {
+                data = c.getString(c.getColumnIndexOrThrow(CmsCacheContract.Columns.JSON_DATA));
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error reading CMS cache", e);
+        } finally {
+            if (c != null)
+                c.close();
+        }
+        return data;
+    }
+
+    @Override
+    public List<String> queryCmsData(String contentType, String filterClause, String[] selectionArgs, String orderBy, int limit, int offset) {
+        List<String> results = new ArrayList<>();
+        Cursor c = null;
+        try {
+            SQLiteDatabase db = dataStore.getReadableDatabase();
+            // Using json_each on the 'data' array of the JsonData column
+            String query = "SELECT json_extract(value, '$') FROM " + CmsCacheContract.TABLE_NAME +
+                    ", json_each(" + CmsCacheContract.Columns.JSON_DATA + ", '$.data') " +
+                    " WHERE " + CmsCacheContract.Columns.CONTENT_TYPE + " = ?";
+
+            if (filterClause != null && !filterClause.isEmpty()) {
+                query += " AND (" + filterClause + ")";
+            }
+
+            if (orderBy != null && !orderBy.isEmpty()) {
+                query += " ORDER BY " + orderBy;
+            }
+
+            if (limit > 0) {
+                query += " LIMIT " + limit;
+                if (offset > 0) {
+                    query += " OFFSET " + offset;
+                }
+            }
+
+            int selectionArgsLen = (selectionArgs != null) ? selectionArgs.length : 0;
+            String[] args = new String[selectionArgsLen + 1];
+            args[0] = contentType;
+            if (selectionArgs != null) {
+                System.arraycopy(selectionArgs, 0, args, 1, selectionArgsLen);
+            }
+
+            c = db.rawQuery(query, args);
+            if (c.moveToFirst()) {
+                do {
+                    results.add(c.getString(0));
+                } while (c.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error querying CMS cache with JSON1", e);
+        } finally {
+            if (c != null)
+                c.close();
+        }
+        return results;
+    }
+
+    @Override
+    public void deleteCmsEntry(String contentType) {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            db.delete(CmsCacheContract.TABLE_NAME,
+                    CmsCacheContract.Columns.CONTENT_TYPE + " = ?",
+                    new String[]{contentType});
+            Log.d(AppAmbit.class.getSimpleName(), "CMS cache cleared for: " + contentType);
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error clearing CMS cache for: " + contentType, e);
+        }
+    }
+
+    @Override
+    public void deleteAllCmsEntries() {
+        try {
+            SQLiteDatabase db = dataStore.getWritableDatabase();
+            db.delete(CmsCacheContract.TABLE_NAME, null, null);
+            Log.d(AppAmbit.class.getSimpleName(), "All CMS cache cleared");
+        } catch (Exception e) {
+            Log.e(AppAmbit.class.getSimpleName(), "Error clearing all CMS cache", e);
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        dataStore.close();
+    }
 }
