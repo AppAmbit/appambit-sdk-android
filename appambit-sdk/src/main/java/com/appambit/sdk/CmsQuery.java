@@ -141,18 +141,18 @@ public class CmsQuery<T> implements ICmsQuery<T> {
     @Override
     public ICmsQuery<T> inList(String field, List<String> values) {
         if (sqlClause.length() > 0) sqlClause.append(" AND ");
-        appendListCondition(field, values, false);
+        buildListClause(field, values, false);
         return this;
     }
 
     @Override
     public ICmsQuery<T> notInList(String field, List<String> values) {
         if (sqlClause.length() > 0) sqlClause.append(" AND ");
-        appendListCondition(field, values, true);
+        buildListClause(field, values, true);
         return this;
     }
 
-    private void appendListCondition(String field, List<String> values, boolean negate) {
+    private void buildListClause(String field, List<String> values, boolean negate) {
         List<String> plainValues = new ArrayList<>();
         List<JSONObject> jsonValues = new ArrayList<>();
 
