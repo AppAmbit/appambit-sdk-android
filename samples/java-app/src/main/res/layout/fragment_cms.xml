@@ -13,138 +13,36 @@
         android:textStyle="bold"
         android:layout_marginBottom="8dp"/>
 
-    <HorizontalScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="8dp"
-        android:scrollbars="none">
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical">
 
-        <LinearLayout
+        <Spinner
+            android:id="@+id/spinner_filters"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <EditText
+            android:id="@+id/edit_search"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:hint="Search..."
+            android:inputType="text"
+            android:maxLines="1"
+            android:layout_marginStart="8dp" />
+
+        <Button
+            android:id="@+id/btn_execute"
+            style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_filter_all"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="All Posts" />
-
-            <Button
-                android:id="@+id/btn_filter_tech"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Category = technology" />
-
-            <Button
-                android:id="@+id/btn_filter_not_equals"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Category ≠ test" />
-
-            <Button
-                android:id="@+id/btn_filter_search"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Search 'test'" />
-
-            <Button
-                android:id="@+id/btn_filter_contains"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Title contains 'st'" />
-
-            <Button
-                android:id="@+id/btn_filter_starts_with"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Body starts with 'orem'" />
-
-            <Button
-                android:id="@+id/btn_filter_in"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Category IN [science, technology]" />
-
-            <Button
-                android:id="@+id/btn_filter_not_in"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Category NOT IN [technology, test]" />
-
-            <Button
-                android:id="@+id/btn_filter_id"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Likes > 1000" />
-
-            <Button
-                android:id="@+id/btn_filter_gte"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Rating ≥ 4.3" />
-
-            <Button
-                android:id="@+id/btn_filter_less"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Reading Time &lt; 15m" />
-
-            <Button
-                android:id="@+id/btn_filter_lte"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Reading Time ≤ 15m" />
-
-            <Button
-                android:id="@+id/btn_filter_sort_asc"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Sort Title ↑" />
-
-            <Button
-                android:id="@+id/btn_filter_sort"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Sort Title ↓" />
-
-            <Button
-                android:id="@+id/btn_filter_limit"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Page 1 (2 per page)" />
-
-        </LinearLayout>
-    </HorizontalScrollView>
+            android:layout_marginStart="8dp"
+            android:text="Run" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_cms"
@@ -152,3 +50,4 @@
         android:layout_height="0dp"
         android:layout_weight="1"/>
 </LinearLayout>
+

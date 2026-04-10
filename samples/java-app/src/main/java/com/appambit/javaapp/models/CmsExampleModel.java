@@ -2,11 +2,13 @@ package com.appambit.javaapp.models;
 
 import com.appambit.sdk.utils.JsonKey;
 
+import java.util.List;
+
 public class CmsExampleModel {
     public String id;
     public String title;
     public String body;
-    public String category;
+    public List<String> category;
     public String author;
 
     @JsonKey("featured_image")
@@ -18,6 +20,9 @@ public class CmsExampleModel {
 
     @JsonKey("reading_time")
     public int readingTime;
+
+    @JsonKey("is_published")
+    public Boolean isPublished;
 
     @JsonKey("published_at")
     public String publishedAt;

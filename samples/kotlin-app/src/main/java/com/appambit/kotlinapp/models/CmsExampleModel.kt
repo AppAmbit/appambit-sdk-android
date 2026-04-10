@@ -6,7 +6,7 @@ class CmsExampleModel {
     var id: String? = null
     var title: String? = null
     var body: String? = null
-    var category: String? = null
+    var category: List<String>? = null
     var author: String? = null
 
     @JsonKey("featured_image")
@@ -17,6 +17,9 @@ class CmsExampleModel {
 
     @JsonKey("reading_time")
     var readingTime: Int = 0
+
+    @JsonKey("is_published")
+    var isPublished: Boolean? = null
 
     @JsonKey("published_at")
     var publishedAt: String? = null

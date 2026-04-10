@@ -62,6 +62,14 @@ public class JsonDeserializer {
                                 throw new RuntimeException("Invalid date format for field: " + key, ex2);
                             }
                         }
+                    } else if (List.class.isAssignableFrom(fieldType) && value instanceof JSONArray) {
+                        JSONArray jsonArray = (JSONArray) value;
+                        List<String> list = new ArrayList<>();
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            Object item = jsonArray.get(i);
+                            list.add(item.toString());
+                        }
+                        field.set(instance, list);
                     } else if (Map.class.isAssignableFrom(fieldType) && value instanceof JSONObject) {
                         JSONObject jsonObject = (JSONObject) value;
                         Map<String, Object> map = new HashMap<>();

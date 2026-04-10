@@ -69,8 +69,15 @@ public class CmsQuery<T> implements ICmsQuery<T> {
 
     private void addCondition(String field, String operator, String value) {
         if (sqlClause.length() > 0) sqlClause.append(" AND ");
-        sqlClause.append("json_extract(value, '$.").append(field).append("') ").append(operator).append(" ?");
-        selectionArgs.add(value);
+        String lowerValue = value.toLowerCase();
+        if (lowerValue.equals("true")) {
+            sqlClause.append("json_extract(value, '$.").append(field).append("') ").append(operator).append(" 1");
+        } else if (lowerValue.equals("false")) {
+            sqlClause.append("json_extract(value, '$.").append(field).append("') ").append(operator).append(" 0");
+        } else {
+            sqlClause.append("json_extract(value, '$.").append(field).append("') ").append(operator).append(" ?");
+            selectionArgs.add(value);
+        }
     }
 
     private void addNumericCondition(String field, String operator, Number value) {
@@ -91,9 +98,33 @@ public class CmsQuery<T> implements ICmsQuery<T> {
     }
 
     @Override
-    public ICmsQuery<T> equals(String field, String value) { addCondition(field, "=", value); return this; }
+    public ICmsQuery<T> equals(String field, String value) { 
+        if ("true".equalsIgnoreCase(value)) {
+            if (sqlClause.length() > 0) sqlClause.append(" AND ");
+            sqlClause.append("json_extract(value, '$.").append(field).append("') = 1");
+        } else if ("false".equalsIgnoreCase(value)) {
+            if (sqlClause.length() > 0) sqlClause.append(" AND ");
+            sqlClause.append("json_extract(value, '$.").append(field).append("') = 0");
+        } else {
+            addCondition(field, "=", value); 
+        }
+        return this; 
+    }
+    
     @Override
-    public ICmsQuery<T> notEquals(String field, String value) { addCondition(field, "!=", value); return this; }
+    public ICmsQuery<T> notEquals(String field, String value) { 
+        if ("true".equalsIgnoreCase(value)) {
+            if (sqlClause.length() > 0) sqlClause.append(" AND ");
+            sqlClause.append("json_extract(value, '$.").append(field).append("') != 1");
+        } else if ("false".equalsIgnoreCase(value)) {
+            if (sqlClause.length() > 0) sqlClause.append(" AND ");
+            sqlClause.append("json_extract(value, '$.").append(field).append("') != 0");
+        } else {
+            addCondition(field, "!=", value); 
+        }
+        return this; 
+    }
+
     @Override
     public ICmsQuery<T> contains(String field, String value) { addCondition(field, "LIKE", "%" + value + "%"); return this; }
     @Override
@@ -137,20 +168,34 @@ public class CmsQuery<T> implements ICmsQuery<T> {
             List<String> orClauses = new ArrayList<>();
 
             if (!plainValues.isEmpty()) {
-                StringBuilder inClause = new StringBuilder("json_extract(value, '$.")
-                        .append(field).append("') IN (");
+                StringBuilder inClause = new StringBuilder("(");
+                inClause.append("json_extract(value, '$.").append(field).append("') IN (");
                 for (int i = 0; i < plainValues.size(); i++) {
                     inClause.append("?");
                     if (i < plainValues.size() - 1) inClause.append(",");
                     selectionArgs.add(plainValues.get(i));
                 }
                 inClause.append(")");
+
+                inClause.append(" OR (json_type(value, '$.").append(field).append("') = 'array' AND EXISTS (")
+                        .append("SELECT 1 FROM json_each(json_each.value, '$.").append(field).append("') AS je WHERE je.value IN (");
+                for (int i = 0; i < plainValues.size(); i++) {
+                    inClause.append("?");
+                    if (i < plainValues.size() - 1) inClause.append(",");
+                    selectionArgs.add(plainValues.get(i));
+                }
+                inClause.append("))))");
+
                 orClauses.add(inClause.toString());
             }
 
             for (JSONObject jsonObj : jsonValues) {
-                orClauses.add("json_extract(value, '$." + field + "') = json(?)");
-                selectionArgs.add(jsonObj.toString());
+                String objStr = jsonObj.toString();
+                orClauses.add("(json_extract(value, '$." + field + "') = json(?) OR " +
+                              "(json_type(value, '$." + field + "') = 'array' AND EXISTS (" +
+                              "SELECT 1 FROM json_each(json_each.value, '$." + field + "') AS je WHERE je.value = json(?))))");
+                selectionArgs.add(objStr);
+                selectionArgs.add(objStr);
             }
 
             if (orClauses.isEmpty()) { sqlClause.append("1 = 0"); return; }
@@ -170,21 +215,35 @@ public class CmsQuery<T> implements ICmsQuery<T> {
             List<String> andClauses = new ArrayList<>();
 
             if (!plainValues.isEmpty()) {
-                StringBuilder notInClause = new StringBuilder("json_extract(value, '$.")
-                        .append(field).append("') NOT IN (");
+                StringBuilder notInClause = new StringBuilder("(");
+                notInClause.append("json_extract(value, '$.").append(field).append("') NOT IN (");
                 for (int i = 0; i < plainValues.size(); i++) {
                     notInClause.append("?");
                     if (i < plainValues.size() - 1) notInClause.append(",");
                     selectionArgs.add(plainValues.get(i));
                 }
                 notInClause.append(")");
+
+                notInClause.append(" AND (json_type(value, '$.").append(field).append("') != 'array' OR NOT EXISTS (")
+                           .append("SELECT 1 FROM json_each(json_each.value, '$.").append(field).append("') AS je WHERE je.value IN (");
+                for (int i = 0; i < plainValues.size(); i++) {
+                    notInClause.append("?");
+                    if (i < plainValues.size() - 1) notInClause.append(",");
+                    selectionArgs.add(plainValues.get(i));
+                }
+                notInClause.append("))))");
+
                 andClauses.add(notInClause.toString());
             }
 
             for (JSONObject jsonObj : jsonValues) {
+                String objStr = jsonObj.toString();
                 String extracted = "json_extract(value, '$." + field + "')";
-                andClauses.add("(" + extracted + " IS NULL OR " + extracted + " != json(?))");
-                selectionArgs.add(jsonObj.toString());
+                andClauses.add("((" + extracted + " IS NULL OR " + extracted + " != json(?)) AND " +
+                               "(json_type(value, '$." + field + "') != 'array' OR NOT EXISTS (" +
+                               "SELECT 1 FROM json_each(json_each.value, '$." + field + "') AS je WHERE je.value = json(?))))");
+                selectionArgs.add(objStr);
+                selectionArgs.add(objStr);
             }
 
             if (andClauses.isEmpty()) { sqlClause.append("1 = 1"); return; }

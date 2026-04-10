@@ -65,34 +65,96 @@ fun Cms() {
 
 @Composable
 fun FilterButtons(onQuery: (ICmsQuery<CmsExampleModel>) -> Unit) {
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item { FilterButton("All Posts") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java)) } }
-        item { FilterButton("Category = technology") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).equals("category", "technology")) } }
-        item { FilterButton("Category ≠ test") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).notEquals("category", "test")) } }
-        item { FilterButton("Search 'test'") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).search("test")) } }
-        item { FilterButton("Title contains 'st'") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).contains("title", "st")) } }
-        item { FilterButton("Body starts with 'orem'") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).startsWith("body", "orem")) } }
-        item { FilterButton("Category IN [science, technology]") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).inList("category", listOf("science", "technology"))) } }
-        item { FilterButton("Category NOT IN [technology, test]") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).notInList("category", listOf("technology", "test"))) } }
-        item { FilterButton("Likes > 1000") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).greaterThan("likes", 1000)) } }
-        item { FilterButton("Rating ≥ 4.3") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).greaterThanOrEqual("rating", 4.3)) } }
-        item { FilterButton("Reading Time < 15m") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).lessThan("reading_time", 15)) } }
-        item { FilterButton("Reading Time ≤ 15m") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).lessThanOrEqual("reading_time", 15)) } }
-        item { FilterButton("Sort Title ↑") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).orderByAscending("title")) } }
-        item { FilterButton("Sort Title ↓") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).orderByDescending("title")) } }
-        item { FilterButton("Page 1 (2 per page)") { onQuery(Cms.content("blog_posts", CmsExampleModel::class.java).getPage(1).getPerPage(2)) } }
-    }
-}
+    var expanded by remember { mutableStateOf(false) }
+    var selectedIndex by remember { mutableStateOf(0) }
+    var searchText by remember { mutableStateOf("") }
+    
+    val options = listOf(
+        "All Posts",
+        "Title = first",
+        "Title ≠ first",
+        "Is Published = true",
+        "Is Published = false",
+        "Title contains 'st'",
+        "Title starts with 'f'",
+        "Category IN [science]",
+        "Category NOT IN [tech, news]",
+        "Likes > 500",
+        "Rating ≥ 2.1",
+        "Reading Time < 15m",
+        "Reading Time ≤ 15m",
+        "Sort Title ↑",
+        "Sort Title ↓",
+        "Sort Likes ↑",
+        "Sort Likes ↓",
+        "Page 1 (2 per page)",
+        "Page 2 (2 per page)"
+    )
 
-@Composable
-fun FilterButton(text: String, onClick: () -> Unit) {
-    Button(onClick = onClick) {
-        Text(text)
+    Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Box(modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(options[selectedIndex], maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEachIndexed { index, option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            selectedIndex = index
+                            searchText = ""
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+        
+        OutlinedTextField(
+            value = searchText,
+            onValueChange = { 
+                searchText = it
+                if (it.isNotEmpty() && selectedIndex != 0) {
+                    selectedIndex = 0
+                }
+            },
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("Search...") },
+            singleLine = true
+        )
+        
+        Button(onClick = {
+            var query = Cms.content("blog_posts", CmsExampleModel::class.java)
+
+            if (searchText.isNotBlank()) {
+                query = query.search(searchText.trim())
+            }
+
+            query = when (selectedIndex) {
+                1 -> query.equals("title", "first")
+                2 -> query.notEquals("title", "first")
+                3 -> query.equals("is_published", "true")
+                4 -> query.equals("is_published", "false")
+                5 -> query.contains("title", "st")
+                6 -> query.startsWith("title", "f")
+                7 -> query.inList("category", listOf("science"))
+                8 -> query.notInList("category", listOf("technology", "news"))
+                9 -> query.greaterThan("likes", 500)
+                10 -> query.greaterThanOrEqual("rating", 2.1)
+                11 -> query.lessThan("reading_time", 15)
+                12 -> query.lessThanOrEqual("reading_time", 15)
+                13 -> query.orderByAscending("title")
+                14 -> query.orderByDescending("title")
+                15 -> query.orderByAscending("likes")
+                16 -> query.orderByDescending("likes")
+                17 -> query.getPage(1).getPerPage(2)
+                18 -> query.getPage(2).getPerPage(2)
+                else -> query
+            }
+            onQuery(query)
+        }) {
+            Text("Run")
+        }
     }
 }
 
@@ -106,17 +168,17 @@ fun PostItem(post: CmsExampleModel) {
             post.featuredImage?.let { url ->
                 NetworkImage(url)
             }
-            
+
             Text(text = post.title ?: "No Title", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = post.body ?: "", style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "${post.author} in ${post.category}",
-                style = MaterialTheme.typography.labelSmall,
+                text = "${post.author} in ${post.category?.joinToString(", ")}",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary
             )
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -124,6 +186,28 @@ fun PostItem(post: CmsExampleModel) {
                 Text(text = "❤️ ${post.likes}")
                 Text(text = "⭐ ${post.rating}/5")
                 Text(text = "📖 ${post.readingTime} min")
+            }
+
+            post.isPublished?.let { published ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = if (published)
+                        androidx.compose.ui.graphics.Color(0xFF2E7D32).copy(alpha = 0.12f)
+                    else
+                        androidx.compose.ui.graphics.Color(0xFFE65100).copy(alpha = 0.12f),
+                    modifier = Modifier.wrapContentSize()
+                ) {
+                    Text(
+                        text = if (published) "✓ Published" else "✕ Draft",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (published)
+                            androidx.compose.ui.graphics.Color(0xFF2E7D32)
+                        else
+                            androidx.compose.ui.graphics.Color(0xFFE65100),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
             }
         }
     }
