@@ -11,4 +11,6 @@ public class AppConstants {
     public static final int TRACK_EVENT_PROPERTY_MAX_CHARACTERS = 80;
     public static final String DID_APP_CRASH = "did_app_crash.json";
     public static final String LIVE_SESSION_STREAMING = "live_session_streaming";
+    public static final String baseUrlSdk = "https://appambit.com/api";
+    public static final String baseUrlCms = "https://cms.appambit.com/api/v1";
 }
