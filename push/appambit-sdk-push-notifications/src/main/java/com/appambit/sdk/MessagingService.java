@@ -56,10 +56,6 @@ public class MessagingService extends FirebaseMessagingService {
     @Nullable
     private static volatile INotificationServiceExtension extensionInstance;
 
-    /**
-     * Reads the meta-data from AndroidManifest and instantiates the developer's extension class
-     * via reflection. The result is cached after the first successful instantiation.
-     */
     @Nullable
     private static INotificationServiceExtension getExtension(@NonNull Context context) {
         if (extensionInstance != null) return extensionInstance;
@@ -132,14 +128,17 @@ public class MessagingService extends FirebaseMessagingService {
                 if (bgListener != null) {
                     bgListener.onBackgroundNotificationReceived(notification);
                 }
-            }
 
-            if (!isNotificationMessage && (title != null || body != null)) {
-                AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
-                buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
-                        NotificationCompat.PRIORITY_DEFAULT,
-                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                        null, null);
+                if (title != null || body != null) {
+                    buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
+                            NotificationCompat.PRIORITY_DEFAULT,
+                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                            null, null);
+
+                    if (isNotificationMessage) {
+                        return;
+                    }
+                }
             }
         }
 

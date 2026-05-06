@@ -75,6 +75,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        // Update the activity's intent so getIntent() always returns the latest one.
+        // This follows the Firebase recommended pattern for handling notification taps.
+        setIntent(intent);
         // Dispatch the callback when the app was already running in the background
         // and the user tapped a notification to bring it to the foreground.
         PushNotifications.handleNotificationOpened(this, intent);
