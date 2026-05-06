@@ -7,6 +7,22 @@
         tools:targetApi="33" />
 
     <application>
+
+        <!--
+            AppAmbit FCM service. Registered here so client apps work out of the box.
+
+            To extend this service, declare your subclass in YOUR app's AndroidManifest.xml
+            with tools:node="replace" to override this entry:
+
+                <service
+                    android:name=".MyMessagingService"
+                    android:exported="false"
+                    tools:node="replace">
+                    <intent-filter>
+                        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                    </intent-filter>
+                </service>
+        -->
         <service
             android:name=".MessagingService"
             android:exported="false">
@@ -14,6 +30,7 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
 
         <activity
             android:name=".PermissionRequestActivity"

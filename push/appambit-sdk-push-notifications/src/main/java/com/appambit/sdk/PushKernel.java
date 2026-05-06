@@ -31,6 +31,9 @@ public final class PushKernel {
 
     private static TokenListener tokenListener;
     private static NotificationCustomizer notificationCustomizer;
+    private static NotificationListener notificationListener;
+    private static BackgroundNotificationListener backgroundNotificationListener;
+    private static OpenedNotificationListener openedNotificationListener;
     private static String currentToken;
     private static boolean isStarted = false;
 
@@ -48,12 +51,47 @@ public final class PushKernel {
         void customize(@NonNull Context context, @NonNull NotificationCompat.Builder builder, @NonNull AppAmbitNotification notification);
     }
 
+    public interface NotificationListener {
+        void onNotificationReceived(@NonNull AppAmbitNotification notification);
+    }
+
+    public interface BackgroundNotificationListener {
+        void onBackgroundNotificationReceived(@NonNull AppAmbitNotification notification);
+    }
+
+    public interface OpenedNotificationListener {
+        void onOpenedNotification(@NonNull AppAmbitNotification notification);
+    }
+
     public static void setTokenListener(@Nullable TokenListener listener) {
         tokenListener = listener;
     }
 
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         notificationCustomizer = customizer;
+    }
+
+    public static void setNotificationListener(@Nullable NotificationListener listener) {
+        notificationListener = listener;
+    }
+
+    public static void setOpenedNotificationListener(@Nullable OpenedNotificationListener listener) {
+        openedNotificationListener = listener;
+    }
+
+    @Nullable
+    public static NotificationListener getNotificationListener() {
+        return notificationListener;
+    }
+
+    @Nullable
+    public static BackgroundNotificationListener getBackgroundNotificationListener() {
+        return backgroundNotificationListener;
+    }
+
+    @Nullable
+    public static OpenedNotificationListener getOpenedNotificationListener() {
+        return openedNotificationListener;
     }
 
     @Nullable
@@ -158,5 +196,32 @@ public final class PushKernel {
         if (tokenListener != null) {
             tokenListener.onNewToken(token);
         }
+    }
+
+    public static void handleNotificationOpened(@NonNull Context context, @NonNull Intent intent) {
+        if (!MessagingService.ACTION_NOTIFICATION_OPENED.equals(intent.getAction())) {
+            return;
+        }
+
+        String title = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_TITLE);
+        String body  = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_BODY);
+        String color = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_COLOR);
+        String icon  = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_ICON);
+
+        java.util.Map<String, String> data = new java.util.HashMap<>();
+        String[] keys   = intent.getStringArrayExtra(MessagingService.EXTRA_NOTIFICATION_DATA);
+        String[] values = intent.getStringArrayExtra(MessagingService.EXTRA_NOTIFICATION_DATA + "_values");
+        if (keys != null && values != null) {
+            for (int i = 0; i < keys.length && i < values.length; i++) {
+                data.put(keys[i], values[i]);
+            }
+        }
+
+        AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
+        Log.d(TAG, "Notification opened by user. Title: " + title);
+
+        MessagingService.dispatchOpened(context, notification);
+
+        intent.setAction(null);
     }
 }
