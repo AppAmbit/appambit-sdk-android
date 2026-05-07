@@ -16,7 +16,6 @@ This SDK is an extension of the core AppAmbit Android SDK, providing a simple an
   - [Enabling and Disabling Notifications](#enabling-and-disabling-notifications)
   - [Permission Request](#permission-request)
   - [Handling Notification Taps (Opened)](#handling-notification-taps-opened)
-  - [Receiving Notifications in Foreground](#receiving-notifications-in-foreground)
   - [Receiving Notifications in Background / App closed](#receiving-notifications-in-background--app-closed)
 - [Advanced: Service Extension](#advanced-service-extension)
 - [Customization](#customization)
@@ -84,16 +83,6 @@ Ensure you have the Google Services plugin configured in your project-level `bui
 ```java
 AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
 PushNotifications.start(getApplicationContext());
-```
-
-**2. Listen for incoming notifications:**
-
-```java
-PushNotifications.setNotificationListener(notification -> {
-    Log.d(TAG, "Notification received: " + notification.getTitle());
-    Log.d(TAG, "Body: " + notification.getBody());
-    Log.d(TAG, "Data: " + notification.getData());
-});
 ```
 
 **3. Request the notification permission** (required on Android 13+):
@@ -199,21 +188,6 @@ protected void onNewIntent(Intent intent) {
 
 ---
 
-### Receiving Notifications in Foreground
-
-Register a listener to be notified when an FCM message arrives while the app is **open and active**:
-
-```java
-PushNotifications.setNotificationListener(notification -> {
-    Log.d(TAG, "[FOREGROUND] Title: " + notification.getTitle());
-    Log.d(TAG, "[FOREGROUND] Body:  " + notification.getBody());
-    Log.d(TAG, "[FOREGROUND] Data:  " + notification.getData());
-});
-```
-
-> This listener is **not** called when the app is in the background or closed.
-
----
 
 ## Advanced: Service Extension
 
@@ -353,7 +327,6 @@ PushNotifications.setNotificationCustomizer((context, builder, notification) -> 
 | `isNotificationsEnabled(context)` | Returns the current notification opt-in state. |
 | `requestNotificationPermission(activity)` | Requests the `POST_NOTIFICATIONS` runtime permission (Android 13+). |
 | `requestNotificationPermission(activity, listener)` | Same as above, with a callback for the permission result. |
-| `setNotificationListener(listener)` | Registers a listener for notifications received **in the foreground**. |
 | `setOpenedNotificationListener(listener)` | Registers a listener for when the user **taps** a notification to open the app. |
 | `handleNotificationOpened(context, intent)` | Dispatches the opened callback from an `Intent`. Call in `onCreate` and `onNewIntent`. |
 | `setNotificationCustomizer(customizer)` | Registers a hook to modify the `NotificationCompat.Builder` before display. |

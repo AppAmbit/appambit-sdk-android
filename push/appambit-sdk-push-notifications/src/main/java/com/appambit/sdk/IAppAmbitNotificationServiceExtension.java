@@ -3,7 +3,7 @@ package com.appambit.sdk;
 import androidx.annotation.NonNull;
 import com.appambit.sdk.models.AppAmbitNotification;
 
-public interface INotificationServiceExtension {
+public interface IAppAmbitNotificationServiceExtension {
 
     void onNotificationForeground(@NonNull AppAmbitNotification notification);
 

@@ -21,16 +21,11 @@ public final class PushNotifications {
 
     public interface NotificationCustomizer extends PushKernel.NotificationCustomizer {}
 
-    public interface NotificationListener extends PushKernel.NotificationListener {}
 
     public interface OpenedNotificationListener extends PushKernel.OpenedNotificationListener {}
 
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         PushKernel.setNotificationCustomizer(customizer);
-    }
-
-    public static void setNotificationListener(@Nullable NotificationListener listener) {
-        PushKernel.setNotificationListener(listener);
     }
 
     public static void setOpenedNotificationListener(@Nullable OpenedNotificationListener listener) {

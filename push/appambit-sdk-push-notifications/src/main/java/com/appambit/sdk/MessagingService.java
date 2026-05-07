@@ -54,10 +54,10 @@ public class MessagingService extends FirebaseMessagingService {
     private static final String DEFAULT_CHANNEL_NAME  = "Default Channel";
 
     @Nullable
-    private static volatile INotificationServiceExtension extensionInstance;
+    private static volatile IAppAmbitNotificationServiceExtension extensionInstance;
 
     @Nullable
-    private static INotificationServiceExtension getExtension(@NonNull Context context) {
+    private static IAppAmbitNotificationServiceExtension getExtension(@NonNull Context context) {
         if (extensionInstance != null) return extensionInstance;
         try {
             ApplicationInfo ai = context.getPackageManager().getApplicationInfo(
@@ -66,7 +66,7 @@ public class MessagingService extends FirebaseMessagingService {
             String className = ai.metaData.getString(META_DATA_EXTENSION_KEY);
             if (className == null || className.isEmpty()) return null;
             Class<?> cls = Class.forName(className);
-            extensionInstance = (INotificationServiceExtension) cls.getDeclaredConstructor().newInstance();
+            extensionInstance = (IAppAmbitNotificationServiceExtension) cls.getDeclaredConstructor().newInstance();
             Log.d(TAG, "NotificationServiceExtension loaded: " + className);
         } catch (Exception e) {
             Log.e(TAG, "Failed to instantiate NotificationServiceExtension from meta-data.", e);
@@ -120,7 +120,7 @@ public class MessagingService extends FirebaseMessagingService {
 
             if (!isAppInForeground(this)) {
                 AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
-                INotificationServiceExtension ext = getExtension(this);
+                IAppAmbitNotificationServiceExtension ext = getExtension(this);
                 if (ext != null) {
                     ext.onNotificationBackground(notification);
                 }
@@ -182,13 +182,9 @@ public class MessagingService extends FirebaseMessagingService {
                     data);
         }
 
-        INotificationServiceExtension ext = getExtension(this);
+        IAppAmbitNotificationServiceExtension ext = getExtension(this);
         if (ext != null) {
             ext.onNotificationForeground(notification);
-        }
-        PushKernel.NotificationListener fgListener = PushKernel.getNotificationListener();
-        if (fgListener != null) {
-            fgListener.onNotificationReceived(notification);
         }
     }
 

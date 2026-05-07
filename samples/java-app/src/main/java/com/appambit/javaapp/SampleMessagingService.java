@@ -5,11 +5,11 @@ import android.util.Log;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 
-import com.appambit.sdk.INotificationServiceExtension;
+import com.appambit.sdk.IAppAmbitNotificationServiceExtension;
 import com.appambit.sdk.models.AppAmbitNotification;
 
 @Keep
-public class SampleMessagingService implements INotificationServiceExtension {
+public class SampleMessagingService implements IAppAmbitNotificationServiceExtension {
 
     private static final String TAG = "AppAmbitSample";
 

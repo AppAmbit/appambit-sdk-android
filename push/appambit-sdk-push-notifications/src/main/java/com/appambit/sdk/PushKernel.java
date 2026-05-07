@@ -31,7 +31,6 @@ public final class PushKernel {
 
     private static TokenListener tokenListener;
     private static NotificationCustomizer notificationCustomizer;
-    private static NotificationListener notificationListener;
     private static BackgroundNotificationListener backgroundNotificationListener;
     private static OpenedNotificationListener openedNotificationListener;
     private static String currentToken;
@@ -51,10 +50,6 @@ public final class PushKernel {
         void customize(@NonNull Context context, @NonNull NotificationCompat.Builder builder, @NonNull AppAmbitNotification notification);
     }
 
-    public interface NotificationListener {
-        void onNotificationReceived(@NonNull AppAmbitNotification notification);
-    }
-
     public interface BackgroundNotificationListener {
         void onBackgroundNotificationReceived(@NonNull AppAmbitNotification notification);
     }
@@ -71,18 +66,11 @@ public final class PushKernel {
         notificationCustomizer = customizer;
     }
 
-    public static void setNotificationListener(@Nullable NotificationListener listener) {
-        notificationListener = listener;
-    }
 
     public static void setOpenedNotificationListener(@Nullable OpenedNotificationListener listener) {
         openedNotificationListener = listener;
     }
 
-    @Nullable
-    public static NotificationListener getNotificationListener() {
-        return notificationListener;
-    }
 
     @Nullable
     public static BackgroundNotificationListener getBackgroundNotificationListener() {
