@@ -77,13 +77,13 @@ public class MessagingService extends FirebaseMessagingService {
         return extensionInstance;
     }
 
-    private static boolean isAppInForeground(@NonNull Context context) {
+    private static boolean isAppInForeground() {
         ActivityManager.RunningAppProcessInfo info = new ActivityManager.RunningAppProcessInfo();
         ActivityManager.getMyMemoryState(info);
         return info.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
     }
 
-    static void dispatchOpened(@NonNull Context context, @NonNull AppAmbitNotification notification) {
+    static void dispatchOpened(@NonNull AppAmbitNotification notification) {
         PushKernel.OpenedNotificationListener staticListener = PushKernel.getOpenedNotificationListener();
         if (staticListener != null) {
             staticListener.onOpenedNotification(notification);

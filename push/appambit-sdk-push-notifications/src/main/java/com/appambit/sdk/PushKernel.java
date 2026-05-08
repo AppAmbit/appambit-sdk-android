@@ -211,7 +211,7 @@ public final class PushKernel {
         AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
         Log.d(TAG, "Notification opened by user. Title: " + title);
 
-        MessagingService.dispatchOpened(context, notification);
+        MessagingService.dispatchOpened(notification);
 
         intent.setAction(null);
     }
