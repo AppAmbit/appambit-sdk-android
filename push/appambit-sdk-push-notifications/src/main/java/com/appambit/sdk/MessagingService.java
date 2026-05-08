@@ -59,17 +59,20 @@ public class MessagingService extends FirebaseMessagingService {
     @Nullable
     private static IAppAmbitNotificationServiceExtension getExtension(@NonNull Context context) {
         if (extensionInstance != null) return extensionInstance;
-        try {
-            ApplicationInfo ai = context.getPackageManager().getApplicationInfo(
-                    context.getPackageName(), PackageManager.GET_META_DATA);
-            if (ai.metaData == null) return null;
-            String className = ai.metaData.getString(META_DATA_EXTENSION_KEY);
-            if (className == null || className.isEmpty()) return null;
-            Class<?> cls = Class.forName(className);
-            extensionInstance = (IAppAmbitNotificationServiceExtension) cls.getDeclaredConstructor().newInstance();
-            Log.d(TAG, "NotificationServiceExtension loaded: " + className);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to instantiate NotificationServiceExtension from meta-data.", e);
+        synchronized (MessagingService.class) {
+            if (extensionInstance != null) return extensionInstance;
+            try {
+                ApplicationInfo appInfo = context.getPackageManager().getApplicationInfo(
+                        context.getPackageName(), PackageManager.GET_META_DATA);
+                if (appInfo.metaData == null) return null;
+                String className = appInfo.metaData.getString(META_DATA_EXTENSION_KEY);
+                if (className == null || className.isEmpty()) return null;
+                Class<?> cls = Class.forName(className);
+                extensionInstance = (IAppAmbitNotificationServiceExtension) cls.getDeclaredConstructor().newInstance();
+                Log.d(TAG, "NotificationServiceExtension loaded: " + className);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to instantiate NotificationServiceExtension from meta-data.", e);
+            }
         }
         return extensionInstance;
     }
@@ -104,6 +107,9 @@ public class MessagingService extends FirebaseMessagingService {
                     extras.getString("body"));
             String color = extras.getString("gcm.notification.color");
             String icon  = extras.getString("gcm.notification.icon");
+            String clickAction = firstNonNull(
+                    extras.getString("gcm.notification.click_action"),
+                    extras.getString("click_action"));
 
             Map<String, String> data = new HashMap<>();
             boolean isNotificationMessage = false;
@@ -112,7 +118,12 @@ public class MessagingService extends FirebaseMessagingService {
                 if (key.startsWith("gcm.n.") || key.startsWith("gcm.notification.")) {
                     isNotificationMessage = true;
                 }
-                if (!key.startsWith("google.") && !key.startsWith("gcm.") && !key.equals("from")) {
+                if (!key.startsWith("google.")
+                        && !key.startsWith("gcm.")
+                        && !key.startsWith("android.")
+                        && !key.equals("from")
+                        && !key.equals("collapse_key")
+                        && !key.equals("notification_foreground")) {
                     Object val = extras.get(key);
                     if (val != null) data.put(key, val.toString());
                 }
@@ -133,7 +144,7 @@ public class MessagingService extends FirebaseMessagingService {
                     buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
                             NotificationCompat.PRIORITY_DEFAULT,
                             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                            null, null);
+                            null, null, clickAction);
 
                     if (isNotificationMessage) {
                         return;
@@ -154,6 +165,8 @@ public class MessagingService extends FirebaseMessagingService {
 
         AppAmbitNotification notification;
         if (fcmNotification != null) {
+            String clickAction = fcmNotification.getClickAction();
+
             notification = new AppAmbitNotification(
                     fcmNotification.getTitle(),
                     fcmNotification.getBody(),
@@ -172,14 +185,21 @@ public class MessagingService extends FirebaseMessagingService {
             buildAndPostNotification(notification, channelId, priority,
                     getSoundUri(fcmNotification.getSound()),
                     fcmNotification.getTag(),
-                    fcmNotification.getImageUrl());
+                    fcmNotification.getImageUrl(),
+                    clickAction);
         } else {
+            String clickAction = data.get("click_action");
             notification = new AppAmbitNotification(
                     data.get("title"),
                     data.get("body"),
                     data.get("color"),
                     data.get("icon"),
                     data);
+
+            buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
+                    NotificationCompat.PRIORITY_DEFAULT,
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                    null, null, clickAction);
         }
 
         IAppAmbitNotificationServiceExtension ext = getExtension(this);
@@ -200,7 +220,8 @@ public class MessagingService extends FirebaseMessagingService {
             int priority,
             @NonNull Uri soundUri,
             @Nullable String tag,
-            @Nullable Uri imageUrl) {
+            @Nullable Uri imageUrl,
+            @Nullable String clickAction) {
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -221,7 +242,7 @@ public class MessagingService extends FirebaseMessagingService {
                 .setSmallIcon(getSmallIcon(notification))
                 .setContentTitle(notification.getTitle())
                 .setContentText(notification.getBody())
-                .setContentIntent(buildOpenedPendingIntent(notification))
+                .setContentIntent(buildOpenedPendingIntent(notification, clickAction))
                 .setAutoCancel(true)
                 .setPriority(priority)
                 .setSound(soundUri);
@@ -251,12 +272,16 @@ public class MessagingService extends FirebaseMessagingService {
         notificationManager.notify(tag, (int) System.currentTimeMillis(), builder.build());
     }
 
-    private PendingIntent buildOpenedPendingIntent(@NonNull AppAmbitNotification notification) {
-        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        if (launchIntent == null) {
-            launchIntent = new Intent();
+    private PendingIntent buildOpenedPendingIntent(@NonNull AppAmbitNotification notification, @Nullable String clickAction) {
+        Intent launchIntent;
+        if (!TextUtils.isEmpty(clickAction)) {
+            launchIntent = new Intent(clickAction);
+        } else {
+            launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+            if (launchIntent == null) launchIntent = new Intent();
+            launchIntent.setAction(ACTION_NOTIFICATION_OPENED);
         }
-        launchIntent.setAction(ACTION_NOTIFICATION_OPENED);
+
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
         launchIntent.putExtra(EXTRA_NOTIFICATION_TITLE, notification.getTitle());

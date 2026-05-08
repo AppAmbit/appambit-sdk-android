@@ -18,6 +18,9 @@ import com.appambit.sdk.models.AppAmbitNotification;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * The decoupled kernel for handling FCM logic.
  * This class has no dependency on the AppAmbit Core SDK.
@@ -29,12 +32,12 @@ public final class PushKernel {
     private static final String PREFS_NAME = "com.appambit.sdk.push.prefs";
     private static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
 
-    private static TokenListener tokenListener;
-    private static NotificationCustomizer notificationCustomizer;
-    private static BackgroundNotificationListener backgroundNotificationListener;
-    private static OpenedNotificationListener openedNotificationListener;
-    private static String currentToken;
-    private static boolean isStarted = false;
+    private static volatile TokenListener tokenListener;
+    private static volatile NotificationCustomizer notificationCustomizer;
+    private static volatile BackgroundNotificationListener backgroundNotificationListener;
+    private static volatile OpenedNotificationListener openedNotificationListener;
+    private static volatile String currentToken;
+    private static volatile boolean isStarted = false;
 
     private PushKernel() {}
 
@@ -196,7 +199,7 @@ public final class PushKernel {
         String color = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_COLOR);
         String icon  = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_ICON);
 
-        java.util.Map<String, String> data = new java.util.HashMap<>();
+        Map<String, String> data = new HashMap<>();
         String[] keys   = intent.getStringArrayExtra(MessagingService.EXTRA_NOTIFICATION_DATA);
         String[] values = intent.getStringArrayExtra(MessagingService.EXTRA_NOTIFICATION_DATA + "_values");
         if (keys != null && values != null) {
