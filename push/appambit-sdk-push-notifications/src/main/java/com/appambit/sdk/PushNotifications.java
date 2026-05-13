@@ -1,7 +1,6 @@
 package com.appambit.sdk;
 
 import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
 
 import androidx.activity.ComponentActivity;
@@ -24,6 +23,10 @@ public final class PushNotifications {
 
     public interface OpenedNotificationListener extends PushKernel.OpenedNotificationListener {}
 
+    public interface ForegroundNotificationListener extends PushKernel.ForegroundNotificationListener {}
+
+    public interface BackgroundNotificationListener extends PushKernel.BackgroundNotificationListener {}
+
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         PushKernel.setNotificationCustomizer(customizer);
     }
@@ -32,8 +35,12 @@ public final class PushNotifications {
         PushKernel.setOpenedNotificationListener(listener);
     }
 
-    public static void handleNotificationOpened(@NonNull Context context, @NonNull Intent intent) {
-        PushKernel.handleNotificationOpened(context, intent);
+    public static void setForegroundNotificationListener(@Nullable ForegroundNotificationListener listener) {
+        PushKernel.setForegroundNotificationListener(listener);
+    }
+
+    public static void setBackgroundNotificationListener(@Nullable BackgroundNotificationListener listener) {
+        PushKernel.setBackgroundNotificationListener(listener);
     }
 
     public static void start(@NonNull Context context) {

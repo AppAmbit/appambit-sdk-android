@@ -10,6 +10,7 @@ public class AppAmbitNotification {
     private final String body;
     private final String color;
     private final String smallIconName;
+    private final String imageUrl;
     private final Map<String, String> data;
 
     public AppAmbitNotification(
@@ -17,12 +18,14 @@ public class AppAmbitNotification {
             @Nullable String body,
             @Nullable String color,
             @Nullable String smallIconName,
+            @Nullable String imageUrl,
             @NonNull Map<String, String> data
     ) {
         this.title = title;
         this.body = body;
         this.color = color;
         this.smallIconName = smallIconName;
+        this.imageUrl = imageUrl;
         this.data = data;
     }
 
@@ -44,6 +47,11 @@ public class AppAmbitNotification {
     @Nullable
     public String getSmallIconName() {
         return smallIconName;
+    }
+
+    @Nullable
+    public String getImageUrl() {
+        return imageUrl;
     }
 
     @NonNull

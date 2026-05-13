@@ -36,6 +36,8 @@ public final class PushKernel {
     private static volatile NotificationCustomizer notificationCustomizer;
     private static volatile BackgroundNotificationListener backgroundNotificationListener;
     private static volatile OpenedNotificationListener openedNotificationListener;
+    private static volatile ForegroundNotificationListener foregroundNotificationListener;
+    private static volatile AppAmbitNotification pendingOpenedNotification;
     private static volatile String currentToken;
     private static volatile boolean isStarted = false;
 
@@ -61,6 +63,10 @@ public final class PushKernel {
         void onOpenedNotification(@NonNull AppAmbitNotification notification);
     }
 
+    public interface ForegroundNotificationListener {
+        void onForegroundNotificationReceived(@NonNull AppAmbitNotification notification);
+    }
+
     public static void setTokenListener(@Nullable TokenListener listener) {
         tokenListener = listener;
     }
@@ -72,8 +78,24 @@ public final class PushKernel {
 
     public static void setOpenedNotificationListener(@Nullable OpenedNotificationListener listener) {
         openedNotificationListener = listener;
+        AppAmbitNotification pending = pendingOpenedNotification;
+        if (listener != null && pending != null) {
+            pendingOpenedNotification = null;
+            listener.onOpenedNotification(pending);
+        }
     }
 
+    static void setPendingOpenedNotification(@NonNull AppAmbitNotification notification) {
+        pendingOpenedNotification = notification;
+    }
+
+    public static void setForegroundNotificationListener(@Nullable ForegroundNotificationListener listener) {
+        foregroundNotificationListener = listener;
+    }
+
+    public static void setBackgroundNotificationListener(@Nullable BackgroundNotificationListener listener) {
+        backgroundNotificationListener = listener;
+    }
 
     @Nullable
     public static BackgroundNotificationListener getBackgroundNotificationListener() {
@@ -83,6 +105,11 @@ public final class PushKernel {
     @Nullable
     public static OpenedNotificationListener getOpenedNotificationListener() {
         return openedNotificationListener;
+    }
+
+    @Nullable
+    public static ForegroundNotificationListener getForegroundNotificationListener() {
+        return foregroundNotificationListener;
     }
 
     @Nullable
@@ -198,6 +225,7 @@ public final class PushKernel {
         String body  = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_BODY);
         String color = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_COLOR);
         String icon  = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_ICON);
+        String imageUrl = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_IMAGE_URL);
 
         Map<String, String> data = new HashMap<>();
         String[] keys   = intent.getStringArrayExtra(MessagingService.EXTRA_NOTIFICATION_DATA);
@@ -208,11 +236,14 @@ public final class PushKernel {
             }
         }
 
-        AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
+        AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, imageUrl, data);
         Log.d(TAG, "Notification opened by user. Title: " + title);
 
-        MessagingService.dispatchOpened(notification);
-
-        intent.setAction(null);
+        OpenedNotificationListener listener = openedNotificationListener;
+        if (listener != null) {
+            listener.onOpenedNotification(notification);
+        } else {
+            pendingOpenedNotification = notification;
+        }
     }
 }

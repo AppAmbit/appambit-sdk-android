@@ -48,6 +48,7 @@ public class MessagingService extends FirebaseMessagingService {
     static final String EXTRA_NOTIFICATION_BODY       = "appambit_body";
     static final String EXTRA_NOTIFICATION_COLOR      = "appambit_color";
     static final String EXTRA_NOTIFICATION_ICON       = "appambit_icon";
+    static final String EXTRA_NOTIFICATION_IMAGE_URL  = "appambit_image_url";
     static final String EXTRA_NOTIFICATION_DATA       = "appambit_data_keys";
 
     private static final String DEFAULT_CHANNEL_ID    = "default_channel_id";
@@ -83,13 +84,6 @@ public class MessagingService extends FirebaseMessagingService {
         return info.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
     }
 
-    static void dispatchOpened(@NonNull AppAmbitNotification notification) {
-        PushKernel.OpenedNotificationListener staticListener = PushKernel.getOpenedNotificationListener();
-        if (staticListener != null) {
-            staticListener.onOpenedNotification(notification);
-        }
-    }
-
     @Override
     public void handleIntent(Intent intent) {
         if (!PushKernel.isNotificationsEnabled(this)) {
@@ -107,6 +101,9 @@ public class MessagingService extends FirebaseMessagingService {
                     extras.getString("body"));
             String color = extras.getString("gcm.notification.color");
             String icon  = extras.getString("gcm.notification.icon");
+            String imageUrl = firstNonNull(
+                    extras.getString("gcm.notification.image"),
+                    extras.getString("image"));
             String clickAction = firstNonNull(
                     extras.getString("gcm.notification.click_action"),
                     extras.getString("click_action"));
@@ -129,8 +126,8 @@ public class MessagingService extends FirebaseMessagingService {
                 }
             }
 
-            if (!isAppInForeground(this)) {
-                AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
+            if (!isAppInForeground()) {
+                AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, imageUrl, data);
                 IAppAmbitNotificationServiceExtension ext = getExtension(this);
                 if (ext != null) {
                     ext.onNotificationBackground(notification);
@@ -166,12 +163,15 @@ public class MessagingService extends FirebaseMessagingService {
         AppAmbitNotification notification;
         if (fcmNotification != null) {
             String clickAction = fcmNotification.getClickAction();
+            Uri fcmImage = fcmNotification.getImageUrl();
+            String imageUrl = fcmImage != null ? fcmImage.toString() : null;
 
             notification = new AppAmbitNotification(
                     fcmNotification.getTitle(),
                     fcmNotification.getBody(),
                     fcmNotification.getColor(),
                     fcmNotification.getIcon(),
+                    imageUrl,
                     data);
 
             String channelId = TextUtils.isEmpty(fcmNotification.getChannelId())
@@ -185,26 +185,35 @@ public class MessagingService extends FirebaseMessagingService {
             buildAndPostNotification(notification, channelId, priority,
                     getSoundUri(fcmNotification.getSound()),
                     fcmNotification.getTag(),
-                    fcmNotification.getImageUrl(),
+                    fcmImage,
                     clickAction);
         } else {
             String clickAction = data.get("click_action");
+            String imageUrl = firstNonNull(data.get("image"), data.get("image_url"));
             notification = new AppAmbitNotification(
                     data.get("title"),
                     data.get("body"),
                     data.get("color"),
                     data.get("icon"),
+                    imageUrl,
                     data);
 
             buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
                     NotificationCompat.PRIORITY_DEFAULT,
                     RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                    null, null, clickAction);
+                    null,
+                    imageUrl != null ? Uri.parse(imageUrl) : null,
+                    clickAction);
         }
 
         IAppAmbitNotificationServiceExtension ext = getExtension(this);
         if (ext != null) {
             ext.onNotificationForeground(notification);
+        }
+
+        PushKernel.ForegroundNotificationListener fgListener = PushKernel.getForegroundNotificationListener();
+        if (fgListener != null) {
+            fgListener.onForegroundNotificationReceived(notification);
         }
     }
 
@@ -273,21 +282,18 @@ public class MessagingService extends FirebaseMessagingService {
     }
 
     private PendingIntent buildOpenedPendingIntent(@NonNull AppAmbitNotification notification, @Nullable String clickAction) {
-        Intent launchIntent;
+        Intent intent = new Intent(this, NotificationOpenedReceiver.class);
+        intent.setAction(ACTION_NOTIFICATION_OPENED);
+
         if (!TextUtils.isEmpty(clickAction)) {
-            launchIntent = new Intent(clickAction);
-        } else {
-            launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-            if (launchIntent == null) launchIntent = new Intent();
-            launchIntent.setAction(ACTION_NOTIFICATION_OPENED);
+            intent.putExtra("appambit_click_action", clickAction);
         }
 
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
-        launchIntent.putExtra(EXTRA_NOTIFICATION_TITLE, notification.getTitle());
-        launchIntent.putExtra(EXTRA_NOTIFICATION_BODY,  notification.getBody());
-        launchIntent.putExtra(EXTRA_NOTIFICATION_COLOR, notification.getColor());
-        launchIntent.putExtra(EXTRA_NOTIFICATION_ICON,  notification.getSmallIconName());
+        intent.putExtra(EXTRA_NOTIFICATION_TITLE, notification.getTitle());
+        intent.putExtra(EXTRA_NOTIFICATION_BODY,  notification.getBody());
+        intent.putExtra(EXTRA_NOTIFICATION_COLOR, notification.getColor());
+        intent.putExtra(EXTRA_NOTIFICATION_ICON,  notification.getSmallIconName());
+        intent.putExtra(EXTRA_NOTIFICATION_IMAGE_URL, notification.getImageUrl());
 
         if (!notification.getData().isEmpty()) {
             String[] keys   = notification.getData().keySet().toArray(new String[0]);
@@ -295,14 +301,12 @@ public class MessagingService extends FirebaseMessagingService {
             for (int i = 0; i < keys.length; i++) {
                 values[i] = notification.getData().get(keys[i]);
             }
-            launchIntent.putExtra(EXTRA_NOTIFICATION_DATA, keys);
-            launchIntent.putExtra(EXTRA_NOTIFICATION_DATA + "_values", values);
+            intent.putExtra(EXTRA_NOTIFICATION_DATA, keys);
+            intent.putExtra(EXTRA_NOTIFICATION_DATA + "_values", values);
         }
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        return TaskStackBuilder.create(this)
-                .addNextIntentWithParentStack(launchIntent)
-                .getPendingIntent(0, flags);
+        return PendingIntent.getBroadcast(this, (int) System.currentTimeMillis(), intent, flags);
     }
 
     private static String firstNonNull(String... values) {
