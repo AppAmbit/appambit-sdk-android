@@ -1,6 +1,7 @@
 package com.appambit.sdk;
 
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 import androidx.activity.ComponentActivity;
@@ -9,11 +10,6 @@ import androidx.annotation.Nullable;
 
 import com.appambit.sdk.services.ConsumerService;
 
-/**
- * The public-facing class for integrating AppAmbit Push Notifications.
- * This class acts as a facade that connects the decoupled PushKernel with the AppAmbit Core SDK.
- * Native Android developers should use this class for a seamless integration.
- */
 public final class PushNotifications {
 
     private static final String TAG = "AppAmbitPushSDK";
@@ -25,8 +21,19 @@ public final class PushNotifications {
 
     public interface NotificationCustomizer extends PushKernel.NotificationCustomizer {}
 
+
+    public interface OpenedNotificationListener extends PushKernel.OpenedNotificationListener {}
+
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         PushKernel.setNotificationCustomizer(customizer);
+    }
+
+    public static void setOpenedNotificationListener(@Nullable OpenedNotificationListener listener) {
+        PushKernel.setOpenedNotificationListener(listener);
+    }
+
+    public static void handleNotificationOpened(@NonNull Context context, @NonNull Intent intent) {
+        PushKernel.handleNotificationOpened(context, intent);
     }
 
     public static void start(@NonNull Context context) {
@@ -62,20 +69,6 @@ public final class PushNotifications {
         }
     }
 
-    /**
-     * Enables or disables push notifications at both the business and FCM levels.
-     *
-     * <p>When set to {@code false}, this method will:
-     * <ol>
-     *     <li>Update the AppAmbit dashboard to reflect that the user has opted out.</li>
-     *     <li>Delete the local FCM token to stop the device from receiving push notifications.</li>
-     * </ol>
-     *
-     * <p>When set to {@code true}, a new FCM token will be fetched and sent to the AppAmbit dashboard.
-     *
-     * @param context The application context.
-     * @param enabled {@code true} to enable notifications, {@code false} to disable.
-     */
     public static void setNotificationsEnabled(@NonNull Context context, boolean enabled) {
         if (!AppAmbit.isInitialized()) {
             Log.e(TAG, "AppAmbit SDK is not initialized. Cannot set notification status.");
@@ -90,12 +83,6 @@ public final class PushNotifications {
         ConsumerService.updateConsumer(currentToken, enabled);
     }
 
-    /**
-     * Checks if push notifications are currently enabled by the user.
-     *
-     * @param context The application context.
-     * @return {@code true} if notifications are enabled, {@code false} otherwise.
-     */
     public static boolean isNotificationsEnabled(@NonNull Context context) {
         return PushKernel.isNotificationsEnabled(context);
     }

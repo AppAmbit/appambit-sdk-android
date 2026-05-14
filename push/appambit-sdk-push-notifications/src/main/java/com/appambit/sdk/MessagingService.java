@@ -1,11 +1,12 @@
 package com.appambit.sdk;
 
+import android.app.ActivityManager;
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -15,12 +16,15 @@ import android.graphics.Color;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.TaskStackBuilder;
 import androidx.core.content.ContextCompat;
 
 import com.appambit.sdk.models.AppAmbitNotification;
@@ -31,11 +35,60 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 
 public class MessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "AppAmbitPushSDK";
+    public static final String META_DATA_EXTENSION_KEY = "com.appambit.sdk.NotificationServiceExtension";
+
+    static final String ACTION_NOTIFICATION_OPENED    = "com.appambit.sdk.NOTIFICATION_OPENED";
+    static final String EXTRA_NOTIFICATION_TITLE      = "appambit_title";
+    static final String EXTRA_NOTIFICATION_BODY       = "appambit_body";
+    static final String EXTRA_NOTIFICATION_COLOR      = "appambit_color";
+    static final String EXTRA_NOTIFICATION_ICON       = "appambit_icon";
+    static final String EXTRA_NOTIFICATION_DATA       = "appambit_data_keys";
+
+    private static final String DEFAULT_CHANNEL_ID    = "default_channel_id";
+    private static final String DEFAULT_CHANNEL_NAME  = "Default Channel";
+
+    @Nullable
+    private static volatile IAppAmbitNotificationServiceExtension extensionInstance;
+
+    @Nullable
+    private static IAppAmbitNotificationServiceExtension getExtension(@NonNull Context context) {
+        if (extensionInstance != null) return extensionInstance;
+        synchronized (MessagingService.class) {
+            if (extensionInstance != null) return extensionInstance;
+            try {
+                ApplicationInfo appInfo = context.getPackageManager().getApplicationInfo(
+                        context.getPackageName(), PackageManager.GET_META_DATA);
+                if (appInfo.metaData == null) return null;
+                String className = appInfo.metaData.getString(META_DATA_EXTENSION_KEY);
+                if (className == null || className.isEmpty()) return null;
+                Class<?> cls = Class.forName(className);
+                extensionInstance = (IAppAmbitNotificationServiceExtension) cls.getDeclaredConstructor().newInstance();
+                Log.d(TAG, "NotificationServiceExtension loaded: " + className);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to instantiate NotificationServiceExtension from meta-data.", e);
+            }
+        }
+        return extensionInstance;
+    }
+
+    private static boolean isAppInForeground() {
+        ActivityManager.RunningAppProcessInfo info = new ActivityManager.RunningAppProcessInfo();
+        ActivityManager.getMyMemoryState(info);
+        return info.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
+    }
+
+    static void dispatchOpened(@NonNull AppAmbitNotification notification) {
+        PushKernel.OpenedNotificationListener staticListener = PushKernel.getOpenedNotificationListener();
+        if (staticListener != null) {
+            staticListener.onOpenedNotification(notification);
+        }
+    }
 
     @Override
     public void handleIntent(Intent intent) {
@@ -43,131 +96,231 @@ public class MessagingService extends FirebaseMessagingService {
             Log.d(TAG, "Notification received but push is disabled locally. Skipping.");
             return;
         }
+
+        Bundle extras = intent.getExtras();
+        if (extras != null) {
+            String title = firstNonNull(
+                    extras.getString("gcm.notification.title"),
+                    extras.getString("title"));
+            String body = firstNonNull(
+                    extras.getString("gcm.notification.body"),
+                    extras.getString("body"));
+            String color = extras.getString("gcm.notification.color");
+            String icon  = extras.getString("gcm.notification.icon");
+            String clickAction = firstNonNull(
+                    extras.getString("gcm.notification.click_action"),
+                    extras.getString("click_action"));
+
+            Map<String, String> data = new HashMap<>();
+            boolean isNotificationMessage = false;
+
+            for (String key : extras.keySet()) {
+                if (key.startsWith("gcm.n.") || key.startsWith("gcm.notification.")) {
+                    isNotificationMessage = true;
+                }
+                if (!key.startsWith("google.")
+                        && !key.startsWith("gcm.")
+                        && !key.startsWith("android.")
+                        && !key.equals("from")
+                        && !key.equals("collapse_key")
+                        && !key.equals("notification_foreground")) {
+                    Object val = extras.get(key);
+                    if (val != null) data.put(key, val.toString());
+                }
+            }
+
+            if (!isAppInForeground(this)) {
+                AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
+                IAppAmbitNotificationServiceExtension ext = getExtension(this);
+                if (ext != null) {
+                    ext.onNotificationBackground(notification);
+                }
+                PushKernel.BackgroundNotificationListener bgListener = PushKernel.getBackgroundNotificationListener();
+                if (bgListener != null) {
+                    bgListener.onBackgroundNotificationReceived(notification);
+                }
+
+                if (title != null || body != null) {
+                    buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
+                            NotificationCompat.PRIORITY_DEFAULT,
+                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                            null, null, clickAction);
+
+                    if (isNotificationMessage) {
+                        return;
+                    }
+                }
+            }
+        }
+
         super.handleIntent(intent);
     }
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage message) {
         super.onMessageReceived(message);
-        if (message.getNotification() != null) {
-            sendNotification(message);
+
+        RemoteMessage.Notification fcmNotification = message.getNotification();
+        Map<String, String> data = message.getData();
+
+        AppAmbitNotification notification;
+        if (fcmNotification != null) {
+            String clickAction = fcmNotification.getClickAction();
+
+            notification = new AppAmbitNotification(
+                    fcmNotification.getTitle(),
+                    fcmNotification.getBody(),
+                    fcmNotification.getColor(),
+                    fcmNotification.getIcon(),
+                    data);
+
+            String channelId = TextUtils.isEmpty(fcmNotification.getChannelId())
+                    ? DEFAULT_CHANNEL_ID
+                    : fcmNotification.getChannelId();
+
+            int priority = fcmNotification.getNotificationPriority() != null
+                    ? fcmNotification.getNotificationPriority()
+                    : NotificationCompat.PRIORITY_DEFAULT;
+
+            buildAndPostNotification(notification, channelId, priority,
+                    getSoundUri(fcmNotification.getSound()),
+                    fcmNotification.getTag(),
+                    fcmNotification.getImageUrl(),
+                    clickAction);
+        } else {
+            String clickAction = data.get("click_action");
+            notification = new AppAmbitNotification(
+                    data.get("title"),
+                    data.get("body"),
+                    data.get("color"),
+                    data.get("icon"),
+                    data);
+
+            buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
+                    NotificationCompat.PRIORITY_DEFAULT,
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                    null, null, clickAction);
+        }
+
+        IAppAmbitNotificationServiceExtension ext = getExtension(this);
+        if (ext != null) {
+            ext.onNotificationForeground(notification);
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private void sendNotification(@NonNull RemoteMessage remoteMessage) {
-        RemoteMessage.Notification notification = remoteMessage.getNotification();
-        if (notification == null) return;
+    @Override
+    public void onNewToken(@NonNull String token) {
+        super.onNewToken(token);
+        PushKernel.handleNewToken(token);
+    }
 
-        Map<String, String> data = remoteMessage.getData();
+    private void buildAndPostNotification(
+            @NonNull AppAmbitNotification notification,
+            @NonNull String channelId,
+            int priority,
+            @NonNull Uri soundUri,
+            @Nullable String tag,
+            @Nullable Uri imageUrl,
+            @Nullable String clickAction) {
 
-        AppAmbitNotification appAmbitNotification = new AppAmbitNotification(
-                notification.getTitle(),
-                notification.getBody(),
-                notification.getColor(),
-                notification.getIcon(),
-                data
-        );
-
-        String channelId = notification.getChannelId();
-        if (TextUtils.isEmpty(channelId)) {
-            channelId = "default_channel_id";
-        }
-        String channelName = "Default Channel";
-
-        Intent intent;
-        String clickAction = notification.getClickAction();
-        if (!TextUtils.isEmpty(clickAction)) {
-            intent = new Intent(clickAction);
-        } else {
-            intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        }
-
-        PendingIntent pendingIntent = null;
-        if (intent != null) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "POST_NOTIFICATIONS permission not granted. Cannot show notification.");
+            return;
         }
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            if (notification.getNotificationPriority() != null) {
-                importance = getImportanceFromPriority(notification.getNotificationPriority());
-            }
-            NotificationChannel channel = new NotificationChannel(channelId, channelName, importance);
-            Uri soundUri = getSoundUri(notification.getSound());
+            int importance = getImportanceFromPriority(priority);
+            NotificationChannel channel = new NotificationChannel(channelId, DEFAULT_CHANNEL_NAME, importance);
             channel.setSound(soundUri, null);
             notificationManager.createNotificationChannel(channel);
         }
 
-        int appIcon = getSmallIcon(appAmbitNotification);
-
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(appIcon)
-                .setContentTitle(appAmbitNotification.getTitle())
-                .setContentText(appAmbitNotification.getBody())
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true);
+                .setSmallIcon(getSmallIcon(notification))
+                .setContentTitle(notification.getTitle())
+                .setContentText(notification.getBody())
+                .setContentIntent(buildOpenedPendingIntent(notification, clickAction))
+                .setAutoCancel(true)
+                .setPriority(priority)
+                .setSound(soundUri);
 
-        if (notification.getNotificationPriority() != null) {
-            builder.setPriority(notification.getNotificationPriority());
-        } else {
-            builder.setPriority(NotificationCompat.PRIORITY_DEFAULT);
-        }
-
-        if (appAmbitNotification.getColor() != null) {
+        if (notification.getColor() != null) {
             try {
-                builder.setColor(Color.parseColor(appAmbitNotification.getColor()));
+                builder.setColor(Color.parseColor(notification.getColor()));
             } catch (IllegalArgumentException e) {
-                Log.w(TAG, "Invalid color format: " + appAmbitNotification.getColor() + ". Using default.");
+                Log.w(TAG, "Invalid color value: " + notification.getColor());
             }
         }
 
-        builder.setSound(getSoundUri(notification.getSound()));
-
-        if (notification.getTicker() != null) {
-            builder.setTicker(notification.getTicker());
-        }
-
-        builder.setOngoing(notification.getSticky());
-
-        if (notification.getVisibility() != null) {
-            builder.setVisibility(notification.getVisibility());
-        }
-
-        Uri imageUrl = remoteMessage.getNotification().getImageUrl();
         if (imageUrl != null) {
             Bitmap bitmap = getBitmapFromUrl(imageUrl.toString());
             if (bitmap != null) {
-                builder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bitmap).bigLargeIcon((Bitmap) null));
+                builder.setStyle(new NotificationCompat.BigPictureStyle()
+                        .bigPicture(bitmap)
+                        .bigLargeIcon((Bitmap) null));
             }
         }
 
         PushKernel.NotificationCustomizer customizer = PushKernel.getNotificationCustomizer();
         if (customizer != null) {
-            customizer.customize(this, builder, appAmbitNotification);
+            customizer.customize(this, builder, notification);
         }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            notificationManager.notify(notification.getTag(), (int) System.currentTimeMillis(), builder.build());
-        } else {
-            Log.w(TAG, "POST_NOTIFICATIONS permission not granted. Cannot show notification.");
-        }
+        notificationManager.notify(tag, (int) System.currentTimeMillis(), builder.build());
     }
 
-    private Uri getSoundUri(String sound) {
+    private PendingIntent buildOpenedPendingIntent(@NonNull AppAmbitNotification notification, @Nullable String clickAction) {
+        Intent launchIntent;
+        if (!TextUtils.isEmpty(clickAction)) {
+            launchIntent = new Intent(clickAction);
+        } else {
+            launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+            if (launchIntent == null) launchIntent = new Intent();
+            launchIntent.setAction(ACTION_NOTIFICATION_OPENED);
+        }
+
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        launchIntent.putExtra(EXTRA_NOTIFICATION_TITLE, notification.getTitle());
+        launchIntent.putExtra(EXTRA_NOTIFICATION_BODY,  notification.getBody());
+        launchIntent.putExtra(EXTRA_NOTIFICATION_COLOR, notification.getColor());
+        launchIntent.putExtra(EXTRA_NOTIFICATION_ICON,  notification.getSmallIconName());
+
+        if (!notification.getData().isEmpty()) {
+            String[] keys   = notification.getData().keySet().toArray(new String[0]);
+            String[] values = new String[keys.length];
+            for (int i = 0; i < keys.length; i++) {
+                values[i] = notification.getData().get(keys[i]);
+            }
+            launchIntent.putExtra(EXTRA_NOTIFICATION_DATA, keys);
+            launchIntent.putExtra(EXTRA_NOTIFICATION_DATA + "_values", values);
+        }
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+        return TaskStackBuilder.create(this)
+                .addNextIntentWithParentStack(launchIntent)
+                .getPendingIntent(0, flags);
+    }
+
+    private static String firstNonNull(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isEmpty()) return v;
+        }
+        return null;
+    }
+
+    private Uri getSoundUri(@Nullable String sound) {
         if (sound == null || sound.isEmpty() || "default".equalsIgnoreCase(sound)) {
             return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         }
-
-        int soundResourceId = getResources().getIdentifier(sound, "raw", getPackageName());
-        if (soundResourceId != 0) {
-            return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + getPackageName() + "/" + soundResourceId);
+        int resourceId = getResources().getIdentifier(sound, "raw", getPackageName());
+        if (resourceId != 0) {
+            return Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + getPackageName() + "/" + resourceId);
         }
-
-        Log.w(TAG, "Sound resource '" + sound + "' not found. Using default sound.");
+        Log.w(TAG, "Sound resource '" + sound + "' not found. Using default.");
         return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
     }
 
@@ -191,29 +344,26 @@ public class MessagingService extends FirebaseMessagingService {
         String customIconName = notification.getSmallIconName();
         if (customIconName != null && !customIconName.isEmpty()) {
             try {
-                String iconNameWithoutExtension = customIconName.split("\\.")[0];
-                int iconId = getResources().getIdentifier(iconNameWithoutExtension, "drawable", getPackageName());
+                String name = customIconName.split("\\.")[0];
+                int iconId = getResources().getIdentifier(name, "drawable", getPackageName());
                 if (iconId != 0) return iconId;
                 Log.w(TAG, "Custom icon '" + customIconName + "' not found in drawables.");
             } catch (Exception e) {
-                Log.e(TAG, "Error getting custom icon", e);
+                Log.e(TAG, "Error resolving custom icon", e);
             }
         }
         try {
             ApplicationInfo appInfo = getPackageManager().getApplicationInfo(getPackageName(), 0);
             if (appInfo.icon != 0) return appInfo.icon;
-            Log.w(TAG, "App icon not found, using default.");
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Could not find application package icon", e);
+            Log.e(TAG, "Could not resolve application icon", e);
         }
         return android.R.drawable.sym_def_app_icon;
     }
 
-    private Bitmap getBitmapFromUrl(String src) {
-        if (src == null || src.isEmpty()) return null;
+    private Bitmap getBitmapFromUrl(@NonNull String src) {
         try {
-            URL url = new URL(src);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) new URL(src).openConnection();
             connection.setDoInput(true);
             connection.connect();
             InputStream input = connection.getInputStream();
@@ -224,9 +374,5 @@ public class MessagingService extends FirebaseMessagingService {
         }
     }
 
-    @Override
-    public void onNewToken(@NonNull String token) {
-        super.onNewToken(token);
-        PushKernel.handleNewToken(token);
-    }
+
 }

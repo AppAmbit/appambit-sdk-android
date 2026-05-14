@@ -18,6 +18,9 @@ import com.appambit.sdk.models.AppAmbitNotification;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * The decoupled kernel for handling FCM logic.
  * This class has no dependency on the AppAmbit Core SDK.
@@ -29,10 +32,12 @@ public final class PushKernel {
     private static final String PREFS_NAME = "com.appambit.sdk.push.prefs";
     private static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
 
-    private static TokenListener tokenListener;
-    private static NotificationCustomizer notificationCustomizer;
-    private static String currentToken;
-    private static boolean isStarted = false;
+    private static volatile TokenListener tokenListener;
+    private static volatile NotificationCustomizer notificationCustomizer;
+    private static volatile BackgroundNotificationListener backgroundNotificationListener;
+    private static volatile OpenedNotificationListener openedNotificationListener;
+    private static volatile String currentToken;
+    private static volatile boolean isStarted = false;
 
     private PushKernel() {}
 
@@ -48,12 +53,36 @@ public final class PushKernel {
         void customize(@NonNull Context context, @NonNull NotificationCompat.Builder builder, @NonNull AppAmbitNotification notification);
     }
 
+    public interface BackgroundNotificationListener {
+        void onBackgroundNotificationReceived(@NonNull AppAmbitNotification notification);
+    }
+
+    public interface OpenedNotificationListener {
+        void onOpenedNotification(@NonNull AppAmbitNotification notification);
+    }
+
     public static void setTokenListener(@Nullable TokenListener listener) {
         tokenListener = listener;
     }
 
     public static void setNotificationCustomizer(@Nullable NotificationCustomizer customizer) {
         notificationCustomizer = customizer;
+    }
+
+
+    public static void setOpenedNotificationListener(@Nullable OpenedNotificationListener listener) {
+        openedNotificationListener = listener;
+    }
+
+
+    @Nullable
+    public static BackgroundNotificationListener getBackgroundNotificationListener() {
+        return backgroundNotificationListener;
+    }
+
+    @Nullable
+    public static OpenedNotificationListener getOpenedNotificationListener() {
+        return openedNotificationListener;
     }
 
     @Nullable
@@ -158,5 +187,32 @@ public final class PushKernel {
         if (tokenListener != null) {
             tokenListener.onNewToken(token);
         }
+    }
+
+    public static void handleNotificationOpened(@NonNull Context context, @NonNull Intent intent) {
+        if (!MessagingService.ACTION_NOTIFICATION_OPENED.equals(intent.getAction())) {
+            return;
+        }
+
+        String title = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_TITLE);
+        String body  = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_BODY);
+        String color = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_COLOR);
+        String icon  = intent.getStringExtra(MessagingService.EXTRA_NOTIFICATION_ICON);
+
+        Map<String, String> data = new HashMap<>();
+        String[] keys   = intent.getStringArrayExtra(MessagingService.EXTRA_NOTIFICATION_DATA);
+        String[] values = intent.getStringArrayExtra(MessagingService.EXTRA_NOTIFICATION_DATA + "_values");
+        if (keys != null && values != null) {
+            for (int i = 0; i < keys.length && i < values.length; i++) {
+                data.put(keys[i], values[i]);
+            }
+        }
+
+        AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, data);
+        Log.d(TAG, "Notification opened by user. Title: " + title);
+
+        MessagingService.dispatchOpened(notification);
+
+        intent.setAction(null);
     }
 }
