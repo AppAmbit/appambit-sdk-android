@@ -130,7 +130,7 @@ public class MessagingService extends FirebaseMessagingService {
                 AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, imageUrl, data);
                 IAppAmbitNotificationServiceExtension ext = getExtension(this);
                 if (ext != null) {
-                    ext.onNotificationBackground(notification);
+                    ext.onNotificationBackground(this, notification);
                 }
                 PushKernel.BackgroundNotificationListener bgListener = PushKernel.getBackgroundNotificationListener();
                 if (bgListener != null) {
@@ -208,7 +208,7 @@ public class MessagingService extends FirebaseMessagingService {
 
         IAppAmbitNotificationServiceExtension ext = getExtension(this);
         if (ext != null) {
-            ext.onNotificationForeground(notification);
+            ext.onNotificationForeground(this, notification);
         }
 
         PushKernel.ForegroundNotificationListener fgListener = PushKernel.getForegroundNotificationListener();
@@ -282,12 +282,14 @@ public class MessagingService extends FirebaseMessagingService {
     }
 
     private PendingIntent buildOpenedPendingIntent(@NonNull AppAmbitNotification notification, @Nullable String clickAction) {
-        Intent intent = new Intent(this, NotificationOpenedReceiver.class);
-        intent.setAction(ACTION_NOTIFICATION_OPENED);
-
-        if (!TextUtils.isEmpty(clickAction)) {
-            intent.putExtra("appambit_click_action", clickAction);
+        Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        if (intent == null) {
+            intent = new Intent();
+            intent.setPackage(getPackageName());
         }
+
+        intent.setAction(ACTION_NOTIFICATION_OPENED);
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
         intent.putExtra(EXTRA_NOTIFICATION_TITLE, notification.getTitle());
         intent.putExtra(EXTRA_NOTIFICATION_BODY,  notification.getBody());
@@ -306,7 +308,7 @@ public class MessagingService extends FirebaseMessagingService {
         }
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        return PendingIntent.getBroadcast(this, (int) System.currentTimeMillis(), intent, flags);
+        return PendingIntent.getActivity(this, (int) System.currentTimeMillis(), intent, flags);
     }
 
     private static String firstNonNull(String... values) {

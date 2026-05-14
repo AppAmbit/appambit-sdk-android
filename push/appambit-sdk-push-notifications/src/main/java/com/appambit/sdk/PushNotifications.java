@@ -101,4 +101,8 @@ public final class PushNotifications {
     public static void requestNotificationPermission(@NonNull ComponentActivity activity, @Nullable PermissionListener listener) {
         PushKernel.requestNotificationPermission(activity, listener);
     }
+
+    public static void handleNotificationOpened(@NonNull Context context, @NonNull android.content.Intent intent) {
+        PushKernel.handleNotificationOpened(context, intent);
+    }
 }
