@@ -11,11 +11,11 @@ public interface IAppAmbitNotificationServiceExtension {
 
     void onNotificationBackground(@NonNull AppAmbitNotification notification);
 
-     default void onNotificationForeground(@NonNull Context context, @NonNull AppAmbitNotification notification) {
-         onNotificationForeground(notification);
-     }
-
-     default void onNotificationBackground(@NonNull Context context, @NonNull AppAmbitNotification notification) {
-         onNotificationBackground(notification);
-     }
+    default void onNotificationForeground(@NonNull Context context, @NonNull AppAmbitNotification notification) {
+        onNotificationForeground(notification);
+    }
+    
+    default void onNotificationBackground(@NonNull Context context, @NonNull AppAmbitNotification notification) {
+        onNotificationBackground(notification);
+    }
 }
