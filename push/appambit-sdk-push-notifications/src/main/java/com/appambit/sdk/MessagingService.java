@@ -93,20 +93,20 @@ public class MessagingService extends FirebaseMessagingService {
 
         Bundle extras = intent.getExtras();
         if (extras != null) {
-            String title = firstNonNull(
-                    extras.getString("gcm.notification.title"),
-                    extras.getString("title"));
-            String body = firstNonNull(
-                    extras.getString("gcm.notification.body"),
-                    extras.getString("body"));
-            String color = extras.getString("gcm.notification.color");
-            String icon  = extras.getString("gcm.notification.icon");
-            String imageUrl = firstNonNull(
-                    extras.getString("gcm.notification.image"),
-                    extras.getString("image"));
-            String clickAction = firstNonNull(
-                    extras.getString("gcm.notification.click_action"),
-                    extras.getString("click_action"));
+            String title       = firstNonNull(extras.getString("gcm.notification.title"),    extras.getString("title"));
+            String body        = firstNonNull(extras.getString("gcm.notification.body"),     extras.getString("body"));
+            String color       = firstNonNull(extras.getString("gcm.notification.color"),    extras.getString("color"));
+            String icon        = firstNonNull(extras.getString("gcm.notification.icon"),     extras.getString("icon"));
+            String imageUrl    = firstNonNull(extras.getString("gcm.notification.image"),    extras.getString("image"), extras.getString("image_url"));
+            String clickAction = firstNonNull(extras.getString("gcm.notification.click_action"), extras.getString("click_action"));
+            String ticker      = firstNonNull(extras.getString("gcm.notification.ticker"),   extras.getString("ticker"));
+            String visibility  = firstNonNull(extras.getString("gcm.notification.visibility"), extras.getString("visibility"));
+            String channelId   = firstNonNull(extras.getString("gcm.notification.android_channel_id"), extras.getString("channel_id"), extras.getString("android_channel_id"));
+            String priority    = firstNonNull(extras.getString("gcm.notification.notification_priority"), extras.getString("notification_priority"));
+            String tag         = firstNonNull(extras.getString("gcm.notification.tag"),      extras.getString("tag"));
+            String sound       = firstNonNull(extras.getString("gcm.notification.sound"),    extras.getString("sound"));
+            String stickyRaw   = firstNonNull(extras.getString("gcm.notification.sticky"),   extras.getString("sticky"));
+            Boolean sticky     = stickyRaw != null ? Boolean.parseBoolean(stickyRaw) : null;
 
             Map<String, String> data = new HashMap<>();
             boolean isNotificationMessage = false;
@@ -127,7 +127,9 @@ public class MessagingService extends FirebaseMessagingService {
             }
 
             if (!isAppInForeground()) {
-                AppAmbitNotification notification = new AppAmbitNotification(title, body, color, icon, imageUrl, data);
+                AppAmbitNotification notification = new AppAmbitNotification(
+                        title, body, color, icon, imageUrl, data,
+                        ticker, sticky, visibility, channelId, priority, tag, sound, clickAction);
                 IAppAmbitNotificationServiceExtension ext = getExtension(this);
                 if (ext != null) {
                     ext.onNotificationBackground(this, notification);
@@ -138,10 +140,7 @@ public class MessagingService extends FirebaseMessagingService {
                 }
 
                 if (title != null || body != null) {
-                    buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
-                            NotificationCompat.PRIORITY_DEFAULT,
-                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                            null, null, clickAction);
+                    buildAndPostNotification(notification, imageUrl != null ? Uri.parse(imageUrl) : null);
 
                     if (isNotificationMessage) {
                         return;
@@ -157,54 +156,52 @@ public class MessagingService extends FirebaseMessagingService {
     public void onMessageReceived(@NonNull RemoteMessage message) {
         super.onMessageReceived(message);
 
-        RemoteMessage.Notification fcmNotification = message.getNotification();
+        RemoteMessage.Notification fcm = message.getNotification();
         Map<String, String> data = message.getData();
 
-        AppAmbitNotification notification;
-        if (fcmNotification != null) {
-            String clickAction = fcmNotification.getClickAction();
-            Uri fcmImage = fcmNotification.getImageUrl();
-            String imageUrl = fcmImage != null ? fcmImage.toString() : null;
+        String title, body, color, icon, imageUrl, ticker, channelId, tag, sound, clickAction, visibility, priority;
+        Boolean sticky;
+        Uri fcmImage = null;
 
-            notification = new AppAmbitNotification(
-                    fcmNotification.getTitle(),
-                    fcmNotification.getBody(),
-                    fcmNotification.getColor(),
-                    fcmNotification.getIcon(),
-                    imageUrl,
-                    data);
-
-            String channelId = TextUtils.isEmpty(fcmNotification.getChannelId())
-                    ? DEFAULT_CHANNEL_ID
-                    : fcmNotification.getChannelId();
-
-            int priority = fcmNotification.getNotificationPriority() != null
-                    ? fcmNotification.getNotificationPriority()
-                    : NotificationCompat.PRIORITY_DEFAULT;
-
-            buildAndPostNotification(notification, channelId, priority,
-                    getSoundUri(fcmNotification.getSound()),
-                    fcmNotification.getTag(),
-                    fcmImage,
-                    clickAction);
+        if (fcm != null) {
+            fcmImage    = fcm.getImageUrl();
+            title       = firstNonNull(fcm.getTitle(),    data.get("title"));
+            body        = firstNonNull(fcm.getBody(),     data.get("body"));
+            color       = firstNonNull(fcm.getColor(),    data.get("color"));
+            icon        = firstNonNull(fcm.getIcon(),     data.get("icon"));
+            imageUrl    = fcmImage != null ? fcmImage.toString() : firstNonNull(data.get("image"), data.get("image_url"));
+            ticker      = firstNonNull(fcm.getTicker(),   data.get("ticker"));
+            sticky      = fcm.getSticky() ? Boolean.TRUE
+                    : (data.containsKey("sticky") ? Boolean.parseBoolean(data.get("sticky")) : null);
+            visibility  = fcm.getVisibility() != null ? String.valueOf(fcm.getVisibility()) : data.get("visibility");
+            channelId   = firstNonNull(fcm.getChannelId(), data.get("channel_id"), data.get("android_channel_id"));
+            priority    = fcm.getNotificationPriority() != null ? String.valueOf(fcm.getNotificationPriority())
+                    : data.get("notification_priority");
+            tag         = firstNonNull(fcm.getTag(),         data.get("tag"));
+            sound       = firstNonNull(fcm.getSound(),       data.get("sound"));
+            clickAction = firstNonNull(fcm.getClickAction(), data.get("click_action"));
         } else {
-            String clickAction = data.get("click_action");
-            String imageUrl = firstNonNull(data.get("image"), data.get("image_url"));
-            notification = new AppAmbitNotification(
-                    data.get("title"),
-                    data.get("body"),
-                    data.get("color"),
-                    data.get("icon"),
-                    imageUrl,
-                    data);
-
-            buildAndPostNotification(notification, DEFAULT_CHANNEL_ID,
-                    NotificationCompat.PRIORITY_DEFAULT,
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                    null,
-                    imageUrl != null ? Uri.parse(imageUrl) : null,
-                    clickAction);
+            title       = data.get("title");
+            body        = data.get("body");
+            color       = data.get("color");
+            icon        = data.get("icon");
+            imageUrl    = firstNonNull(data.get("image"), data.get("image_url"));
+            ticker      = data.get("ticker");
+            sticky      = data.containsKey("sticky") ? Boolean.parseBoolean(data.get("sticky")) : null;
+            visibility  = data.get("visibility");
+            channelId   = firstNonNull(data.get("channel_id"), data.get("android_channel_id"));
+            priority    = data.get("notification_priority");
+            tag         = data.get("tag");
+            sound       = data.get("sound");
+            clickAction = data.get("click_action");
         }
+
+        AppAmbitNotification notification = new AppAmbitNotification(
+                title, body, color, icon, imageUrl, data,
+                ticker, sticky, visibility, channelId, priority, tag, sound, clickAction);
+
+        Uri imageUri = fcmImage != null ? fcmImage : (imageUrl != null ? Uri.parse(imageUrl) : null);
+        buildAndPostNotification(notification, imageUri);
 
         IAppAmbitNotificationServiceExtension ext = getExtension(this);
         if (ext != null) {
@@ -225,18 +222,19 @@ public class MessagingService extends FirebaseMessagingService {
 
     private void buildAndPostNotification(
             @NonNull AppAmbitNotification notification,
-            @NonNull String channelId,
-            int priority,
-            @NonNull Uri soundUri,
-            @Nullable String tag,
-            @Nullable Uri imageUrl,
-            @Nullable String clickAction) {
+            @Nullable Uri imageUrl) {
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
             Log.w(TAG, "POST_NOTIFICATIONS permission not granted. Cannot show notification.");
             return;
         }
+
+        String channelId = !TextUtils.isEmpty(notification.getChannelId())
+                ? notification.getChannelId()
+                : DEFAULT_CHANNEL_ID;
+        int priority = parsePriority(notification.getPriority());
+        Uri soundUri = getSoundUri(notification.getSound());
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
 
@@ -247,14 +245,26 @@ public class MessagingService extends FirebaseMessagingService {
             notificationManager.createNotificationChannel(channel);
         }
 
+        boolean sticky = Boolean.TRUE.equals(notification.getSticky());
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(getSmallIcon(notification))
                 .setContentTitle(notification.getTitle())
                 .setContentText(notification.getBody())
-                .setContentIntent(buildOpenedPendingIntent(notification, clickAction))
-                .setAutoCancel(true)
+                .setContentIntent(buildOpenedPendingIntent(notification))
+                .setAutoCancel(!sticky)
+                .setOngoing(sticky)
                 .setPriority(priority)
                 .setSound(soundUri);
+
+        if (notification.getTicker() != null) {
+            builder.setTicker(notification.getTicker());
+        }
+
+        Integer visibility = parseVisibility(notification.getVisibility());
+        if (visibility != null) {
+            builder.setVisibility(visibility);
+        }
 
         if (notification.getColor() != null) {
             try {
@@ -278,10 +288,38 @@ public class MessagingService extends FirebaseMessagingService {
             customizer.customize(this, builder, notification);
         }
 
-        notificationManager.notify(tag, (int) System.currentTimeMillis(), builder.build());
+        notificationManager.notify(notification.getTag(), (int) System.currentTimeMillis(), builder.build());
     }
 
-    private PendingIntent buildOpenedPendingIntent(@NonNull AppAmbitNotification notification, @Nullable String clickAction) {
+    private static int parsePriority(@Nullable String value) {
+        if (value == null) return NotificationCompat.PRIORITY_DEFAULT;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) { }
+        switch (value.toLowerCase()) {
+            case "max":     return NotificationCompat.PRIORITY_MAX;
+            case "high":    return NotificationCompat.PRIORITY_HIGH;
+            case "low":     return NotificationCompat.PRIORITY_LOW;
+            case "min":     return NotificationCompat.PRIORITY_MIN;
+            default:        return NotificationCompat.PRIORITY_DEFAULT;
+        }
+    }
+
+    @Nullable
+    private static Integer parseVisibility(@Nullable String value) {
+        if (value == null) return null;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) { }
+        switch (value.toLowerCase()) {
+            case "public":  return NotificationCompat.VISIBILITY_PUBLIC;
+            case "private": return NotificationCompat.VISIBILITY_PRIVATE;
+            case "secret":  return NotificationCompat.VISIBILITY_SECRET;
+            default:        return null;
+        }
+    }
+
+    private PendingIntent buildOpenedPendingIntent(@NonNull AppAmbitNotification notification) {
         Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (intent == null) {
             intent = new Intent();
@@ -296,6 +334,9 @@ public class MessagingService extends FirebaseMessagingService {
         intent.putExtra(EXTRA_NOTIFICATION_COLOR, notification.getColor());
         intent.putExtra(EXTRA_NOTIFICATION_ICON,  notification.getSmallIconName());
         intent.putExtra(EXTRA_NOTIFICATION_IMAGE_URL, notification.getImageUrl());
+        if (notification.getClickAction() != null) {
+            intent.putExtra("appambit_click_action", notification.getClickAction());
+        }
 
         if (!notification.getData().isEmpty()) {
             String[] keys   = notification.getData().keySet().toArray(new String[0]);

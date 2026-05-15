@@ -31,15 +31,15 @@ public final class PushNotifications {
         PushKernel.setNotificationCustomizer(customizer);
     }
 
-    public static void setOpenedNotificationListener(@Nullable OpenedNotificationListener listener) {
+    public static void setOpenedListener(@Nullable OpenedNotificationListener listener) {
         PushKernel.setOpenedNotificationListener(listener);
     }
 
-    public static void setForegroundNotificationListener(@Nullable ForegroundNotificationListener listener) {
+    public static void setForegroundListener(@Nullable ForegroundNotificationListener listener) {
         PushKernel.setForegroundNotificationListener(listener);
     }
 
-    public static void setBackgroundNotificationListener(@Nullable BackgroundNotificationListener listener) {
+    public static void setBackgroundListener(@Nullable BackgroundNotificationListener listener) {
         PushKernel.setBackgroundNotificationListener(listener);
     }
 
