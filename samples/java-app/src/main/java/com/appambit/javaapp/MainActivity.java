@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Handle notification taps (user pressed the notification to open the app).
         // This is a simple listener, separate from the service extension.
-        PushNotifications.setOpenedNotificationListener(notification -> {
+        PushNotifications.setOpenedListener(notification -> {
             Log.d(TAG, "[OPENED] User tapped the notification");
             Log.d(TAG, "  Title : " + notification.getTitle());
             Log.d(TAG, "  Body  : " + notification.getBody());

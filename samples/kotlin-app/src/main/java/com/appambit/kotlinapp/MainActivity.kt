@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         PushNotifications.start(applicationContext)
 
         // Handle notification taps
-        PushNotifications.setOpenedNotificationListener { notification ->
+        PushNotifications.setOpenedListener { notification ->
             Log.d("AppAmbitSample", "[OPENED] User tapped the notification")
             Log.d("AppAmbitSample", "  Title : ${notification.title}")
             Log.d("AppAmbitSample", "  Body  : ${notification.body}")

@@ -38,6 +38,10 @@
             android:exported="false"
             tools:targetApi="33" />
 
+        <receiver
+            android:name=".NotificationOpenedReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>
