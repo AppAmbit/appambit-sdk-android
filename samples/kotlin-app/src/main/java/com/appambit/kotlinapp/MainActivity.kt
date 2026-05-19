@@ -1,6 +1,8 @@
 package com.appambit.kotlinapp
 
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -36,6 +38,17 @@ class MainActivity : ComponentActivity() {
 
         // Initialize Push SDK on app start
         PushNotifications.start(applicationContext)
+
+        // Handle notification taps
+        PushNotifications.setOpenedListener { notification ->
+            Log.d("AppAmbitSample", "[OPENED] User tapped the notification")
+            Log.d("AppAmbitSample", "  Title : ${notification.title}")
+            Log.d("AppAmbitSample", "  Body  : ${notification.body}")
+            Log.d("AppAmbitSample", "  Data  : ${notification.data}")
+        }
+
+        // Required to dispatch the opened callback when the app was completely closed.
+        PushNotifications.handleNotificationOpened(this, intent)
 
         setContent {
             BottomBar()
@@ -91,5 +104,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Update the activity's intent so getIntent() always returns the latest one.
+        setIntent(intent)
+        // Dispatch the callback when the app was already running in the background.
+        PushNotifications.handleNotificationOpened(this, intent)
     }
 }
