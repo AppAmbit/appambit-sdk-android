@@ -1,5 +1,17 @@
 ___
 
+## Version 1.0.0
+
+### AppAmbit Push Notifications
+
+* **[Breaking Change]** - The `AppAmbitPushNotifications` class has been renamed to `PushNotifications`. All related SDK methods must now be called on this new class, and the older method names have been deprecated.
+
+* **[Feature]** Added specific lifecycle listeners (`setOpenedListener` replacing `setOpenedNotificationListener`, `setForegroundListener` replacing `setForegroundNotificationListener`, `setBackgroundListener` replacing `setBackgroundNotificationListener`) and `IAppAmbitNotificationServiceExtension` for improved and decoupled background notification handling.
+
+* **[Feature]** Added support for push notifications in AppAmbit, allowing developers send and receive data payloads through push notifications, foreground and background handling of push notifications, ensuring that users receive timely and relevant information even when the app is not actively in use.
+
+___
+
 ## Version 0.5.0
 
 ### AppAmbit
