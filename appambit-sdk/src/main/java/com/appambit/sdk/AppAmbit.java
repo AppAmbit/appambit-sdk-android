@@ -194,6 +194,7 @@ public final class AppAmbit {
         InitializeServices(context);
         registerNetworkCallback(context);
         initializeConsumer();
+        ConsumerService.updateConsumer(null, null);
 
         hasStartedSession = true;
         final Runnable batchesTasks = () -> {
@@ -351,6 +352,7 @@ public final class AppAmbit {
                                 SessionManager.sendEndSessionFromDatabase(null);
                                 SessionManager.sendStartSessionIfExist();
                                 SessionManager.sendBatchSessions(batchTasks);
+                                ConsumerService.updateConsumer(null, null);
                                 if (!BreadcrumbManager.streamCrashSessionsOnly) {
                                     BreadcrumbManager.loadBreadcrumbsFromFile();
                                 }
