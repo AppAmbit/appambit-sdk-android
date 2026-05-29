@@ -164,11 +164,15 @@ public class ConsumerService {
         }
 
         String storedToken = mStorageService.getDeviceToken();
-        boolean storedPushEnabled = mStorageService.getPushEnabled();
+        Boolean storedPushEnabled = mStorageService.getPushEnabled();
 
         if (StringUtils.isNullOrBlank(storedToken)) {
             Log.d(TAG, "No push-related data to sync. Skipping consumer update.");
             return;
+        }
+
+        if (storedPushEnabled == null) {
+            storedPushEnabled = false;
         }
 
         UpdateConsumer request = new UpdateConsumer(storedToken, storedPushEnabled);
@@ -176,8 +180,13 @@ public class ConsumerService {
 
         ServiceLocator.getExecutorService().execute(() -> {
             try {
-                mApiService.executeRequest(endpoint, Void.class);
-                Log.d(TAG, "Consumer update request sent.");
+                ApiResult<Void> result = mApiService.executeRequest(endpoint, Void.class);
+                if (result != null && result.errorType == ApiErrorType.None) {
+                    Log.d(TAG, "Consumer update request sent.");
+                } else {
+                    ApiErrorType errorType = result != null ? result.errorType : ApiErrorType.Unknown;
+                    Log.w(TAG, "Consumer update request failed: " + errorType);
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Failed to send consumer update request.", e);
             }
