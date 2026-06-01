@@ -1,5 +1,13 @@
 ___
 
+## Version 1.0.1
+
+### AppAmbit
+
+* **[Fix]** Fixed consumer update issue where `getPushEnabled()` returning `null` caused incorrect push state to be sent on consumer sync.
+
+___
+
 ## Version 1.0.0
 
 ### AppAmbit Push Notifications
