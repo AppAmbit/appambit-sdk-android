@@ -181,9 +181,7 @@ public final class AppAmbit {
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(),
                 ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
-        Cms.initialize(ServiceLocator.getStorageService());
-        CmsQuery.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(),
-                ServiceLocator.getStorageService());
+        CmsQuery.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
         RemoteConfig.initialize(ServiceLocator.getExecutorService(), ServiceLocator.getApiService(),
                 ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
         BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(),

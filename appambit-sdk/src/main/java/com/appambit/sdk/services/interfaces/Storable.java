@@ -82,13 +82,4 @@ public interface Storable extends Closeable {
     void putConfigs(List<RemoteConfigEntity> configs);
     String getConfig(String key);
 
-    void putCmsData(String contentType, String jsonData);
-
-    String getCmsData(String contentType);
-
-    List<String> queryCmsData(String contentType, String filterClause, String[] selectionArgs, String orderBy, int limit, int offset);
-
-    void deleteCmsEntry(String contentType);
-    
-    void deleteAllCmsEntries();
 }
