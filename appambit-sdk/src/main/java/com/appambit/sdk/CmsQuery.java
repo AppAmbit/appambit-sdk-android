@@ -51,10 +51,14 @@ public class CmsQuery<T> implements ICmsQuery<T> {
             this.future = future;
         }
 
-        public void then(AppAmbitTaskFuture.Callback<List<T>> callback) {
-            if (future != null) {
-                future.then(callback);
-            }
+        public CmsQueryResult<T> then(AppAmbitTaskFuture.Callback<List<T>> callback) {
+            if (future != null) future.then(callback);
+            return this;
+        }
+
+        public CmsQueryResult<T> onError(AppAmbitTaskFuture.ErrorCallback callback) {
+            if (future != null) future.onError(callback);
+            return this;
         }
     }
 
@@ -165,8 +169,8 @@ public class CmsQuery<T> implements ICmsQuery<T> {
                 ApiResult<String> result = mApiService.executeRequest(endpoint, String.class);
 
                 if (result == null || result.data == null || result.errorType != ApiErrorType.None) {
-                    Log.w(TAG, "Empty or error response for: " + contentType);
-                    future.complete(new ArrayList<>());
+                    ApiErrorType err = (result != null) ? result.errorType : ApiErrorType.Unknown;
+                    future.fail(new RuntimeException("CMS request failed: " + err));
                     return;
                 }
 
@@ -174,7 +178,7 @@ public class CmsQuery<T> implements ICmsQuery<T> {
                 future.complete(items);
             } catch (Exception e) {
                 Log.e(TAG, "Error in getList for: " + contentType, e);
-                future.complete(new ArrayList<>());
+                future.fail(e);
             }
         });
 
@@ -190,6 +194,9 @@ public class CmsQuery<T> implements ICmsQuery<T> {
 
     private List<T> parseResponse(String json) throws JSONException {
         JSONObject response = new JSONObject(json);
+        if (response.has("error") && !response.has("data")) {
+            throw new RuntimeException("Server error: " + response.optString("error", "unknown"));
+        }
         JSONArray data = response.optJSONArray("data");
         if (data == null) return new ArrayList<>();
 

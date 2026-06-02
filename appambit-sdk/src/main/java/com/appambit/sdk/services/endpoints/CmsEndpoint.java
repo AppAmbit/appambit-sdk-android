@@ -31,7 +31,13 @@ public class CmsEndpoint extends BaseEndpoint implements IEndpoint {
         boolean first = true;
         for (Map.Entry<String, String> entry : queryParams.entrySet()) {
             if (!first) sb.append("&");
-            sb.append(entry.getKey()).append("=").append(entry.getValue());
+            try {
+                sb.append(entry.getKey())
+                  .append("=")
+                  .append(java.net.URLEncoder.encode(entry.getValue(), "UTF-8").replace("+", "%20"));
+            } catch (java.io.UnsupportedEncodingException ignored) {
+                sb.append(entry.getKey()).append("=").append(entry.getValue());
+            }
             first = false;
         }
         return sb.toString();
