@@ -54,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new RemoteConfigFragment();
             }else if (itemId == R.id.nav_cms) {
                 selectedFragment = new CmsFragment();
+            }else if (itemId == R.id.nav_database) {
+                selectedFragment = new DatabaseFragment();
             }
 
             if (selectedFragment != null) {
