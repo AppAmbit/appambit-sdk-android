@@ -9,11 +9,15 @@ import androidx.fragment.app.Fragment;
 import com.appambit.sdk.AppAmbit;
 import com.appambit.sdk.PushNotifications;
 import com.appambit.sdk.RemoteConfig;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.tabs.TabLayout;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "AppAmbitSample";
+
+    private static final String[] TAB_LABELS = {
+            "Crashes", "Analytics", "Load", "RemoteConfig", "CMS", "Database"
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,35 +44,38 @@ public class MainActivity extends AppCompatActivity {
         // Required to dispatch the opened callback when the app was completely closed.
         PushNotifications.handleNotificationOpened(this, getIntent());
 
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
-        bottomNav.setOnItemSelectedListener(item -> {
-            Fragment selectedFragment = null;
-            int itemId = item.getItemId();
-            if (itemId == R.id.nav_crashes) {
-                selectedFragment = new CrashesFragment();
-            } else if (itemId == R.id.nav_analytics) {
-                selectedFragment = new AnalyticsFragment();
-            }else if (itemId == R.id.nav_load) {
-                selectedFragment = new LoadFragment();
-            }else if (itemId == R.id.nav_remote_config) {
-                selectedFragment = new RemoteConfigFragment();
-            }else if (itemId == R.id.nav_cms) {
-                selectedFragment = new CmsFragment();
-            }else if (itemId == R.id.nav_database) {
-                selectedFragment = new DatabaseFragment();
-            }
+        TabLayout tabLayout = findViewById(R.id.bottom_navigation);
+        for (String label : TAB_LABELS) {
+            tabLayout.addTab(tabLayout.newTab().setText(label));
+        }
 
-            if (selectedFragment != null) {
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                Fragment fragment = fragmentForIndex(tab.getPosition());
                 getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.fragment_container, selectedFragment)
+                        .replace(R.id.fragment_container, fragment)
                         .commit();
             }
-            return true;
+            @Override public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override public void onTabReselected(TabLayout.Tab tab) {}
         });
 
-        // Set default fragment
         if (savedInstanceState == null) {
-            bottomNav.setSelectedItemId(R.id.nav_crashes);
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, new CrashesFragment())
+                    .commit();
+        }
+    }
+
+    private Fragment fragmentForIndex(int index) {
+        switch (index) {
+            case 1: return new AnalyticsFragment();
+            case 2: return new LoadFragment();
+            case 3: return new RemoteConfigFragment();
+            case 4: return new CmsFragment();
+            case 5: return new DatabaseFragment();
+            default: return new CrashesFragment();
         }
     }
 

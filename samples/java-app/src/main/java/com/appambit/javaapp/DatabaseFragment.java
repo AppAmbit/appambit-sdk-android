@@ -73,51 +73,51 @@ public class DatabaseFragment extends Fragment {
     private void runSql(String sql) {
         if (sql.isEmpty()) return;
         showStatus("Running...", false);
-        AppAmbitDb.execute(sql)
-                .then(result -> {
-                    if (result.hasError()) {
-                        showStatus("Error: " + result.getError(), true);
-                        adapter.update(new ArrayList<>(), new ArrayList<>());
-                    } else {
-                        showStatus("rows_read=" + result.getRowsRead() + "  rows_written=" + result.getRowsWritten(), false);
-                        adapter.update(result.getColumns(), result.toMaps());
-                    }
-                })
-                .onError(error -> {
-                    showStatus("Error: " + error.getMessage(), true);
-                    adapter.update(new ArrayList<>(), new ArrayList<>());
-                });
+        var future = AppAmbitDb.execute(sql);
+        future.then(result -> {
+            if (result.hasError()) {
+                showStatus("Error: " + result.getError(), true);
+                adapter.update(new ArrayList<>(), new ArrayList<>());
+            } else {
+                showStatus("rows_read=" + result.getRowsRead() + "  rows_written=" + result.getRowsWritten(), false);
+                adapter.update(result.getColumns(), result.toMaps());
+            }
+        });
+        future.onError(error -> {
+            showStatus("Error: " + error.getMessage(), true);
+            adapter.update(new ArrayList<>(), new ArrayList<>());
+        });
     }
 
     private void runFluent(String table) {
         showStatus("Running fluent query on \"" + table + "\"...", false);
-        AppAmbitDb.from(table)
-                .limit(10)
-                .get()
-                .then(maps -> {
-                    if (maps.isEmpty()) {
-                        showStatus("No rows found in \"" + table + "\"", false);
-                        adapter.update(new ArrayList<>(), new ArrayList<>());
-                    } else {
-                        List<String> columns = new ArrayList<>(maps.get(0).keySet());
-                        showStatus(maps.size() + " row(s) via fluent builder", false);
-                        adapter.update(columns, maps);
-                    }
-                })
-                .onError(error -> showStatus("Error: " + error.getMessage(), true));
+        var future = AppAmbitDb.from(table).limit(10).get();
+        future.then(maps -> {
+            if (maps.isEmpty()) {
+                showStatus("No rows found in \"" + table + "\"", false);
+                adapter.update(new ArrayList<>(), new ArrayList<>());
+            } else {
+                List<String> columns = new ArrayList<>(maps.get(0).keySet());
+                showStatus(maps.size() + " row(s) via fluent builder", false);
+                adapter.update(columns, maps);
+            }
+        });
+        future.onError(error -> showStatus("Error: " + error.getMessage(), true));
     }
 
     private void runBatchDemo() {
         showStatus("Running batch...", false);
-        AppAmbitDb.batchInTransaction(
+        var batchFuture = AppAmbitDb.batchInTransaction(
                 DbStatement.of("INSERT INTO demo_log (event) VALUES (?)", "batch_start"),
                 DbStatement.of("INSERT INTO demo_log (event) VALUES (?)", "batch_end")
-        ).then(results -> {
+        );
+        batchFuture.then(results -> {
             int written = 0;
             for (var r : results) written += r.getRowsWritten();
             showStatus("Batch complete — " + written + " row(s) written across " + results.size() + " statements", false);
             adapter.update(new ArrayList<>(), new ArrayList<>());
-        }).onError(error -> showStatus("Batch error: " + error.getMessage(), true));
+        });
+        batchFuture.onError(error -> showStatus("Batch error: " + error.getMessage(), true));
     }
 
     private void showStatus(String message, boolean isError) {
