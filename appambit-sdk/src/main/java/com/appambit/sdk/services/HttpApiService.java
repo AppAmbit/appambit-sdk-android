@@ -33,11 +33,15 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import android.net.SSLCertificateSocketFactory;
+import javax.net.ssl.SSLSocket;
 
 public class HttpApiService implements ApiService {
 
@@ -57,6 +61,10 @@ public class HttpApiService implements ApiService {
         if (!hasInternetConnection(context)) {
             Log.d(TAG, "No internet connection available.");
             return ApiResult.fail(ApiErrorType.NetworkUnavailable, "No internet available");
+        }
+
+        if (endpoint instanceof CmsEndpoint) {
+            return executeCmsGetRequest(endpoint, clazz);
         }
 
         try {
@@ -313,6 +321,128 @@ public class HttpApiService implements ApiService {
         if (token != null && !token.isEmpty()) {
             connection.setRequestProperty("Authorization", "Bearer " + token);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> ApiResult<T> executeCmsGetRequest(IEndpoint endpoint, Class<T> clazz) {
+        String fullUrl = endpoint.getBaseUrl() + endpoint.getUrl();
+        Log.d(TAG, "Full URL: " + fullUrl);
+
+        SSLSocket socket = null;
+        try {
+            URL parsed = new URL(fullUrl);
+            String host = parsed.getHost();
+            int port = parsed.getPort() != -1 ? parsed.getPort() : 443;
+            String requestPath = parsed.getFile(); // preserves raw brackets — URL.getFile() never re-encodes
+
+            // SSLCertificateSocketFactory.setHostname() sets the SNI extension — required for
+            // virtual-host routing on shared infrastructure (CDNs, load balancers).
+            // Without SNI the server cannot identify the target host and never responds.
+            @SuppressWarnings("deprecation")
+            SSLCertificateSocketFactory sslFactory =
+                    (SSLCertificateSocketFactory) SSLCertificateSocketFactory.getDefault(30000);
+            socket = (SSLSocket) sslFactory.createSocket(host, port);
+            sslFactory.setHostname(socket, host);
+            socket.setSoTimeout((int) TimeUnit.SECONDS.toMillis(30));
+            socket.startHandshake();
+
+            // Write raw HTTP/1.1 request — brackets reach server as-is
+            String request = "GET " + requestPath + " HTTP/1.1\r\n"
+                    + "Host: " + host + "\r\n"
+                    + "Accept: application/json\r\n"
+                    + "X-App-Key: " + AppAmbit.getAppKey() + "\r\n"
+                    + "Connection: close\r\n"
+                    + "\r\n";
+            socket.getOutputStream().write(request.getBytes(StandardCharsets.UTF_8));
+            socket.getOutputStream().flush();
+
+            // Read full response as bytes to handle chunked encoding correctly
+            ByteArrayOutputStream responseBytes = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = socket.getInputStream().read(buf)) != -1) {
+                responseBytes.write(buf, 0, n);
+            }
+            byte[] raw = responseBytes.toByteArray();
+
+            // Locate \r\n\r\n boundary between headers and body
+            int bodyStart = -1;
+            for (int i = 0; i < raw.length - 3; i++) {
+                if (raw[i] == '\r' && raw[i+1] == '\n' && raw[i+2] == '\r' && raw[i+3] == '\n') {
+                    bodyStart = i + 4;
+                    break;
+                }
+            }
+            if (bodyStart < 0) {
+                return ApiResult.fail(ApiErrorType.Unknown, "Malformed HTTP response");
+            }
+
+            String headerSection = new String(raw, 0, bodyStart - 4, StandardCharsets.UTF_8);
+            byte[] bodyBytes = Arrays.copyOfRange(raw, bodyStart, raw.length);
+
+            // Parse status code from first header line
+            int statusCode = 200;
+            String[] headerLines = headerSection.split("\r\n");
+            if (headerLines.length > 0) {
+                String[] statusParts = headerLines[0].split(" ", 3);
+                if (statusParts.length >= 2) {
+                    try { statusCode = Integer.parseInt(statusParts[1]); }
+                    catch (NumberFormatException ignore) {}
+                }
+            }
+            Log.d(TAG, "HTTP-Response-Header: " + statusCode);
+
+            // Decode chunked transfer encoding if needed
+            if (headerSection.toLowerCase(Locale.US).contains("transfer-encoding: chunked")) {
+                bodyBytes = decodeChunkedBodyBytes(bodyBytes);
+            }
+
+            String body = new String(bodyBytes, StandardCharsets.UTF_8);
+            Log.d(TAG, "[HTTP-Response-Body] " + body);
+            checkStatusCodeFrom(statusCode);
+
+            return ApiResult.success((T) body);
+
+        } catch (UnauthorizedException ex) {
+            return ApiResult.fail(ApiErrorType.Unauthorized, "CMS request unauthorized");
+        } catch (HttpRequestException ex) {
+            return ApiResult.fail(ApiErrorType.Unknown, ex.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "CMS request failed", e);
+            return ApiResult.fail(ApiErrorType.Unknown, "CMS request failed");
+        } finally {
+            if (socket != null) {
+                try { socket.close(); } catch (Exception ignore) {}
+            }
+        }
+    }
+
+    private static byte[] decodeChunkedBodyBytes(byte[] data) {
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        int pos = 0;
+        while (pos < data.length) {
+            // Find end of chunk-size line (\r\n)
+            int lineEnd = pos;
+            while (lineEnd + 1 < data.length && !(data[lineEnd] == '\r' && data[lineEnd + 1] == '\n')) {
+                lineEnd++;
+            }
+            if (lineEnd + 1 >= data.length) break;
+            int chunkSize;
+            try {
+                String sizeLine = new String(data, pos, lineEnd - pos, StandardCharsets.US_ASCII).trim();
+                int ext = sizeLine.indexOf(';');
+                if (ext >= 0) sizeLine = sizeLine.substring(0, ext);
+                chunkSize = Integer.parseInt(sizeLine, 16);
+            } catch (NumberFormatException e) {
+                break;
+            }
+            if (chunkSize == 0) break;
+            pos = lineEnd + 2; // skip \r\n after size
+            if (pos + chunkSize > data.length) break;
+            result.write(data, pos, chunkSize);
+            pos += chunkSize + 2; // skip chunk data + trailing \r\n
+        }
+        return result.toByteArray();
     }
 
     private static String serializedGetUrl(String baseUrl, Object payload)

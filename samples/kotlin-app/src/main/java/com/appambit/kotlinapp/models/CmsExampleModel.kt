@@ -9,7 +9,7 @@ class CmsExampleModel {
     var category: List<String>? = null
     var author: String? = null
 
-    @JsonKey("featured_image")
+    @JsonKey("featured_image_url")
     var featuredImage: String? = null
 
     var likes: Int = 0

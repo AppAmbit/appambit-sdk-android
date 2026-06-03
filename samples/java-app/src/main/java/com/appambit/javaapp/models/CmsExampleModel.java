@@ -11,7 +11,7 @@ public class CmsExampleModel {
     public List<String> category;
     public String author;
 
-    @JsonKey("featured_image")
+    @JsonKey("featured_image_url")
     public String featuredImage;
 
     public int likes;

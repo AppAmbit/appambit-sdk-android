@@ -425,28 +425,6 @@ class AnalyticsTest {
             return null
         }
 
-        override fun putCmsData(contentType: String?, jsonData: String?) {
-
-        }
-
-        override fun getCmsData(contentType: String?): String? {
-            return null
-        }
-
-        override fun queryCmsData(
-            contentType: String?,
-            filterClause: String?,
-            selectionArgs: Array<String?>?,
-            orderBy: String?,
-            limit: Int,
-            offset: Int
-        ): MutableList<String?>? {
-            return null
-        }
-
-        override fun deleteCmsEntry(contentType: String?) {}
-
-        override fun deleteAllCmsEntries() {}
     }
 
     class FakeApiService : ApiService {
