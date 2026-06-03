@@ -148,16 +148,17 @@ public class CmsFragment extends Fragment {
     }
 
     private void loadPosts(ICmsQuery<CmsExampleModel> query) {
-        try {
-            query.getList()
-                 .then(posts -> {
-                    if (posts != null && !posts.isEmpty()) {
-                    adapter.updatePosts(posts);
-                    }
-                 });
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        query.getList()
+             .then(posts -> {
+                 if (posts != null && !posts.isEmpty()) {
+                     adapter.updatePosts(posts);
+                 }
+             })
+             .onError(error -> {
+                 if (getContext() != null) {
+                     android.widget.Toast.makeText(getContext(), "Error: " + error.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
+                 }
+             });
     }
 
     private class CmsAdapter extends RecyclerView.Adapter<CmsAdapter.CmsViewHolder> {
