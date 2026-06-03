@@ -1,5 +1,11 @@
 ___
 
+## Version 1.0.2
+
+### AppAmbit
+
+* **[Refactor]** Removed local CMS cache: `Cms` now fetches content directly from the API on every call, eliminating the SQLite cache table, related storage methods, and migration logic.
+
 ## Version 1.0.1
 
 ### AppAmbit
