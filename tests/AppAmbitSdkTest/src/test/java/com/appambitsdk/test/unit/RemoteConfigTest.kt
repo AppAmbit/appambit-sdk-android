@@ -96,7 +96,7 @@ class RemoteConfigTest {
             apiService.executeRequest(any<RemoteConfigEndpoint>(), RemoteConfigResponse::class.java) 
         } returns ApiResult(mockResponse, ApiErrorType.None, null)
 
-        every { appInfoService.getAppVersion() } returns "1.0.0"
+        every { appInfoService.getAppVersion() } returns "1.0.1"
         
         every { storable.getConfig(com.appambit.sdk.AppConstants.LIVE_SESSION_STREAMING) } returns null
 
@@ -124,7 +124,7 @@ class RemoteConfigTest {
             apiService.executeRequest(any<RemoteConfigEndpoint>(), RemoteConfigResponse::class.java) 
         } returns ApiResult(null, ApiErrorType.NetworkUnavailable, "Error")
 
-        every { appInfoService.getAppVersion() } returns "1.0.0"
+        every { appInfoService.getAppVersion() } returns "1.0.1"
 
         // When
         RemoteConfig.fetchAndStoreConfig()

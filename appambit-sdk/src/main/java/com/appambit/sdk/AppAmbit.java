@@ -181,9 +181,7 @@ public final class AppAmbit {
         ConsumerService.initialize(ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService(),
                 ServiceLocator.getApiService());
         TokenService.initialize(ServiceLocator.getStorageService());
-        Cms.initialize(ServiceLocator.getStorageService());
-        CmsQuery.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(),
-                ServiceLocator.getStorageService());
+        CmsQuery.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService());
         RemoteConfig.initialize(ServiceLocator.getExecutorService(), ServiceLocator.getApiService(),
                 ServiceLocator.getStorageService(), ServiceLocator.getAppInfoService());
         BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(),
@@ -195,6 +193,7 @@ public final class AppAmbit {
         InitializeServices(context);
         registerNetworkCallback(context);
         initializeConsumer();
+        ConsumerService.updateConsumer(null, null);
 
         hasStartedSession = true;
         final Runnable batchesTasks = () -> {
@@ -352,6 +351,7 @@ public final class AppAmbit {
                                 SessionManager.sendEndSessionFromDatabase(null);
                                 SessionManager.sendStartSessionIfExist();
                                 SessionManager.sendBatchSessions(batchTasks);
+                                ConsumerService.updateConsumer(null, null);
                                 if (!BreadcrumbManager.streamCrashSessionsOnly) {
                                     BreadcrumbManager.loadBreadcrumbsFromFile();
                                 }

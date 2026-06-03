@@ -88,8 +88,18 @@ public class JsonDeserializer {
                             }
                         }
                         field.set(instance, map);
-                    }else {
-                        Log.d(TAG, "Could not parse JSON. Data not serialized");
+                    } else if (List.class.isAssignableFrom(fieldType)) {
+                        // value is not JSONArray — try comma-separated string fallback
+                        List<String> list = new ArrayList<>();
+                        String raw = value.toString().trim();
+                        if (!raw.isEmpty()) {
+                            for (String part : raw.split(",")) {
+                                list.add(part.trim());
+                            }
+                        }
+                        field.set(instance, list);
+                    } else {
+                        Log.d(TAG, "Could not parse JSON. Field '" + key + "' type=" + fieldType.getSimpleName() + " value=" + value.getClass().getSimpleName() + " not serialized");
                     }
                 }
             }

@@ -25,17 +25,19 @@ import java.net.URL
 fun Cms() {
     val scope = rememberCoroutineScope()
     var posts by remember { mutableStateOf(emptyList<CmsExampleModel>()) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     fun loadPosts(query: ICmsQuery<CmsExampleModel>) {
-        try {
-            query.getList().then { result ->
+        errorMessage = null
+        query.getList()
+            .then { result ->
                 if (result != null) {
                     posts = result
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+            .onError { error ->
+                errorMessage = error.message ?: "Unknown error"
+            }
     }
 
     // Initial load
@@ -49,6 +51,14 @@ fun Cms() {
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(16.dp)
         )
+        errorMessage?.let {
+            Text(
+                text = "Error: $it",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
         FilterButtons { query -> loadPosts(query) }
         
         LazyColumn(

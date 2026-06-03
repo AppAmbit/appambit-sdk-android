@@ -29,16 +29,20 @@ public class AppAmbitTaskFuture<T> {
     }
 
     public synchronized void then(Callback<T> callback) {
-        if (isCompleted && error == null) {
-            mHandler.post(() -> callback.onSuccess(result));
+        if (isCompleted) {
+            if (error == null) {
+                mHandler.post(() -> callback.onSuccess(result));
+            }
         } else {
             successCallbacks.add(callback);
         }
     }
 
     public synchronized void onError(ErrorCallback callback) {
-        if (isCompleted && error != null) {
-            mHandler.post(() -> callback.onError(error));
+        if (isCompleted) {
+            if (error != null) {
+                mHandler.post(() -> callback.onError(error));
+            }
         } else {
             errorCallbacks.add(callback);
         }

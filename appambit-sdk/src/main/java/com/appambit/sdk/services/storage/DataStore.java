@@ -11,8 +11,6 @@ import com.appambit.sdk.services.storage.contract.EventEntityContract;
 import com.appambit.sdk.services.storage.contract.LogEntityContract;
 import com.appambit.sdk.services.storage.contract.RemoteConfigContract;
 import com.appambit.sdk.services.storage.contract.SessionContract;
-import com.appambit.sdk.services.storage.contract.CmsCacheContract;
-
 public class DataStore extends SQLiteOpenHelper {
     public DataStore(Context context) {
         super(context, AppConstants.DATABASE_NAME, null, AppConstants.DB_VERSION);
@@ -27,7 +25,6 @@ public class DataStore extends SQLiteOpenHelper {
         sqLiteDatabase.execSQL(SessionContract.CREATE_TABLE);
         sqLiteDatabase.execSQL(BreadcrumbContract.CREATE_TABLE);
         sqLiteDatabase.execSQL(RemoteConfigContract.CREATE_TABLE);
-        sqLiteDatabase.execSQL(CmsCacheContract.CREATE_TABLE);
     }
 
     @Override
@@ -35,6 +32,9 @@ public class DataStore extends SQLiteOpenHelper {
         if (oldVersion < 2) {
             sqLiteDatabase.execSQL("ALTER TABLE " + AppSecretContract.TABLE_NAME + " ADD COLUMN " + AppSecretContract.Columns.DEVICE_TOKEN + " TEXT;");
             sqLiteDatabase.execSQL("ALTER TABLE " + AppSecretContract.TABLE_NAME + " ADD COLUMN " + AppSecretContract.Columns.PUSH_ENABLED + " INTEGER;");
+        }
+        if (oldVersion < 3) {
+            sqLiteDatabase.execSQL("DROP TABLE IF EXISTS cms_cache");
         }
     }
 }
