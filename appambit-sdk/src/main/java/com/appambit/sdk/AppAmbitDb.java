@@ -29,7 +29,6 @@ public final class AppAmbitDb {
     /**
      * Execute a raw SQL statement with no parameters.
      */
-    public static AppAmbitTaskFuture<DbResult> execute(String sql) {
     public static AppAmbitTaskFuture<DbResult> execute(@NonNull String sql) {
         return executeInternal(sql, null);
     }
