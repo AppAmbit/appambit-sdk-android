@@ -1,5 +1,6 @@
 package com.appambit.sdk.models.db;
 
+import android.util.Log;
 import com.appambit.sdk.annotations.DbColumn;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,7 +45,7 @@ public class DbResult {
 
         result.rowsRead = json.optInt("rows_read", 0);
         result.rowsWritten = json.optInt("rows_written", 0);
-        if (!json.isNull("error") && json.has("error")) {
+        if (json.has("error") && !json.isNull("error")) {
             result.error = json.optString("error", null);
         }
 
@@ -80,23 +81,32 @@ public class DbResult {
                     setField(instance, columns.get(colIdx), row.get(colIdx), modelClass);
                 }
                 result.add(instance);
-            } catch (Exception ignored) {}
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(
+                        modelClass.getSimpleName() + " requires a public no-arg constructor for DB mapping.", e);
+            } catch (Exception e) {
+                Log.w("AppAmbitDb", "Failed to map row to " + modelClass.getSimpleName(), e);
+            }
         }
         return result;
     }
 
-    private <T> void setField(T instance, String columnName, Object value, Class<T> clazz) {
-        for (Field field : clazz.getDeclaredFields()) {
-            DbColumn annotation = field.getAnnotation(DbColumn.class);
-            String mapped = (annotation != null && !annotation.value().isEmpty())
-                    ? annotation.value()
-                    : field.getName();
-            if (!mapped.equals(columnName)) continue;
-            field.setAccessible(true);
-            try {
-                field.set(instance, castValue(value, field.getType()));
-            } catch (Exception ignored) {}
-            break;
+    private <T> void setField(T instance, String columnName, Object value, Class<?> clazz) {
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            for (Field field : current.getDeclaredFields()) {
+                DbColumn annotation = field.getAnnotation(DbColumn.class);
+                String mapped = (annotation != null && !annotation.value().isEmpty())
+                        ? annotation.value()
+                        : field.getName();
+                if (!mapped.equals(columnName)) continue;
+                field.setAccessible(true);
+                try {
+                    field.set(instance, castValue(value, field.getType()));
+                } catch (Exception ignored) {}
+                return;
+            }
+            current = current.getSuperclass();
         }
     }
 

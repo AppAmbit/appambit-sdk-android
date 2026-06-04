@@ -1,5 +1,7 @@
 package com.appambit.sdk;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.appambit.sdk.models.db.DbResponse;
 import com.appambit.sdk.models.db.DbResult;
 import com.appambit.sdk.models.db.DbStatement;
@@ -28,6 +30,7 @@ public final class AppAmbitDb {
      * Execute a raw SQL statement with no parameters.
      */
     public static AppAmbitTaskFuture<DbResult> execute(String sql) {
+    public static AppAmbitTaskFuture<DbResult> execute(@NonNull String sql) {
         return executeInternal(sql, null);
     }
 
@@ -35,7 +38,7 @@ public final class AppAmbitDb {
      * Execute a raw SQL statement with positional parameters.
      * Use ? placeholders in the SQL string.
      */
-    public static AppAmbitTaskFuture<DbResult> execute(String sql, Object... params) {
+    public static AppAmbitTaskFuture<DbResult> execute(@NonNull String sql, @Nullable Object... params) {
         List<Object> paramList = (params != null && params.length > 0)
                 ? Arrays.asList(params)
                 : null;
@@ -77,7 +80,18 @@ public final class AppAmbitDb {
         ensureInitialized();
         AppAmbitTaskFuture<List<DbResult>> future = new AppAmbitTaskFuture<>();
         AppAmbitTaskFuture<DbResponse> batchFuture = mDbService.batch(statements, transaction);
-        batchFuture.then(response -> future.complete(response.getResults()));
+        batchFuture.then(response -> {
+            List<DbResult> results = response.getResults();
+            if (transaction) {
+                for (DbResult r : results) {
+                    if (r.hasError()) {
+                        future.fail(new RuntimeException("Batch transaction failed: " + r.getError()));
+                        return;
+                    }
+                }
+            }
+            future.complete(results);
+        });
         batchFuture.onError(future::fail);
         return future;
     }
@@ -86,7 +100,7 @@ public final class AppAmbitDb {
      * Start a fluent query builder for the given table, mapping results to the provided model class.
      * Fields are matched by name or by the {@code @DbColumn} annotation.
      */
-    public static <T> DbQueryBuilder<T> from(String table, Class<T> modelClass) {
+    public static <T> DbQueryBuilder<T> from(@NonNull String table, @NonNull Class<T> modelClass) {
         ensureInitialized();
         return new DbQueryBuilder<>(table, modelClass, mDbService);
     }
@@ -95,7 +109,7 @@ public final class AppAmbitDb {
      * Start a fluent query builder for the given table, returning results as maps.
      */
     @SuppressWarnings("unchecked")
-    public static DbQueryBuilder<Map<String, Object>> from(String table) {
+    public static DbQueryBuilder<Map<String, Object>> from(@NonNull String table) {
         ensureInitialized();
         return new DbQueryBuilder<>(table, (Class<Map<String, Object>>) (Class<?>) Map.class, mDbService);
     }

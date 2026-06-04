@@ -2,101 +2,276 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:orientation="vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Database"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-
-    <EditText
-        android:id="@+id/edit_sql"
+    <!-- Scrollable controls -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="SQL query"
-        android:inputType="textMultiLine"
-        android:minLines="3"
-        android:maxLines="5"
-        android:gravity="top"
-        android:fontFamily="monospace"
-        android:text="SELECT * FROM users LIMIT 10"
-        android:layout_marginBottom="8dp"/>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
-
-        <Button
-            android:id="@+id/btn_execute"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Execute" />
-
-        <Button
-            android:id="@+id/btn_batch_demo"
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="Batch demo" />
-
-    </LinearLayout>
-
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none"
-        android:layout_marginBottom="8dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
-            android:id="@+id/preset_buttons"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <Button
-                android:id="@+id/btn_preset_tables"
-                style="?android:attr/buttonStyleSmall"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="List tables"
-                android:layout_marginEnd="4dp"/>
+                android:text="Database"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
 
-            <Button
-                android:id="@+id/btn_preset_users"
-                style="?android:attr/buttonStyleSmall"
+            <!-- ── Raw SQL ── -->
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="users (fluent)"
-                android:layout_marginEnd="4dp"/>
+                android:text="Raw SQL"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="6dp"/>
 
-            <Button
-                android:id="@+id/btn_preset_products"
-                style="?android:attr/buttonStyleSmall"
+            <EditText
+                android:id="@+id/edit_sql"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="SQL query"
+                android:inputType="textMultiLine"
+                android:minLines="3"
+                android:maxLines="5"
+                android:gravity="top"
+                android:fontFamily="monospace"
+                android:text="SELECT * FROM users LIMIT 10"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <Button
+                    android:id="@+id/btn_execute"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="execute(sql)" />
+
+                <Button
+                    android:id="@+id/btn_execute_params"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="execute(sql, params)" />
+
+            </LinearLayout>
+
+            <!-- ── Batch ── -->
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="products (fluent)"
-                android:layout_marginEnd="4dp"/>
+                android:text="Batch"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="6dp"/>
 
-            <Button
-                android:id="@+id/btn_preset_select1"
-                style="?android:attr/buttonStyleSmall"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <Button
+                    android:id="@+id/btn_batch"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="batch()" />
+
+                <Button
+                    android:id="@+id/btn_batch_tx"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="batchInTransaction()" />
+
+            </LinearLayout>
+
+            <!-- ── Fluent SELECT ── -->
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="SELECT 1"/>
+                android:text="Fluent Builder — SELECT"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="6dp"/>
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginBottom="4dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_fluent_select"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="select+where+orderByDesc+limit"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_where_eq"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="where(col,val)"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_where_in"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="whereIn()"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_offset"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="limit+offset"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_first"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="first()"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_count"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="count()"/>
+
+                </LinearLayout>
+
+            </HorizontalScrollView>
+
+            <!-- Preset queries -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_preset_tables"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="List tables"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_preset_select1"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SELECT 1"/>
+
+                </LinearLayout>
+
+            </HorizontalScrollView>
+
+            <!-- ── Fluent WRITE ── -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fluent Builder — WRITE"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="6dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <Button
+                    android:id="@+id/btn_insert"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="insert()" />
+
+                <Button
+                    android:id="@+id/btn_update"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="update()" />
+
+                <Button
+                    android:id="@+id/btn_delete"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="delete()" />
+
+            </LinearLayout>
+
+            <!-- ── Typed Model ── -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Typed Model Mapping"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="6dp"/>
+
+            <Button
+                android:id="@+id/btn_typed_model"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="from(users, UserModel.class)" />
 
         </LinearLayout>
 
-    </HorizontalScrollView>
+    </ScrollView>
 
+    <!-- Output — fixed below the scroll -->
     <TextView
         android:id="@+id/txt_status"
         android:layout_width="match_parent"
@@ -104,12 +279,13 @@
         android:visibility="gone"
         android:padding="8dp"
         android:textSize="12sp"
-        android:layout_marginBottom="4dp"/>
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="4dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_results"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_height="200dp"
+        android:layout_marginTop="4dp"/>
 
 </LinearLayout>

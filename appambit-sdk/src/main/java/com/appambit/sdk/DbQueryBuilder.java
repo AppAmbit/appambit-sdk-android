@@ -1,16 +1,24 @@
 package com.appambit.sdk;
 
-import com.appambit.sdk.enums.ApiErrorType;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.appambit.sdk.models.db.DbResponse;
 import com.appambit.sdk.models.db.DbResult;
 import com.appambit.sdk.services.DbService;
 import com.appambit.sdk.services.exceptionsCustom.DbException;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public class DbQueryBuilder<T> {
+public final class DbQueryBuilder<T> {
+    private static final Set<String> ALLOWED_OPERATORS = new HashSet<>(Arrays.asList(
+            "=", "!=", "<>", ">", ">=", "<", "<=", "LIKE", "NOT LIKE", "IS", "IS NOT"
+    ));
+
     private final String table;
     private final Class<T> modelClass;
     private final DbService dbService;
@@ -29,26 +37,31 @@ public class DbQueryBuilder<T> {
         this.dbService = dbService;
     }
 
-    public DbQueryBuilder<T> select(String... columns) {
+    public DbQueryBuilder<T> select(@NonNull String... columns) {
         for (String col : columns) {
-            selectedColumns.add(col);
+            if (!selectedColumns.contains(col)) {
+                selectedColumns.add(col);
+            }
         }
         return this;
     }
 
-    public DbQueryBuilder<T> where(String column, Object value) {
+    public DbQueryBuilder<T> where(@NonNull String column, @Nullable Object value) {
         whereConditions.add(quoteIdentifier(column) + " = ?");
         whereParams.add(value);
         return this;
     }
 
-    public DbQueryBuilder<T> where(String column, String operator, Object value) {
+    public DbQueryBuilder<T> where(@NonNull String column, @NonNull String operator, @Nullable Object value) {
+        if (!ALLOWED_OPERATORS.contains(operator.toUpperCase())) {
+            throw new IllegalArgumentException("Operator not allowed: " + operator);
+        }
         whereConditions.add(quoteIdentifier(column) + " " + operator + " ?");
         whereParams.add(value);
         return this;
     }
 
-    public DbQueryBuilder<T> whereIn(String column, List<?> values) {
+    public DbQueryBuilder<T> whereIn(@NonNull String column, @NonNull List<?> values) {
         StringBuilder placeholders = new StringBuilder();
         for (int i = 0; i < values.size(); i++) {
             if (i > 0) placeholders.append(", ");
@@ -59,13 +72,13 @@ public class DbQueryBuilder<T> {
         return this;
     }
 
-    public DbQueryBuilder<T> orderBy(String column) {
+    public DbQueryBuilder<T> orderBy(@NonNull String column) {
         this.orderByColumn = column;
         this.orderByDesc = false;
         return this;
     }
 
-    public DbQueryBuilder<T> orderByDesc(String column) {
+    public DbQueryBuilder<T> orderByDesc(@NonNull String column) {
         this.orderByColumn = column;
         this.orderByDesc = true;
         return this;
@@ -107,7 +120,7 @@ public class DbQueryBuilder<T> {
         AppAmbitTaskFuture<DbResponse> queryFuture = dbService.query(sql, new ArrayList<>(whereParams));
         queryFuture.then(response -> {
             DbResult result = response.getFirst();
-            if (result == null || result.getRows().isEmpty()) {
+            if (result == null) {
                 future.complete(null);
                 return;
             }
@@ -131,12 +144,16 @@ public class DbQueryBuilder<T> {
         AppAmbitTaskFuture<DbResponse> queryFuture = dbService.query(sql.toString(), new ArrayList<>(whereParams));
         queryFuture.then(response -> {
             DbResult result = response.getFirst();
-            if (result == null || result.getRows().isEmpty()) {
+            if (result == null) {
                 future.complete(0);
                 return;
             }
             if (result.hasError()) {
                 future.fail(new DbException(result.getError()));
+                return;
+            }
+            if (result.getRows().isEmpty()) {
+                future.complete(0);
                 return;
             }
             Object val = result.getRows().get(0).get(0);
@@ -149,7 +166,7 @@ public class DbQueryBuilder<T> {
         return future;
     }
 
-    public AppAmbitTaskFuture<DbResult> insert(Map<String, Object> data) {
+    public AppAmbitTaskFuture<DbResult> insert(@NonNull Map<String, Object> data) {
         List<String> cols = new ArrayList<>(data.keySet());
         StringBuilder sql = new StringBuilder("INSERT INTO ").append(quoteIdentifier(table)).append(" (");
         List<Object> params = new ArrayList<>();
@@ -179,7 +196,13 @@ public class DbQueryBuilder<T> {
         return future;
     }
 
-    public AppAmbitTaskFuture<DbResult> update(Map<String, Object> data) {
+    public AppAmbitTaskFuture<DbResult> update(@NonNull Map<String, Object> data) {
+        if (whereConditions.isEmpty()) {
+            AppAmbitTaskFuture<DbResult> future = new AppAmbitTaskFuture<>();
+            future.fail(new IllegalStateException(
+                    "update() without WHERE would affect all rows. Use execute() for intentional full-table updates."));
+            return future;
+        }
         List<String> cols = new ArrayList<>(data.keySet());
         StringBuilder sql = new StringBuilder("UPDATE ").append(quoteIdentifier(table)).append(" SET ");
         List<Object> params = new ArrayList<>();
@@ -188,10 +211,8 @@ public class DbQueryBuilder<T> {
             sql.append(quoteIdentifier(cols.get(i))).append(" = ?");
             params.add(data.get(cols.get(i)));
         }
-        if (!whereConditions.isEmpty()) {
-            sql.append(" WHERE ").append(joinConditions());
-            params.addAll(whereParams);
-        }
+        sql.append(" WHERE ").append(joinConditions());
+        params.addAll(whereParams);
 
         AppAmbitTaskFuture<DbResult> future = new AppAmbitTaskFuture<>();
         AppAmbitTaskFuture<DbResponse> queryFuture = dbService.query(sql.toString(), params);
@@ -208,10 +229,14 @@ public class DbQueryBuilder<T> {
     }
 
     public AppAmbitTaskFuture<DbResult> delete() {
-        StringBuilder sql = new StringBuilder("DELETE FROM ").append(quoteIdentifier(table));
-        if (!whereConditions.isEmpty()) {
-            sql.append(" WHERE ").append(joinConditions());
+        if (whereConditions.isEmpty()) {
+            AppAmbitTaskFuture<DbResult> future = new AppAmbitTaskFuture<>();
+            future.fail(new IllegalStateException(
+                    "delete() without WHERE would delete all rows. Use execute() for intentional full-table deletes."));
+            return future;
         }
+        StringBuilder sql = new StringBuilder("DELETE FROM ").append(quoteIdentifier(table));
+        sql.append(" WHERE ").append(joinConditions());
 
         AppAmbitTaskFuture<DbResult> future = new AppAmbitTaskFuture<>();
         AppAmbitTaskFuture<DbResponse> queryFuture = dbService.query(sql.toString(), new ArrayList<>(whereParams));
