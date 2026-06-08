@@ -81,12 +81,10 @@ public final class AppAmbitDb {
         AppAmbitTaskFuture<DbResponse> batchFuture = mDbService.batch(statements, transaction);
         batchFuture.then(response -> {
             List<DbResult> results = response.getResults();
-            if (transaction) {
-                for (DbResult r : results) {
-                    if (r.hasError()) {
-                        future.fail(new RuntimeException("Batch transaction failed: " + r.getError()));
-                        return;
-                    }
+            for (DbResult r : results) {
+                if (r.hasError()) {
+                    future.fail(new RuntimeException("Batch statement failed: " + r.getError()));
+                    return;
                 }
             }
             future.complete(results);

@@ -2,7 +2,7 @@ package com.appambit.javaapp.models;
 
 import com.appambit.sdk.annotations.DbColumn;
 
-public class UserModel {
+public class TaskModel {
     public int id;
     public String title;
 
@@ -14,5 +14,5 @@ public class UserModel {
     @DbColumn("due_date")
     public String dueDate;
 
-    public UserModel() {}
+    public TaskModel() {}
 }

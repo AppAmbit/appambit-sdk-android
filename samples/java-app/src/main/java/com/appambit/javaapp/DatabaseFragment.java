@@ -16,7 +16,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.appambit.javaapp.models.UserModel;
+import com.appambit.javaapp.models.TaskModel;
 import com.appambit.sdk.AppAmbitDb;
 import com.appambit.sdk.models.db.DbStatement;
 
@@ -61,6 +61,10 @@ public class DatabaseFragment extends Fragment {
 
         view.findViewById(R.id.btn_batch_tx).setOnClickListener(v -> demoBatchInTransaction());
 
+        view.findViewById(R.id.btn_create_table).setOnClickListener(v -> demoCreateTable());
+
+        view.findViewById(R.id.btn_drop_table).setOnClickListener(v -> demoDropTable());
+
         view.findViewById(R.id.btn_fluent_select).setOnClickListener(v -> demoFluentSelect());
 
         view.findViewById(R.id.btn_where_eq).setOnClickListener(v -> demoWhereEquality());
@@ -74,6 +78,12 @@ public class DatabaseFragment extends Fragment {
         view.findViewById(R.id.btn_count).setOnClickListener(v -> demoCount());
 
         view.findViewById(R.id.btn_insert).setOnClickListener(v -> demoInsert());
+
+        view.findViewById(R.id.btn_insert_high).setOnClickListener(v -> demoInsertHigh());
+
+        view.findViewById(R.id.btn_insert_raw_sql).setOnClickListener(v -> demoInsertRawSQL());
+
+        view.findViewById(R.id.btn_insert_many).setOnClickListener(v -> demoInsertMany());
 
         view.findViewById(R.id.btn_update).setOnClickListener(v -> demoUpdate());
 
@@ -122,7 +132,7 @@ public class DatabaseFragment extends Fragment {
         future.then(result -> {
             if (result.hasError()) showStatus("Error: " + result.getError(), true);
             else {
-                showStatus("tareas pendientes — rows_read=" + result.getRowsRead(), false);
+                showStatus("pending tasks — rows_read=" + result.getRowsRead(), false);
                 adapter.update(result.getColumns(), result.toMaps());
             }
         });
@@ -132,8 +142,8 @@ public class DatabaseFragment extends Fragment {
     private void demoBatch() {
         showStatus("Running batch (no transaction)...", false);
         var future = AppAmbitDb.batch(
-                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Comprar café", 0, "low", "2026-06-10"),
-                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Revisar PR", 0, "high", "2026-06-05"),
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Buy coffee", 0, "low", "2026-06-10"),
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Review PR", 0, "high", "2026-06-05"),
                 DbStatement.of("SELECT COUNT(*) AS total FROM tasks")
         );
         future.then(results -> {
@@ -157,8 +167,8 @@ public class DatabaseFragment extends Fragment {
     private void demoBatchInTransaction() {
         showStatus("Running batch in transaction...", false);
         var future = AppAmbitDb.batchInTransaction(
-                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Reunión de equipo", 0, "high", "2026-06-06"),
-                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Preparar agenda", 0, "medium", "2026-06-06")
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Team meeting", 0, "high", "2026-06-06"),
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Prepare agenda", 0, "medium", "2026-06-06")
         );
         future.then(results -> {
             int written = 0;
@@ -167,6 +177,29 @@ public class DatabaseFragment extends Fragment {
             adapter.update(new ArrayList<>(), new ArrayList<>());
         });
         future.onError(e -> showStatus("Transaction error: " + e.getMessage(), true));
+    }
+
+    private void demoCreateTable() {
+        showStatus("CREATE TABLE...", false);
+        var future = AppAmbitDb.execute(
+                "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, is_completed INTEGER DEFAULT 0, priority TEXT, due_date TEXT)");
+        future.then(result -> {
+            if (result.hasError()) showStatus("Error: " + result.getError(), true);
+            else showStatus("CREATE TABLE OK — rows_read=" + result.getRowsRead()
+                    + "  rows_written=" + result.getRowsWritten(), false);
+        });
+        future.onError(e -> showStatus("Error: " + e.getMessage(), true));
+    }
+
+    private void demoDropTable() {
+        showStatus("DROP TABLE...", false);
+        var future = AppAmbitDb.execute("DROP TABLE IF EXISTS tasks");
+        future.then(result -> {
+            if (result.hasError()) showStatus("Error: " + result.getError(), true);
+            else showStatus("DROP TABLE OK — rows_read=" + result.getRowsRead()
+                    + "  rows_written=" + result.getRowsWritten(), false);
+        });
+        future.onError(e -> showStatus("Error: " + e.getMessage(), true));
     }
 
     private void demoFluentSelect() {
@@ -178,9 +211,9 @@ public class DatabaseFragment extends Fragment {
                 .limit(5)
                 .get();
         future.then(maps -> {
-            if (maps.isEmpty()) showStatus("No hay tareas pendientes", false);
+            if (maps.isEmpty()) showStatus("No pending tasks", false);
             else {
-                showStatus("tareas pendientes por vencer — " + maps.size() + " row(s)", false);
+                showStatus("pending tasks — " + maps.size() + " row(s)", false);
                 adapter.update(new ArrayList<>(maps.get(0).keySet()), maps);
             }
         });
@@ -193,9 +226,9 @@ public class DatabaseFragment extends Fragment {
                 .where("is_completed", 0)
                 .get();
         future.then(maps -> {
-            if (maps.isEmpty()) showStatus("No hay tareas pendientes", false);
+            if (maps.isEmpty()) showStatus("No pending tasks", false);
             else {
-                showStatus("where(is_completed, 0) — " + maps.size() + " tarea(s) pendiente(s)", false);
+                showStatus("where(is_completed, 0) — " + maps.size() + " pending task(s)", false);
                 adapter.update(new ArrayList<>(maps.get(0).keySet()), maps);
             }
         });
@@ -209,7 +242,7 @@ public class DatabaseFragment extends Fragment {
                 .orderBy("due_date")
                 .get();
         future.then(maps -> {
-            if (maps.isEmpty()) showStatus("No hay tareas high/medium", false);
+            if (maps.isEmpty()) showStatus("No pending tasks", false);
             else {
                 showStatus("whereIn(priority,[high,medium]) — " + maps.size() + " row(s)", false);
                 adapter.update(new ArrayList<>(maps.get(0).keySet()), maps);
@@ -226,9 +259,9 @@ public class DatabaseFragment extends Fragment {
                 .offset(0)
                 .get();
         future.then(maps -> {
-            if (maps.isEmpty()) showStatus("No hay tareas", false);
+            if (maps.isEmpty()) showStatus("No pending tasks", false);
             else {
-                showStatus("limit(5).offset(0) — página 1, " + maps.size() + " row(s)", false);
+                showStatus("limit(5).offset(0) — page 1, " + maps.size() + " row(s)", false);
                 adapter.update(new ArrayList<>(maps.get(0).keySet()), maps);
             }
         });
@@ -242,9 +275,9 @@ public class DatabaseFragment extends Fragment {
                 .orderBy("due_date")
                 .first();
         future.then(item -> {
-            if (item == null) showStatus("first() — no hay tareas pendientes", false);
+            if (item == null) showStatus("first() — no pending tasks", false);
             else {
-                showStatus("first() — próxima tarea a vencer", false);
+                showStatus("first() — next pending task", false);
                 adapter.update(new ArrayList<>(item.keySet()), List.of(item));
             }
         });
@@ -256,9 +289,9 @@ public class DatabaseFragment extends Fragment {
         var future = AppAmbitDb.from("tasks").where("is_completed", 0).count();
         future.then(count -> {
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("tareas_pendientes", count);
-            showStatus("count() — " + count + " tarea(s) pendiente(s)", false);
-            adapter.update(List.of("tareas_pendientes"), List.of(row));
+            row.put("pending_tasks", count);
+            showStatus("count() — " + count + " pending task(s)", false);
+            adapter.update(List.of("pending_tasks"), List.of(row));
         });
         future.onError(e -> showStatus("Error: " + e.getMessage(), true));
     }
@@ -266,14 +299,59 @@ public class DatabaseFragment extends Fragment {
     private void demoInsert() {
         showStatus("insert()...", false);
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("title", "Nueva tarea");
+        data.put("title", "New task");
         data.put("is_completed", 0);
         data.put("priority", "medium");
         data.put("due_date", "2026-06-10");
         var future = AppAmbitDb.from("tasks").insert(data);
         future.then(result -> {
             if (result.hasError()) showStatus("Error: " + result.getError(), true);
-            else showStatus("insert() — tarea creada, rows_written=" + result.getRowsWritten(), false);
+            else showStatus("insert() — task created, rows_written=" + result.getRowsWritten(), false);
+        });
+        future.onError(e -> showStatus("Error: " + e.getMessage(), true));
+    }
+
+    private void demoInsertHigh() {
+        showStatus("insert() high priority...", false);
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("title", "Fix critical bug");
+        data.put("is_completed", 0);
+        data.put("priority", "high");
+        data.put("due_date", "2026-06-05");
+        var future = AppAmbitDb.from("tasks").insert(data);
+        future.then(result -> {
+            if (result.hasError()) showStatus("Error: " + result.getError(), true);
+            else showStatus("insert() high priority — task created, rows_written=" + result.getRowsWritten(), false);
+        });
+        future.onError(e -> showStatus("Error: " + e.getMessage(), true));
+    }
+
+    private void demoInsertRawSQL() {
+        showStatus("execute() INSERT...", false);
+        var future = AppAmbitDb.execute(
+                "INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)",
+                "Raw SQL insert", 0, "medium", "2026-06-12");
+        future.then(result -> {
+            if (result.hasError()) showStatus("Error: " + result.getError(), true);
+            else showStatus("execute() INSERT OK — rows_written=" + result.getRowsWritten(), false);
+        });
+        future.onError(e -> showStatus("Error: " + e.getMessage(), true));
+    }
+
+    private void demoInsertMany() {
+        showStatus("insert many (batch)...", false);
+        var future = AppAmbitDb.batchInTransaction(
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Write unit tests", 0, "high", "2026-06-07"),
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Update documentation", 0, "low", "2026-06-15"),
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Code review", 0, "medium", "2026-06-08"),
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Deploy to staging", 0, "high", "2026-06-09"),
+                DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Monitor metrics", 0, "low", "2026-06-20")
+        );
+        future.then(results -> {
+            int written = 0;
+            for (var r : results) written += r.getRowsWritten();
+            showStatus("insert many — " + written + " rows inserted via batch", false);
+            adapter.update(new ArrayList<>(), new ArrayList<>());
         });
         future.onError(e -> showStatus("Error: " + e.getMessage(), true));
     }
@@ -283,11 +361,11 @@ public class DatabaseFragment extends Fragment {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("is_completed", 1);
         var future = AppAmbitDb.from("tasks")
-                .where("title", "Nueva tarea")
+                .where("title", "New task")
                 .update(data);
         future.then(result -> {
             if (result.hasError()) showStatus("Error: " + result.getError(), true);
-            else showStatus("update() — tarea completada, rows_written=" + result.getRowsWritten(), false);
+            else showStatus("update() — task completed, rows_written=" + result.getRowsWritten(), false);
         });
         future.onError(e -> showStatus("Error: " + e.getMessage(), true));
     }
@@ -299,21 +377,21 @@ public class DatabaseFragment extends Fragment {
                 .delete();
         future.then(result -> {
             if (result.hasError()) showStatus("Error: " + result.getError(), true);
-            else showStatus("delete() — completadas eliminadas, rows_written=" + result.getRowsWritten(), false);
+            else showStatus("delete() — completed tasks deleted, rows_written=" + result.getRowsWritten(), false);
         });
         future.onError(e -> showStatus("Error: " + e.getMessage(), true));
     }
 
     private void demoTypedModel() {
         showStatus("Typed model query...", false);
-        var future = AppAmbitDb.from("tasks", UserModel.class)
+        var future = AppAmbitDb.from("tasks", TaskModel.class)
                 .select("id", "title", "is_completed", "priority", "due_date")
                 .limit(5)
                 .get();
         future.then(tasks -> {
             List<String> cols = Arrays.asList("id", "title", "isCompleted", "priority", "dueDate");
             List<Map<String, Object>> maps = new ArrayList<>();
-            for (UserModel t : tasks) {
+            for (TaskModel t : tasks) {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id", t.id);
                 m.put("title", t.title);
@@ -322,7 +400,7 @@ public class DatabaseFragment extends Fragment {
                 m.put("dueDate", t.dueDate);
                 maps.add(m);
             }
-            showStatus("from(tasks, UserModel.class) — " + tasks.size() + " typed row(s)", false);
+            showStatus("from(tasks, TaskModel.class) — " + tasks.size() + " typed row(s)", false);
             adapter.update(cols, maps);
         });
         future.onError(e -> showStatus("Error: " + e.getMessage(), true));

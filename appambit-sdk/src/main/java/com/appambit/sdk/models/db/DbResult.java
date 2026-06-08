@@ -103,7 +103,10 @@ public class DbResult {
                 field.setAccessible(true);
                 try {
                     field.set(instance, castValue(value, field.getType()));
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    Log.w("AppAmbitDb", "Cannot map column '" + columnName + "' to field '"
+                            + field.getName() + "': " + e.getMessage());
+                }
                 return;
             }
             current = current.getSuperclass();

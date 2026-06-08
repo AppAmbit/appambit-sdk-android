@@ -49,155 +49,207 @@ fun Database() {
 
     fun demoExecute() {
         reset(); isLoading = true
-        AppAmbitDb.execute(sql)
-            .then { result ->
-                if (result.hasError()) err(result.error)
-                else {
-                    columns = result.columns
-                    rows = result.rows
-                    ok("execute(sql) — rows_read=${result.rowsRead}  rows_written=${result.rowsWritten}")
-                }
+        val future = AppAmbitDb.execute(sql)
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else {
+                columns = result.columns
+                rows = result.rows
+                ok("execute(sql) — rows_read=${result.rowsRead}  rows_written=${result.rowsWritten}")
             }
-            .onError { e -> err(e.message ?: "Unknown error") }
+        }
+        future.onError { e -> err(e.message ?: "Unknown error") }
     }
 
     fun demoExecuteParams() {
         reset(); isLoading = true
-        AppAmbitDb.execute("SELECT * FROM tasks WHERE is_completed = ? LIMIT ?", 0, 10)
-            .then { result ->
-                if (result.hasError()) err(result.error)
-                else {
-                    columns = result.columns
-                    rows = result.rows
-                    ok("execute(sql, 0, 10) — tareas pendientes, rows_read=${result.rowsRead}")
-                }
+        val future = AppAmbitDb.execute("SELECT * FROM tasks WHERE is_completed = ? LIMIT ?", 0, 10)
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else {
+                columns = result.columns
+                rows = result.rows
+                ok("execute(sql, 0, 10) — pending tasks, rows_read=${result.rowsRead}")
             }
-            .onError { e -> err(e.message ?: "Error") }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
+    fun demoCreateTable() {
+        reset(); isLoading = true
+        val future = AppAmbitDb.execute(
+            "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, is_completed INTEGER DEFAULT 0, priority TEXT, due_date TEXT)"
+        )
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else ok("CREATE TABLE OK — rows_read=${result.rowsRead}  rows_written=${result.rowsWritten}")
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
+    fun demoDropTable() {
+        reset(); isLoading = true
+        val future = AppAmbitDb.execute("DROP TABLE IF EXISTS tasks")
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else ok("DROP TABLE OK — rows_read=${result.rowsRead}  rows_written=${result.rowsWritten}")
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
+    fun demoPresetTables() {
+        reset(); isLoading = true
+        sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
+        val future = AppAmbitDb.execute(sql)
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else {
+                columns = result.columns
+                rows = result.rows
+                ok("execute(sql) — rows_read=${result.rowsRead}  rows_written=${result.rowsWritten}")
+            }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
+    fun demoPresetWherePriorityHigh() {
+        reset(); isLoading = true
+        sql = "SELECT * FROM tasks WHERE priority = 'high'"
+        val future = AppAmbitDb.execute(sql)
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else {
+                columns = result.columns
+                rows = result.rows
+                ok("execute(sql) — rows_read=${result.rowsRead}  rows_written=${result.rowsWritten}")
+            }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
     }
 
     fun demoBatch() {
         reset(); isLoading = true
-        AppAmbitDb.batch(
-            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Comprar café", 0, "low", "2026-06-10"),
-            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Revisar PR", 0, "high", "2026-06-05"),
+        val future = AppAmbitDb.batch(
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Buy coffee", 0, "low", "2026-06-10"),
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Review PR", 0, "high", "2026-06-05"),
             DbStatement.of("SELECT COUNT(*) AS total FROM tasks")
         )
-            .then { results ->
-                val written = results.sumOf { it.rowsWritten }
-                columns = listOf("statement", "rows_written")
-                rows = results.mapIndexed { i, r -> listOf(i + 1, r.rowsWritten) }
-                ok("batch() — $written row(s) written across ${results.size} statements (no transaction)")
-            }
-            .onError { e -> err(e.message ?: "Batch error") }
+        future.then { results ->
+            val written = results.sumOf { it.rowsWritten }
+            columns = listOf("statement", "rows_written")
+            rows = results.mapIndexed { i, r -> listOf(i + 1, r.rowsWritten) }
+            ok("batch() — $written row(s) written across ${results.size} statements (no transaction)")
+        }
+        future.onError { e -> err(e.message ?: "Batch error") }
     }
 
     fun demoBatchInTransaction() {
         reset(); isLoading = true
-        AppAmbitDb.batchInTransaction(
-            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Reunión de equipo", 0, "high", "2026-06-06"),
-            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Preparar agenda", 0, "medium", "2026-06-06")
+        val future = AppAmbitDb.batchInTransaction(
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Team meeting", 0, "high", "2026-06-06"),
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Prepare agenda", 0, "medium", "2026-06-06")
         )
-            .then { results ->
-                val written = results.sumOf { it.rowsWritten }
-                ok("batchInTransaction() — $written row(s) written, rolled back on any failure")
-            }
-            .onError { e -> err(e.message ?: "Transaction error") }
+        future.then { results ->
+            val written = results.sumOf { it.rowsWritten }
+            ok("batchInTransaction() — $written row(s) written, rolled back on any failure")
+        }
+        future.onError { e -> err(e.message ?: "Transaction error") }
     }
 
     fun demoFluentSelect() {
         reset(); isLoading = true
-        AppAmbitDb.from("tasks")
+        val future = AppAmbitDb.from("tasks")
             .select("id", "title", "priority", "due_date")
             .where("is_completed", "=", 0)
             .orderByDesc("due_date")
             .limit(5)
             .get()
-            .then { maps ->
-                if (maps.isEmpty()) ok("No hay tareas pendientes")
-                else {
-                    columns = maps.first().keys.toList()
-                    rows = maps.map { it.values.toList() }
-                    ok("tareas pendientes por vencer — ${maps.size} row(s)")
-                }
+        future.then { maps ->
+            if (maps.isEmpty()) ok("No pending tasks")
+            else {
+                columns = maps.first().keys.toList()
+                rows = maps.map { it.values.toList() }
+                ok("pending tasks to complete — ${maps.size} row(s)")
             }
-            .onError { e -> err(e.message ?: "Error") }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
     }
 
     fun demoWhereEquality() {
         reset(); isLoading = true
-        AppAmbitDb.from("tasks")
+        val future = AppAmbitDb.from("tasks")
             .where("is_completed", 0)
             .get()
-            .then { maps ->
-                if (maps.isEmpty()) ok("No hay tareas pendientes")
-                else {
-                    columns = maps.first().keys.toList()
-                    rows = maps.map { it.values.toList() }
-                    ok("where(is_completed, 0) — ${maps.size} tarea(s) pendiente(s)")
-                }
+        future.then { maps ->
+            if (maps.isEmpty()) ok("No pending tasks")
+            else {
+                columns = maps.first().keys.toList()
+                rows = maps.map { it.values.toList() }
+                ok("where(is_completed, 0) — ${maps.size} pending task(s)")
             }
-            .onError { e -> err(e.message ?: "Error") }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
     }
 
     fun demoWhereIn() {
         reset(); isLoading = true
-        AppAmbitDb.from("tasks")
+        val future = AppAmbitDb.from("tasks")
             .whereIn("priority", listOf("high", "medium"))
             .orderBy("due_date")
             .get()
-            .then { maps ->
-                if (maps.isEmpty()) ok("No hay tareas high/medium")
-                else {
-                    columns = maps.first().keys.toList()
-                    rows = maps.map { it.values.toList() }
-                    ok("whereIn(priority, [high, medium]) — ${maps.size} row(s)")
-                }
+        future.then { maps ->
+            if (maps.isEmpty()) ok("No high/medium tasks")
+            else {
+                columns = maps.first().keys.toList()
+                rows = maps.map { it.values.toList() }
+                ok("whereIn(priority, [high, medium]) — ${maps.size} row(s)")
             }
-            .onError { e -> err(e.message ?: "Error") }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
     }
 
     fun demoOffset() {
         reset(); isLoading = true
-        AppAmbitDb.from("tasks")
+        val future = AppAmbitDb.from("tasks")
             .orderBy("due_date")
             .limit(5)
             .offset(0)
             .get()
-            .then { maps ->
-                if (maps.isEmpty()) ok("No hay tareas")
-                else {
-                    columns = maps.first().keys.toList()
-                    rows = maps.map { it.values.toList() }
-                    ok("limit(5).offset(0) — página 1, ${maps.size} row(s)")
-                }
+        future.then { maps ->
+            if (maps.isEmpty()) ok("No tasks")
+            else {
+                columns = maps.first().keys.toList()
+                rows = maps.map { it.values.toList() }
+                ok("limit(5).offset(0) — page 1, ${maps.size} row(s)")
             }
-            .onError { e -> err(e.message ?: "Error") }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
     }
 
     fun demoFirst() {
         reset(); isLoading = true
-        AppAmbitDb.from("tasks")
+        val future = AppAmbitDb.from("tasks")
             .where("is_completed", "=", 0)
             .orderBy("due_date")
             .first()
-            .then { item ->
-                if (item == null) ok("first() — no hay tareas pendientes")
-                else {
-                    columns = item.keys.toList()
-                    rows = listOf(item.values.toList())
-                    ok("first() — próxima tarea a vencer")
-                }
+        future.then { item ->
+            if (item == null) ok("first() — No pending tasks")
+            else {
+                columns = item.keys.toList()
+                rows = listOf(item.values.toList())
+                ok("first() — next task due")
             }
-            .onError { e -> err(e.message ?: "Error") }
+        }
+        future.onError { e -> err(e.message ?: "Error") }
     }
 
     fun demoCount() {
         reset(); isLoading = true
         val future = AppAmbitDb.from("tasks").where("is_completed", 0).count()
         future.then { count ->
-            columns = listOf("tareas_pendientes")
+            columns = listOf("pending_tasks")
             rows = listOf(listOf(count))
-            ok("count() — $count tarea(s) pendiente(s)")
+            ok("count() — $count pending task(s)")
         }
         future.onError { e -> err(e.message ?: "Error") }
     }
@@ -206,14 +258,59 @@ fun Database() {
         reset(); isLoading = true
         val future = AppAmbitDb.from("tasks")
             .insert(mapOf(
-                "title" to "Nueva tarea",
+                "title" to "New task",
                 "is_completed" to 0,
                 "priority" to "medium",
                 "due_date" to "2026-06-10"
             ))
         future.then { result ->
             if (result.hasError()) err(result.error)
-            else ok("insert() — tarea creada, rows_written=${result.rowsWritten}")
+            else ok("insert() — task created, rows_written=${result.rowsWritten}")
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
+    fun demoInsertHigh() {
+        reset(); isLoading = true
+        val future = AppAmbitDb.from("tasks")
+            .insert(mapOf(
+                "title" to "Fix critical bug",
+                "is_completed" to 0,
+                "priority" to "high",
+                "due_date" to "2026-06-05"
+            ))
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else ok("insert() high priority — task created, rows_written=${result.rowsWritten}")
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
+    fun demoInsertRawSQL() {
+        reset(); isLoading = true
+        val future = AppAmbitDb.execute(
+            "INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)",
+            "Raw SQL insert", 0, "medium", "2026-06-12"
+        )
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else ok("execute() INSERT OK — rows_written=${result.rowsWritten}")
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
+    fun demoInsertMany() {
+        reset(); isLoading = true
+        val future = AppAmbitDb.batchInTransaction(
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Write unit tests", 0, "high", "2026-06-07"),
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Update documentation", 0, "low", "2026-06-15"),
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Code review", 0, "medium", "2026-06-08"),
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Deploy to staging", 0, "high", "2026-06-09"),
+            DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "Monitor metrics", 0, "low", "2026-06-20")
+        )
+        future.then { results ->
+            val written = results.sumOf { it.rowsWritten }
+            ok("insert many — $written rows inserted via batch")
         }
         future.onError { e -> err(e.message ?: "Error") }
     }
@@ -221,11 +318,11 @@ fun Database() {
     fun demoUpdate() {
         reset(); isLoading = true
         val future = AppAmbitDb.from("tasks")
-            .where("title", "Nueva tarea")
+            .where("title", "New task")
             .update(mapOf("is_completed" to 1))
         future.then { result ->
             if (result.hasError()) err(result.error)
-            else ok("update() — tarea marcada como completada, rows_written=${result.rowsWritten}")
+            else ok("update() — task marked as completed, rows_written=${result.rowsWritten}")
         }
         future.onError { e -> err(e.message ?: "Error") }
     }
@@ -237,7 +334,7 @@ fun Database() {
             .delete()
         future.then { result ->
             if (result.hasError()) err(result.error)
-            else ok("delete() — tareas completadas eliminadas, rows_written=${result.rowsWritten}")
+            else ok("delete() — completed tasks deleted, rows_written=${result.rowsWritten}")
         }
         future.onError { e -> err(e.message ?: "Error") }
     }
@@ -282,6 +379,24 @@ fun Database() {
                 DbButton("execute(sql)", Modifier.weight(1f), !isLoading) { demoExecute() }
                 DbButton("execute(sql, params)", Modifier.weight(1f), !isLoading) { demoExecuteParams() }
             }
+            Spacer(Modifier.height(6.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AssistChip({ demoPresetTables() }, { Text("List tables") }, enabled = !isLoading)
+                AssistChip({ demoPresetWherePriorityHigh() }, { Text("SELECT 1") }, enabled = !isLoading)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            DbSection("Schema")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DbButton("CREATE TABLE tasks", Modifier.weight(1f), !isLoading) { demoCreateTable() }
+                DbButton("DROP TABLE tasks", Modifier.weight(1f), !isLoading) { demoDropTable() }
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -318,6 +433,9 @@ fun Database() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AssistChip({ demoInsert() }, { Text("insert()") }, enabled = !isLoading)
+                AssistChip({ demoInsertHigh() }, { Text("insert() high") }, enabled = !isLoading)
+                AssistChip({ demoInsertRawSQL() }, { Text("insert() raw SQL") }, enabled = !isLoading)
+                AssistChip({ demoInsertMany() }, { Text("insert many") }, enabled = !isLoading)
                 AssistChip({ demoUpdate() }, { Text("update()") }, enabled = !isLoading)
                 AssistChip({ demoDelete() }, { Text("delete()") }, enabled = !isLoading)
             }

@@ -39,6 +39,7 @@ public final class DbQueryBuilder<T> {
 
     public DbQueryBuilder<T> select(@NonNull String... columns) {
         for (String col : columns) {
+            if ("*".equals(col)) continue;
             if (!selectedColumns.contains(col)) {
                 selectedColumns.add(col);
             }
@@ -62,6 +63,10 @@ public final class DbQueryBuilder<T> {
     }
 
     public DbQueryBuilder<T> whereIn(@NonNull String column, @NonNull List<?> values) {
+        if (values.isEmpty()) {
+            whereConditions.add("1 = 0");
+            return this;
+        }
         StringBuilder placeholders = new StringBuilder();
         for (int i = 0; i < values.size(); i++) {
             if (i > 0) placeholders.append(", ");
@@ -280,7 +285,7 @@ public final class DbQueryBuilder<T> {
         }
         int effectiveLimit = overrideLimit > 0 ? overrideLimit : limitValue;
         if (effectiveLimit > 0) sql.append(" LIMIT ").append(effectiveLimit);
-        if (offsetValue > 0) sql.append(" OFFSET ").append(offsetValue);
+        if (offsetValue >= 0) sql.append(" OFFSET ").append(offsetValue);
         return sql.toString();
     }
 

@@ -45,7 +45,7 @@
                 android:maxLines="5"
                 android:gravity="top"
                 android:fontFamily="monospace"
-                android:text="SELECT * FROM users LIMIT 10"
+                android:text="SELECT * FROM tasks LIMIT 10"
                 android:layout_marginBottom="8dp"/>
 
             <LinearLayout
@@ -207,11 +207,11 @@
 
             </HorizontalScrollView>
 
-            <!-- ── Fluent WRITE ── -->
+            <!-- ── Schema ── -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Fluent Builder — WRITE"
+                android:text="Schema"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorPrimary"
@@ -224,32 +224,93 @@
                 android:layout_marginBottom="16dp">
 
                 <Button
-                    android:id="@+id/btn_insert"
-                    style="?android:attr/buttonStyleSmall"
+                    android:id="@+id/btn_create_table"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="insert()" />
+                    android:text="CREATE TABLE" />
 
                 <Button
-                    android:id="@+id/btn_update"
-                    style="?android:attr/buttonStyleSmall"
+                    android:id="@+id/btn_drop_table"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="update()" />
-
-                <Button
-                    android:id="@+id/btn_delete"
-                    style="?android:attr/buttonStyleSmall"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="delete()" />
+                    android:layout_marginStart="8dp"
+                    android:text="DROP TABLE" />
 
             </LinearLayout>
+
+            <!-- ── Fluent WRITE ── -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fluent Builder — WRITE"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="6dp"/>
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_insert"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="insert()"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_insert_high"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="insert() high"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_insert_raw_sql"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="insert() raw SQL"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_insert_many"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="insert many"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_update"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="update()"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btn_delete"
+                        style="?android:attr/buttonStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="delete()"/>
+
+                </LinearLayout>
+
+            </HorizontalScrollView>
 
             <!-- ── Typed Model ── -->
             <TextView
@@ -265,7 +326,7 @@
                 android:id="@+id/btn_typed_model"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="from(users, UserModel.class)" />
+                android:text="from(tasks, TaskModel.class)" />
 
         </LinearLayout>
 

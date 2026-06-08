@@ -182,16 +182,16 @@ class AppAmbitDbTest {
     }
 
     @Test
-    fun `batch completes even when individual result has error (known issue)`() {
+    fun `batch fails when an individual result has an error`() {
         injectDbService(mockDbService)
         every { mockDbService.batch(any(), any()) } returns successFuture(
             """{"results":[{"columns":[],"rows":[],"rows_read":0,"rows_written":0,"error":"constraint violation"}]}"""
         )
 
-        var completed = false
-        AppAmbitDb.batch(DbStatement.of("INSERT INTO t (a) VALUES (1)")).then { completed = true }
+        var error: Throwable? = null
+        AppAmbitDb.batch(DbStatement.of("INSERT INTO t (a) VALUES (1)")).onError { error = it }
 
-        assertTrue("batch() should complete even when results contain errors", completed)
+        assertNotNull("batch() should fail when results contain errors", error)
     }
 
     // endregion
