@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun BottomBar() {
         val navController = rememberNavController()
-        val items = listOf("Crashes", "Analytics", "RemoteConfig", "Cms")
+        val items = listOf("Crashes", "Analytics", "RemoteConfig", "Cms", "Database")
 
         Scaffold(
             bottomBar = {
@@ -101,6 +101,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable("Cms") {
                     Cms()
+                }
+                composable("Database") {
+                    Database()
                 }
             }
         }

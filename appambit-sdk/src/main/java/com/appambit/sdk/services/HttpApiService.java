@@ -105,9 +105,9 @@ public class HttpApiService implements ApiService {
             return ApiResult.success(response);
 
         } catch (UnauthorizedException ex) {
-            if (endpoint instanceof RegisterEndpoint) {
+            if (endpoint instanceof RegisterEndpoint || endpoint instanceof TokenEndpoint) {
                 clearToken();
-                return ApiResult.fail(ApiErrorType.Unauthorized, "Register failed");
+                return ApiResult.fail(ApiErrorType.Unauthorized, "Authentication endpoint returned 401");
             }
 
             Log.w(TAG, "401 Unauthorized. Need to renew token.");

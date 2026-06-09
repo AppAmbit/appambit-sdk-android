@@ -42,4 +42,5 @@
     <string name="change_to_second_activity">Change to Second Activity</string>
     <string name="remote_config">Remote Config</string>
     <string name="cms">CMS</string>
+    <string name="database">Database</string>
 </resources>
