@@ -34,6 +34,7 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 * Error logging for quick diagnostics 
 * Crash capture with stack traces and threads
 * Offline support with batching, retry, and queue
+* Cloud database (DBaaS) access via `AppAmbitDb`, with raw SQL, batch/transaction support, and a fluent query builder
 * Create mutliple app profiles for staging and production
 * Small footprint, Kotlin-first API (Java supported)
 
@@ -57,7 +58,7 @@ Add the AppAmbit Android SDK to your app’s `build.gradle`.
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:1.0.2")
+    implementation("com.appambit:appambit:1.1.0")
 }
 ```
 
@@ -65,7 +66,7 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:1.0.2'
+    implementation 'com.appambit:appambit:1.1.0'
 }
 ```
 
@@ -180,7 +181,7 @@ val maxUpload = RemoteConfig.getDouble("max_upload")
 
 ### Java
 
-```kotlin
+```java
 // Enable remote config
 RemoteConfig.enable();
 ```
@@ -194,6 +195,15 @@ double maxUpload = RemoteConfig.getDouble("max_upload");
 ```
 
 * **Remote Config**: fetch and apply remote configuration values asynchronously using type-safe methods (`getString`, `getBoolean`, `getInt`, `getDouble`).
+
+```java
+AppAmbitDb.from("users", User.class)
+    .where("age", ">", 18)
+    .get()
+    .then(users -> { /* List<User> */ });
+```
+
+* **Database**: query and update your AppAmbit cloud database.
 
 ---
 
