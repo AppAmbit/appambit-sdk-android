@@ -34,7 +34,7 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 * Error logging for quick diagnostics 
 * Crash capture with stack traces and threads
 * Offline support with batching, retry, and queue
-* Cloud database (DBaaS) access via `AppAmbitDb`, with raw SQL, batch/transaction support, and a fluent query builder
+* Cloud SQLite database access with raw SQL, batch/transaction support, and a fluent query builder
 * Create mutliple app profiles for staging and production
 * Small footprint, Kotlin-first API (Java supported)
 
