@@ -1,5 +1,13 @@
 ___
 
+## Version 1.1.0
+
+### AppAmbit
+
+* **[Feature]** Added database client for executing SQL, running batched/transactional operations, and querying data with a fluent query builder.
+
+___
+
 ## Version 1.0.2
 
 ### AppAmbit
