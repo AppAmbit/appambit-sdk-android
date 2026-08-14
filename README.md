@@ -35,6 +35,7 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 * Crash capture with stack traces and threads
 * Offline support with batching, retry, and queue
 * Cloud SQLite database access with raw SQL, batch/transaction support, and a fluent query builder
+* Cloud Code HTTP function calls with typed and dynamic JSON responses
 * Create mutliple app profiles for staging and production
 * Small footprint, Kotlin-first API (Java supported)
 
@@ -205,6 +206,47 @@ AppAmbitDb.from("users", User.class)
 
 * **Database**: query and update your AppAmbit cloud database.
 
+* **Cloud Code**: call an HTTP-triggered AppAmbit function. Cloud Code calls are request/response operations and are not queued for offline upload.
+
+### Kotlin
+
+```kotlin
+val request = CloudCode.call(
+    "hello",
+    HttpMethodEnum.POST,
+    mapOf("source" to "android"),
+    mapOf("name" to "Ada"),
+    null
+)
+request.then { response ->
+    println("HTTP ${response.statusCode}: ${response.data}")
+}.onError { error ->
+    println(error.message)
+}
+```
+
+### Java
+
+```java
+CloudCode.call(
+        "hello",
+        HttpMethodEnum.POST,
+        null,
+        Collections.singletonMap("name", "Ada"),
+        null)
+    .then(response -> Log.d("CloudCode", String.valueOf(response.getData())))
+    .onError(error -> Log.e("CloudCode", "Request failed", error));
+```
+
+The typed overload accepts a Java model class:
+
+```java
+CloudCode.call("hello", HttpMethodEnum.GET, null, null, null, Greeting.class)
+    .then(result -> System.out.println(result.getData().greeting));
+```
+
+Typed models use the SDK's reflection mapper and must provide a public no-argument constructor. The SDK forwards the consumer token automatically, rejects reserved headers, preserves HTTP status and `X-Request-Id`, and performs one token renewal retry for `401` responses. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
+
 ---
 
 ## Release Distribution
@@ -272,4 +314,3 @@ Open source under the terms described in the [LICENSE](./LICENSE) file.
 * **Dashboard**: [appambit.com](https://appambit.com)
 * **Discord**: [discord.gg](https://discord.gg/nJyetYue2s)
 * **Examples**: Sample Android test app included in repo.
-

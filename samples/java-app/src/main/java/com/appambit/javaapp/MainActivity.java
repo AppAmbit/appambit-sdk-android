@@ -16,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "AppAmbitSample";
 
     private static final String[] TAB_LABELS = {
-            "Crashes", "Analytics", "Load", "RemoteConfig", "CMS", "Database"
+            "Crashes", "Analytics", "Load", "RemoteConfig", "CMS", "Database", "Cloud Code"
     };
 
     @Override
@@ -52,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
+                tabLayout.post(() -> tabLayout.selectTab(tab, true));
                 Fragment fragment = fragmentForIndex(tab.getPosition());
                 getSupportFragmentManager().beginTransaction()
                         .replace(R.id.fragment_container, fragment)
@@ -75,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
             case 3: return new RemoteConfigFragment();
             case 4: return new CmsFragment();
             case 5: return new DatabaseFragment();
+            case 6: return new CloudCodeFragment();
             default: return new CrashesFragment();
         }
     }

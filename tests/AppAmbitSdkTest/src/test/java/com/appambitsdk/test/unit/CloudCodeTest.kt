@@ -1,0 +1,1028 @@
+package com.appambitsdk.test.unit
+
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.content.Context
+import com.appambit.sdk.enums.HttpMethodEnum
+import com.appambit.sdk.enums.ApiErrorType
+import com.appambit.sdk.models.cloudcode.CloudCodeError
+import com.appambit.sdk.models.cloudcode.CloudCodeResponse
+import com.appambit.sdk.models.cloudcode.CloudCodeResult
+import com.appambit.sdk.services.CloudCodeService
+import com.appambit.sdk.services.HttpApiService
+import com.appambit.sdk.services.TokenService
+import com.appambit.sdk.services.endpoints.CloudCodeEndpoint
+import com.appambit.sdk.services.endpoints.TokenEndpoint
+import com.appambit.sdk.services.endpoints.CmsEndpoint
+import com.appambit.sdk.services.endpoints.RegisterEndpoint
+import com.appambit.sdk.services.endpoints.EventEndpoint
+import com.appambit.sdk.services.endpoints.StartSessionEndpoint
+import com.appambit.sdk.models.app.Consumer
+import com.appambit.sdk.models.app.ConsumerToken
+import com.appambit.sdk.models.analytics.Event
+import com.appambit.sdk.services.interfaces.HttpTransport
+import com.appambit.sdk.services.interfaces.HttpTransportResponse
+import com.appambit.sdk.utils.InternetConnection
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import java.nio.charset.StandardCharsets
+import java.net.ServerSocket
+import java.net.Socket
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.Date
+
+class CloudCodeTest {
+    class NestedChild {
+        @JvmField var name: String = ""
+    }
+
+    class NestedParent {
+        @JvmField var child: NestedChild? = null
+        @JvmField var children: List<NestedChild> = emptyList()
+    }
+
+    @Before
+    fun setup() {
+        mockkStatic(Log::class)
+        every { Log.v(any(), any()) } returns 0
+        every { Log.d(any(), any()) } returns 0
+        every { Log.i(any(), any()) } returns 0
+        every { Log.e(any(), any()) } returns 0
+        every { Log.e(any(), any(), any()) } returns 0
+        every { Log.w(any(), any<String>()) } returns 0
+        every { Log.w(any(), any<Throwable>()) } returns 0
+
+        mockkStatic(Looper::class)
+        every { Looper.getMainLooper() } returns mockk(relaxed = true)
+        mockkConstructor(Handler::class)
+        every { anyConstructed<Handler>().post(any()) } answers {
+            firstArg<Runnable>().run()
+            true
+        }
+
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    @Test
+    fun `endpoint encodes slug and sorted query`() {
+        val endpoint = CloudCodeEndpoint(
+            "hello world?",
+            HttpMethodEnum.POST,
+            mapOf("source" to "android", "message" to "hello world"),
+            mapOf("count" to 2),
+            mapOf("X-Trace" to "test")
+        )
+
+        assertEquals("/fn/hello%20world%3F?message=hello%20world&source=android", endpoint.url)
+        assertEquals("POST", endpoint.method.name)
+        assertEquals("test", endpoint.customHeader["X-Trace"])
+    }
+
+    @Test
+    fun `CMS endpoint uses the same encoded sorted query contract`() {
+        val endpoint = CmsEndpoint(
+            "posts",
+            linkedMapOf("space key" to "hello world", "filter[title]" to "a+b")
+        )
+
+        assertEquals(
+            "/posts?filter%5Btitle%5D=a%2Bb&space%20key=hello%20world",
+            endpoint.url
+        )
+    }
+
+    @Test
+    fun `legacy API response uses the shared HTTP transport`() {
+        val server = HttpProbeServer(
+            mapOf("/consumer/token" to mutableListOf(
+                HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"shared-token\"}")
+            ))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = TokenEndpoint(ConsumerToken("app-key", "consumer-id"))
+            endpoint.setBaseUrl(server.baseUrl)
+            val result = HttpApiService(context, executor)
+                .executeRequest(endpoint, com.appambit.sdk.models.responses.TokenResponse::class.java)
+
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, result.errorType)
+            assertEquals("shared-token", result.data!!.getToken())
+            assertEquals("requests=${server.requests}", 1, server.requestCount("/consumer/token"))
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `legacy API JSON request uses the shared HTTP transport`() {
+        val server = HttpProbeServer(
+            mapOf("/consumer" to mutableListOf(
+                HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"registered-token\"}")
+            ))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = RegisterEndpoint(
+                Consumer("app-key", "device-id", "Pixel", "1.0", "user", "user@example.com", "android", "US", "en")
+            )
+            endpoint.setBaseUrl(server.baseUrl)
+            val result = HttpApiService(context, executor)
+                .executeRequest(endpoint, com.appambit.sdk.models.responses.TokenResponse::class.java)
+
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, result.errorType)
+            assertEquals("registered-token", result.data!!.getToken())
+            assertTrue(server.requests.first().body.contains("\"app_key\":\"app-key\""))
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `legacy event and session requests preserve authorization and POST bodies`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/events" to mutableListOf(HttpProbeServer.Response(200, "{}")),
+                "/session/start" to mutableListOf(HttpProbeServer.Response(200, "{\"session_id\":\"session-1\"}"))
+            )
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("legacy-token")
+
+            val event = Event().apply {
+                setName("purchase")
+                setData(mapOf("source" to "test"))
+            }
+            val eventEndpoint = EventEndpoint(event)
+            eventEndpoint.setBaseUrl(server.baseUrl)
+            val eventResult = service.executeRequest(eventEndpoint, com.appambit.sdk.models.responses.EventResponse::class.java)
+
+            val sessionEndpoint = StartSessionEndpoint(Date())
+            sessionEndpoint.setBaseUrl(server.baseUrl)
+            val sessionResult = service.executeRequest(sessionEndpoint, com.appambit.sdk.models.responses.StartSessionResponse::class.java)
+
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, eventResult.errorType)
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, sessionResult.errorType)
+            assertEquals(2, server.requests.size)
+            assertTrue(server.requests.all { it.method == "POST" })
+            assertTrue(server.requests.all { it.headers["authorization"] == "Bearer legacy-token" })
+            assertTrue(server.requests.first { it.path == "/events" }.body.contains("\"name\":\"purchase\""))
+            assertTrue(server.requests.first { it.path == "/session/start" }.body.isNotEmpty())
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `legacy event 401 refreshes once and retries with the new token`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/events" to mutableListOf(
+                    HttpProbeServer.Response(401, "{\"error\":\"expired\"}"),
+                    HttpProbeServer.Response(200, "{}")
+                ),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"new-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("old-token")
+            val eventEndpoint = EventEndpoint(Event().apply { setName("purchase") })
+            eventEndpoint.setBaseUrl(server.baseUrl)
+
+            val result = service.executeRequest(eventEndpoint, com.appambit.sdk.models.responses.EventResponse::class.java)
+
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, result.errorType)
+            assertEquals(2, server.requestCount("/events"))
+            assertEquals(1, server.requestCount("/consumer/token"))
+            val eventRequests = server.requests.filter { it.path == "/events" }
+            assertEquals("Bearer old-token", eventRequests[0].headers["authorization"])
+            assertEquals("Bearer new-token", eventRequests[1].headers["authorization"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `legacy event refreshes before sending when token is missing`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/events" to mutableListOf(HttpProbeServer.Response(200, "{}")),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"fresh-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("")
+            val eventEndpoint = EventEndpoint(Event().apply { setName("purchase") })
+            eventEndpoint.setBaseUrl(server.baseUrl)
+
+            val result = service.executeRequest(eventEndpoint, com.appambit.sdk.models.responses.EventResponse::class.java)
+
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, result.errorType)
+            assertEquals("requests=${server.requests}", 1, server.requestCount("/consumer/token"))
+            assertEquals(1, server.requestCount("/events"))
+            assertEquals("Bearer fresh-token", server.requests.first { it.path == "/events" }.headers["authorization"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `concurrent legacy requests with missing token share one preflight refresh`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/events" to mutableListOf(
+                    HttpProbeServer.Response(200, "{}"),
+                    HttpProbeServer.Response(200, "{}")
+                ),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"fresh-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newFixedThreadPool(2)
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("")
+            val first = EventEndpoint(Event().apply { setName("first") }).also { it.setBaseUrl(server.baseUrl) }
+            val second = EventEndpoint(Event().apply { setName("second") }).also { it.setBaseUrl(server.baseUrl) }
+            val completed = CountDownLatch(2)
+            executor.submit {
+                service.executeRequest(first, com.appambit.sdk.models.responses.EventResponse::class.java)
+                completed.countDown()
+            }
+            executor.submit {
+                service.executeRequest(second, com.appambit.sdk.models.responses.EventResponse::class.java)
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(1, server.requestCount("/consumer/token"))
+            assertEquals(2, server.requestCount("/events"))
+            assertTrue(server.requests.filter { it.path == "/events" }
+                .all { it.headers["authorization"] == "Bearer fresh-token" })
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `cloud code request with missing token refreshes before the first call`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/fn/hello" to mutableListOf(HttpProbeServer.Response(200, "{\"ok\":true}")),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"cloud-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newFixedThreadPool(2)
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("")
+            val endpoint = CloudCodeEndpoint("hello", HttpMethodEnum.GET, null, null, null)
+            endpoint.setBaseUrl(server.baseUrl)
+            val completed = CountDownLatch(1)
+            var response: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                response = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(200, response!!.statusCode)
+            assertEquals(1, server.requestCount("/consumer/token"))
+            assertEquals(1, server.requestCount("/fn/hello"))
+            assertEquals("Bearer cloud-token", server.requests.first { it.path == "/fn/hello" }.headers["authorization"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `cloud code refresh ignores an in-flight token renewal invalidated before completion`() {
+        val tokenStarted = CountDownLatch(1)
+        val releaseTokenResponse = CountDownLatch(1)
+        val server = HttpProbeServer(
+            mapOf(
+                "/fn/hello" to mutableListOf(HttpProbeServer.Response(200, "{\"ok\":true}")),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(
+                        200,
+                        "{\"id\":\"consumer\",\"token\":\"stale-token\"}",
+                        beforeResponse = {
+                            tokenStarted.countDown()
+                            releaseTokenResponse.await(5, TimeUnit.SECONDS)
+                        }
+                    ),
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"fresh-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newFixedThreadPool(2)
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("old-token")
+
+            val inFlightRenewal = service.GetNewToken()
+            assertTrue(tokenStarted.await(5, TimeUnit.SECONDS))
+
+            service.setToken("")
+            releaseTokenResponse.countDown()
+
+            assertEquals(ApiErrorType.Unknown, inFlightRenewal.getBlocking(5, TimeUnit.SECONDS))
+            assertNull(service.getToken())
+
+            val endpoint = CloudCodeEndpoint("hello", HttpMethodEnum.GET, null, null, null)
+            endpoint.setBaseUrl(server.baseUrl)
+            val completed = CountDownLatch(1)
+            var response: HttpTransportResponse? = null
+            service.executeRaw(endpoint, 2_000) {
+                response = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(200, response!!.statusCode)
+            assertEquals(2, server.requestCount("/consumer/token"))
+            assertEquals(1, server.requestCount("/fn/hello"))
+            assertEquals(
+                "Bearer fresh-token",
+                server.requests.first { it.path == "/fn/hello" }.headers["authorization"]
+            )
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `legacy 403 is terminal and never retries a mutable request`() {
+        val server = HttpProbeServer(
+            mapOf("/events" to mutableListOf(HttpProbeServer.Response(403, "<html>forbidden</html>")))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("legacy-token")
+            val eventEndpoint = EventEndpoint(Event().apply { setName("purchase") })
+            eventEndpoint.setBaseUrl(server.baseUrl)
+
+            val result = service.executeRequest(eventEndpoint, com.appambit.sdk.models.responses.EventResponse::class.java)
+
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.Unknown, result.errorType)
+            assertEquals(1, server.requestCount("/events"))
+            assertEquals(1, server.requests.size)
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `invalid slug and reserved header fail before transport`() {
+        val transport = FakeTransport()
+        val service = CloudCodeService(transport)
+
+        var invalidSlug: Throwable? = null
+        service.call("invalid/function", HttpMethodEnum.POST, null, null, null)
+            .onError { invalidSlug = it }
+        assertTrue(invalidSlug is CloudCodeError)
+        assertEquals(CloudCodeError.Code.INVALID_FUNCTION, (invalidSlug as CloudCodeError).code)
+        assertEquals(0, transport.requestCount)
+
+        var invalidHeader: Throwable? = null
+        service.call("hello", HttpMethodEnum.POST, null, null, mapOf("authorization" to "spoofed"))
+            .onError { invalidHeader = it }
+        assertEquals(CloudCodeError.Code.INVALID_HEADER, (invalidHeader as CloudCodeError).code)
+        assertEquals(0, transport.requestCount)
+    }
+
+    @Test
+    fun `dynamic result supports JSON values and metadata`() {
+        val transport = FakeTransport()
+        transport.response = response(201, "{\"ok\":true,\"count\":3}", mapOf("X-Request-Id" to "header-id"))
+        val service = CloudCodeService(transport)
+
+        var received: CloudCodeResponse? = null
+        var error: Throwable? = null
+        service.call("hello", HttpMethodEnum.POST, null, mapOf("name" to "Ada"), null)
+            .then { received = it }
+            .onError { error = it }
+
+        assertNull(error)
+        assertNotNull(received)
+        assertEquals(201, received!!.statusCode)
+        assertEquals("header-id", received!!.requestId)
+        assertEquals(true, (received!!.data as Map<*, *>) ["ok"])
+        assertEquals(3, (received!!.data as Map<*, *>) ["count"])
+    }
+
+    @Test
+    fun `dynamic result supports primitive and null JSON values`() {
+        val transport = FakeTransport()
+        val service = CloudCodeService(transport)
+
+        transport.response = response(200, "\"hello\"")
+        var stringResult: Any? = "unset"
+        service.call("string", HttpMethodEnum.GET, null, null, null)
+            .then { stringResult = it.data }
+        assertEquals("hello", stringResult)
+
+        transport.response = response(200, "7")
+        var numberResult: Any? = null
+        service.call("number", HttpMethodEnum.GET, null, null, null)
+            .then { numberResult = it.data }
+        assertEquals(7, numberResult)
+
+        transport.response = response(200, "true")
+        var booleanResult: Any? = null
+        service.call("boolean", HttpMethodEnum.GET, null, null, null)
+            .then { booleanResult = it.data }
+        assertEquals(true, booleanResult)
+
+        transport.response = response(200, "null")
+        var nullResult: Any? = "unset"
+        service.call("null", HttpMethodEnum.GET, null, null, null)
+            .then { nullResult = it.data }
+        assertNull(nullResult)
+    }
+
+    @Test
+    fun `typed result decodes model and request id body fallback`() {
+        class Greeting {
+            @JvmField var greeting: String = ""
+        }
+
+        val transport = FakeTransport()
+        transport.response = response(200, "{\"greeting\":\"hello\",\"request_id\":\"body-id\"}")
+        val service = CloudCodeService(transport)
+
+        var received: CloudCodeResult<Greeting>? = null
+        var error: Throwable? = null
+        service.callTyped("typed", HttpMethodEnum.GET, null, null, null, Greeting::class.java)
+            .then { received = it }
+            .onError { error = it }
+
+        assertNull(error)
+        assertEquals("hello", received!!.data!!.greeting)
+        assertEquals("body-id", received!!.requestId)
+    }
+
+    @Test
+    fun `HTTP errors preserve status body and request id`() {
+        val transport = FakeTransport()
+        transport.response = response(429, "{\"error\":\"quota_exceeded\",\"request_id\":\"error-id\"}")
+        val service = CloudCodeService(transport)
+
+        var error: Throwable? = null
+        service.call("limited", HttpMethodEnum.POST, null, null, null).onError { error = it }
+
+        assertTrue(error is CloudCodeError)
+        val cloudError = error as CloudCodeError
+        assertEquals(CloudCodeError.Code.HTTP, cloudError.code)
+        assertEquals(429, cloudError.statusCode)
+        assertEquals("error-id", cloudError.requestId)
+        assertEquals("quota_exceeded", (cloudError.body as Map<*, *>) ["error"])
+    }
+
+    @Test
+    fun `204 typed response completes with null data`() {
+        val transport = FakeTransport()
+        transport.response = response(204, null, mapOf("X-Request-Id" to "empty-id"))
+        val service = CloudCodeService(transport)
+
+        var received: CloudCodeResult<String>? = null
+        var error: Throwable? = null
+        service.callTyped("empty", HttpMethodEnum.DELETE, null, null, null, String::class.java)
+            .then { received = it }
+            .onError { error = it }
+
+        assertNull(error)
+        assertNotNull(received)
+        assertNull(received!!.data)
+        assertEquals("empty-id", received!!.requestId)
+    }
+
+    @Test
+    fun `cancel suppresses callback`() {
+        val transport = FakeTransport()
+        transport.response = null
+        val service = CloudCodeService(transport)
+        var callbackCalled = false
+        val request = service.call("slow", HttpMethodEnum.POST, null, null, null)
+            .then { callbackCalled = true }
+
+        request.cancel()
+        transport.deliver(response(200, "{\"ok\":true}"))
+
+        assertTrue(request.isCancelled)
+        assertFalse(callbackCalled)
+    }
+
+    @Test
+    fun `invalid method fails through the request error channel`() {
+        val transport = FakeTransport()
+        val service = CloudCodeService(transport)
+        var error: Throwable? = null
+
+        val request = service.call("hello", null, null, null, null)
+            .onError { error = it }
+
+        assertTrue(request.isDone)
+        assertTrue(error is CloudCodeError)
+        assertEquals(CloudCodeError.Code.INVALID_METHOD, (error as CloudCodeError).code)
+        assertEquals(0, transport.requestCount)
+    }
+
+    @Test
+    fun `transport exception fails instead of escaping or leaving request pending`() {
+        val transport = FakeTransport()
+        transport.throwOnExecute = IllegalStateException("transport failed")
+        val service = CloudCodeService(transport)
+        var error: Throwable? = null
+
+        val request = service.call("hello", HttpMethodEnum.POST, null, null, null)
+            .onError { error = it }
+
+        assertTrue(request.isDone)
+        assertTrue(error is CloudCodeError)
+        assertEquals(CloudCodeError.Code.TRANSPORT, (error as CloudCodeError).code)
+    }
+
+    @Test
+    fun `invalid query and header values fail before transport`() {
+        val transport = FakeTransport()
+        val service = CloudCodeService(transport)
+        var queryError: Throwable? = null
+        var headerError: Throwable? = null
+
+        service.call("hello", HttpMethodEnum.GET, mapOf("bad" to null), null, null)
+            .onError { queryError = it }
+        service.call("hello", HttpMethodEnum.GET, null, null, mapOf("X-Test" to "bad\nvalue"))
+            .onError { headerError = it }
+
+        assertEquals(CloudCodeError.Code.INVALID_QUERY, (queryError as CloudCodeError).code)
+        assertEquals(CloudCodeError.Code.INVALID_HEADER, (headerError as CloudCodeError).code)
+        assertEquals(0, transport.requestCount)
+    }
+
+    @Test
+    fun `body is snapshotted before transport execution`() {
+        val transport = FakeTransport()
+        transport.response = response(200, "{}")
+        val service = CloudCodeService(transport)
+        val body = linkedMapOf<String, Any>("value" to "before")
+
+        service.call("hello", HttpMethodEnum.POST, null, body, null)
+        body["value"] = "after"
+        assertEquals("before", (transport.lastEndpoint!!.payload as Map<*, *>) ["value"])
+    }
+
+    @Test
+    fun `second 401 is returned after one retry`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/fn/retry" to mutableListOf(
+                    HttpProbeServer.Response(401, "{\"error\":\"expired\"}"),
+                    HttpProbeServer.Response(401, "{\"error\":\"still_expired\"}")
+                ),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"new-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val endpoint = CloudCodeEndpoint("retry", HttpMethodEnum.GET, null, null, null)
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("old-token")
+            val completed = CountDownLatch(1)
+            var received: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                received = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(401, received!!.statusCode)
+            assertEquals(2, server.requestCount("/fn/retry"))
+            assertEquals("requests=${server.requests}", 1, server.requestCount("/consumer/token"))
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `cancel makes the request terminal`() {
+        val transport = FakeTransport()
+        transport.response = null
+        val service = CloudCodeService(transport)
+        var callbackCalled = false
+        var errorCallbackCalled = false
+        val request = service.call("slow", HttpMethodEnum.POST, null, null, null)
+            .then { callbackCalled = true }
+            .onError { errorCallbackCalled = true }
+
+        request.cancel()
+
+        assertTrue(request.isCancelled)
+        assertTrue(request.isDone)
+        assertFalse(callbackCalled)
+        assertFalse(errorCallbackCalled)
+    }
+
+    @Test
+    fun `typed response decodes nested model and model list`() {
+        val transport = FakeTransport()
+        transport.response = response(
+            200,
+            """{"child":{"name":"one"},"children":[{"name":"two"}]}"""
+        )
+        val service = CloudCodeService(transport)
+        var received: CloudCodeResult<NestedParent>? = null
+
+        service.callTyped("nested", HttpMethodEnum.GET, null, null, null, NestedParent::class.java)
+            .then { received = it }
+
+        assertNotNull(received)
+        assertEquals("one", received!!.data!!.child!!.name)
+        assertEquals("two", received!!.data!!.children[0].name)
+    }
+
+    @Test
+    fun `http transport does not send a body for GET`() {
+        val server = HttpProbeServer(
+            mapOf("/fn/read" to mutableListOf(HttpProbeServer.Response(200, "{}")))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = CloudCodeEndpoint(
+                "read", HttpMethodEnum.GET, null, mapOf("ignored" to true), null
+            )
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("transport-token")
+            val completed = CountDownLatch(1)
+            var received: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                received = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(null, received!!.error)
+            assertTrue("requests=${server.requests}", server.requests.first().method == "GET")
+            assertEquals("", server.requests.first().body)
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `http transport sends DELETE body and custom headers`() {
+        val server = HttpProbeServer(
+            mapOf("/fn/delete" to mutableListOf(HttpProbeServer.Response(200, "{}")))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = CloudCodeEndpoint(
+                "delete", HttpMethodEnum.DELETE, null, mapOf("id" to 7), mapOf("X-Probe" to "delete")
+            )
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("transport-token")
+            val completed = CountDownLatch(1)
+
+            service.executeRaw(endpoint, 2_000) { completed.countDown() }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals("DELETE", server.requests.first().method)
+            assertEquals("{\"id\":7}", server.requests.first().body)
+            assertEquals("delete", server.requests.first().headers["x-probe"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `http transport renews once and retries one 401`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/fn/retry" to mutableListOf(
+                    HttpProbeServer.Response(401, "{\"error\":\"expired\"}"),
+                    HttpProbeServer.Response(200, "{\"ok\":true}")
+                ),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"new-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val endpoint = CloudCodeEndpoint("retry", HttpMethodEnum.GET, null, null, null)
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("old-token")
+            val completed = CountDownLatch(1)
+            var received: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                received = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(null, received!!.error)
+            assertEquals(200, received!!.statusCode)
+            assertEquals(2, server.requestCount("/fn/retry"))
+            assertTrue("requests=${server.requests}", server.requestCount("/consumer/token") == 1)
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `concurrent 401 requests share token renewal`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/fn/one" to mutableListOf(
+                    HttpProbeServer.Response(401, "{}"),
+                    HttpProbeServer.Response(200, "{\"ok\":1}")
+                ),
+                "/fn/two" to mutableListOf(
+                    HttpProbeServer.Response(401, "{}"),
+                    HttpProbeServer.Response(200, "{\"ok\":2}")
+                ),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"new-token\"}"),
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"newer-token\"}")
+                )
+            )
+        )
+        val executor = Executors.newFixedThreadPool(2)
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
+
+        try {
+            val service = HttpApiService(context, executor)
+            service.setToken("old-token")
+            val completed = CountDownLatch(2)
+            val endpointOne = CloudCodeEndpoint("one", HttpMethodEnum.GET, null, null, null)
+            val endpointTwo = CloudCodeEndpoint("two", HttpMethodEnum.GET, null, null, null)
+            endpointOne.setBaseUrl(server.baseUrl)
+            endpointTwo.setBaseUrl(server.baseUrl)
+
+            service.executeRaw(endpointOne, 2_000) { completed.countDown() }
+            service.executeRaw(endpointTwo, 2_000) { completed.countDown() }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(1, server.requestCount("/consumer/token"))
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    private fun response(status: Int, body: String?, headers: Map<String, String> = emptyMap()) =
+        HttpTransportResponse(
+            status,
+            body?.toByteArray(StandardCharsets.UTF_8),
+            headers,
+            null
+        )
+
+    private class FakeTransport : HttpTransport {
+        var response: HttpTransportResponse? = null
+        var requestCount: Int = 0
+        var throwOnExecute: Throwable? = null
+        var lastEndpoint: com.appambit.sdk.services.interfaces.IEndpoint? = null
+        private var pending: HttpTransport.Callback? = null
+
+        override fun executeRaw(
+            endpoint: com.appambit.sdk.services.interfaces.IEndpoint,
+            timeoutMillis: Int,
+            callback: HttpTransport.Callback
+        ) {
+            requestCount++
+            lastEndpoint = endpoint
+            throwOnExecute?.let { throw it }
+            if (response == null) pending = callback else callback.onComplete(response!!)
+        }
+
+        fun deliver(response: HttpTransportResponse) {
+            val callback = pending
+            pending = null
+            callback?.onComplete(response)
+        }
+
+    }
+
+    private class HttpProbeServer(
+        private val responses: Map<String, MutableList<Response>>
+    ) : AutoCloseable {
+        data class Response(
+            val status: Int,
+            val body: String,
+            val beforeResponse: (() -> Unit)? = null
+        )
+        data class Request(val method: String, val path: String, val body: String, val headers: Map<String, String>)
+
+        private val socket = ServerSocket(0)
+        private val requestsInternal = mutableListOf<Request>()
+        private val thread = Thread {
+            while (!socket.isClosed) {
+                try {
+                    handle(socket.accept())
+                } catch (_: Exception) {
+                    if (!socket.isClosed) throw RuntimeException("HTTP probe server failed")
+                }
+            }
+        }.apply { start() }
+
+        val baseUrl: String get() = "http://127.0.0.1:${socket.localPort}"
+        val requests: List<Request> get() = synchronized(requestsInternal) { requestsInternal.toList() }
+
+        fun requestCount(path: String): Int = requests.count { it.path == path }
+
+        private fun handle(client: Socket) {
+            client.use { connection ->
+                val input = connection.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+                val requestLine = input.readLine() ?: return
+                val parts = requestLine.split(" ")
+                val headers = mutableMapOf<String, String>()
+                while (true) {
+                    val line = input.readLine() ?: break
+                    if (line.isEmpty()) break
+                    val separator = line.indexOf(':')
+                    if (separator > 0) headers[line.substring(0, separator).lowercase()] = line.substring(separator + 1).trim()
+                }
+                val contentLength = headers["content-length"]?.toIntOrNull() ?: 0
+                val body = CharArray(contentLength)
+                var read = 0
+                while (read < contentLength) {
+                    val count = input.read(body, read, contentLength - read)
+                    if (count <= 0) break
+                    read += count
+                }
+                val request = Request(parts[0], parts[1].substringBefore('?'), String(body, 0, read), headers)
+                synchronized(requestsInternal) { requestsInternal.add(request) }
+                val response = synchronized(responses) {
+                    responses[request.path]?.removeFirstOrNull() ?: Response(404, "{}")
+                }
+                response.beforeResponse?.invoke()
+                val responseBytes = response.body.toByteArray(StandardCharsets.UTF_8)
+                val output = connection.getOutputStream()
+                output.write("HTTP/1.1 ${response.status} Test\r\nContent-Type: application/json\r\nContent-Length: ${responseBytes.size}\r\nConnection: close\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                output.write(responseBytes)
+                output.flush()
+            }
+        }
+
+        override fun close() {
+            socket.close()
+            thread.join(1_000)
+        }
+    }
+}

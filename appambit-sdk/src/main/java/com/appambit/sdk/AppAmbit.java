@@ -187,6 +187,7 @@ public final class AppAmbit {
         BreadcrumbManager.initialize(ServiceLocator.getApiService(), ServiceLocator.getExecutorService(),
                 ServiceLocator.getStorageService());
         AppAmbitDb.initialize(ServiceLocator.getDbService());
+        CloudCode.initialize(ServiceLocator.getCloudCodeService());
     }
 
     private static void onStartApp(Context context) {
