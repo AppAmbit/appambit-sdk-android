@@ -261,7 +261,7 @@ CloudCode.call("profile", HttpMethodEnum.GET, null, null, null, Greeting::class.
     .then { result -> println(result.data?.displayName) }
 ```
 
-Typed models use the SDK's reflection mapper. Field names map directly to JSON names, and `@JsonKey` makes a different mapping explicit. The SDK forwards the consumer token automatically, rejects reserved headers, preserves HTTP status and `X-Request-Id`, and performs one token renewal retry for idempotent `GET` requests only. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
+Typed models use the SDK's reflection mapper. Field names map directly to JSON names, and `@JsonKey` makes a different mapping explicit. The SDK forwards the consumer token automatically, rejects reserved headers, and preserves HTTP status and `X-Request-Id`. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
 
 `getBlocking()` is intended for tests or externally controlled worker threads. It throws on the Android main thread and on SDK-owned executors; use `then()` and `onError()` in application code.
 
