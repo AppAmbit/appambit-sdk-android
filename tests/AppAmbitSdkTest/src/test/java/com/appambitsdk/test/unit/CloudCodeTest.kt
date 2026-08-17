@@ -241,7 +241,7 @@ class CloudCodeTest {
     }
 
     @Test
-    fun `mutating event 401 is terminal and does not retry`() {
+    fun `mutating event 401 refreshes and retries once`() {
         val server = HttpProbeServer(
             mapOf(
                 "/events" to mutableListOf(
@@ -271,10 +271,11 @@ class CloudCodeTest {
 
             val result = service.executeRequest(eventEndpoint, com.appambit.sdk.models.responses.EventResponse::class.java)
 
-            assertEquals(com.appambit.sdk.enums.ApiErrorType.Unauthorized, result.errorType)
-            assertEquals(1, server.requestCount("/events"))
-            assertEquals(0, server.requestCount("/consumer/token"))
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, result.errorType)
+            assertEquals(2, server.requestCount("/events"))
+            assertEquals(1, server.requestCount("/consumer/token"))
             assertEquals("Bearer old-token", server.requests.first { it.path == "/events" }.headers["authorization"])
+            assertEquals("Bearer new-token", server.requests.last { it.path == "/events" }.headers["authorization"])
         } finally {
             executor.shutdownNow()
             server.close()
@@ -1104,12 +1105,15 @@ class CloudCodeTest {
     }
 
     @Test
-    fun `http transport does not retry mutating Cloud Code requests after 401`() {
+    fun `http transport retries mutating Cloud Code requests after 401`() {
         val server = HttpProbeServer(
             mapOf(
                 "/fn/mutate" to mutableListOf(
                     HttpProbeServer.Response(401, "{\"error\":\"expired\"}"),
                     HttpProbeServer.Response(200, "{\"ok\":true}")
+                ),
+                "/consumer/token" to mutableListOf(
+                    HttpProbeServer.Response(200, "{\"id\":\"consumer\",\"token\":\"new-token\"}")
                 )
             )
         )
@@ -1118,6 +1122,10 @@ class CloudCodeTest {
         every { context.applicationContext } returns context
         mockkStatic(InternetConnection::class)
         every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(TokenService::class)
+        val tokenEndpoint = TokenEndpoint(mockk(relaxed = true))
+        tokenEndpoint.setBaseUrl(server.baseUrl)
+        every { TokenService.createTokenendpoint() } returns tokenEndpoint
 
         try {
             val endpoint = CloudCodeEndpoint("mutate", HttpMethodEnum.POST, null, mapOf("id" to 1), null)
@@ -1133,8 +1141,9 @@ class CloudCodeTest {
             }
 
             assertTrue(completed.await(5, TimeUnit.SECONDS))
-            assertEquals(401, received!!.statusCode)
-            assertEquals(1, server.requestCount("/fn/mutate"))
+            assertEquals(200, received!!.statusCode)
+            assertEquals(2, server.requestCount("/fn/mutate"))
+            assertEquals(1, server.requestCount("/consumer/token"))
         } finally {
             executor.shutdownNow()
             server.close()

@@ -129,8 +129,7 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
             if (endpoint instanceof RegisterEndpoint
                     || endpoint instanceof TokenEndpoint
                     || endpoint instanceof CmsEndpoint
-                    || !allowTokenRenewal
-                    || !isRetryableAfterUnauthorized(endpoint)) {
+                    || !allowTokenRenewal) {
                 return ApiResult.fail(ApiErrorType.Unauthorized,
                         endpoint instanceof CmsEndpoint
                                 ? "CMS request unauthorized"
@@ -181,10 +180,6 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
                 && !(endpoint instanceof TokenEndpoint)
                 && !(endpoint instanceof CmsEndpoint)
                 && !endpoint.isSkipAuthorization();
-    }
-
-    private static boolean isRetryableAfterUnauthorized(IEndpoint endpoint) {
-        return endpoint.getMethod() == com.appambit.sdk.enums.HttpMethodEnum.GET;
     }
 
     private static void checkStatusCodeFrom(int statusCode)
@@ -383,8 +378,7 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
         rawTransport.executeRaw(endpoint, timeoutMillis, response -> {
             if (!allowTokenRenewal
                     || response.getStatusCode() == null
-                    || response.getStatusCode() != 401
-                    || !isRetryableAfterUnauthorized(endpoint)) {
+                    || response.getStatusCode() != 401) {
                 callback.onComplete(response);
                 return;
             }
