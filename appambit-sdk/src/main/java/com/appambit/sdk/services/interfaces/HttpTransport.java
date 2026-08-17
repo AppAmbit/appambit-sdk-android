@@ -1,6 +1,8 @@
 package com.appambit.sdk.services.interfaces;
 
 import androidx.annotation.NonNull;
+
+import java.net.SocketTimeoutException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -23,7 +25,7 @@ public interface HttpTransport {
         try {
             if (!completed.await(timeoutMillis, TimeUnit.MILLISECONDS)) {
                 return new HttpTransportResponse(null, null, null,
-                        new java.io.IOException("HTTP request timed out"));
+                        new SocketTimeoutException("HTTP request timed out"));
             }
             return result.get();
         } catch (InterruptedException error) {

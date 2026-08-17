@@ -50,16 +50,22 @@ import com.appambit.sdk.models.cloudcode.CloudCodeError
 import com.appambit.sdk.models.cloudcode.CloudCodeRequest
 import com.appambit.sdk.models.cloudcode.CloudCodeResponse
 import com.appambit.sdk.models.cloudcode.CloudCodeResult
+import com.appambit.sdk.utils.JsonKey
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 import java.util.UUID
 
 class CloudCodeSummary {
+    @field:JsonKey("task_count")
     var task_count: Int? = null
+    @field:JsonKey("database_available")
     var database_available: Boolean = false
+    @field:JsonKey("database_tables_ready")
     var database_tables_ready: Boolean = false
+    @field:JsonKey("posts")
     var posts: List<Any?>? = null
+    @field:JsonKey("platform")
     var platform: String = ""
 }
 

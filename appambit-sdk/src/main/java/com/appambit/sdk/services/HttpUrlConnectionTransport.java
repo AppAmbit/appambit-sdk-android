@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -41,7 +42,7 @@ import java.util.concurrent.ExecutorService;
 
 import javax.net.ssl.SSLSocket;
 
-/** Shared URLConnection-based transport for legacy API and Cloud Code requests. */
+/** Shared URLConnection-based transport for SDK and Cloud Code requests. */
 public final class HttpUrlConnectionTransport implements HttpTransport {
     private static final String TAG = HttpUrlConnectionTransport.class.getSimpleName();
 
@@ -73,17 +74,19 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
         if (!hasInternetConnection(context)) {
             return failure(new IOException("No internet connection"));
         }
+        long deadlineNanos = deadlineNanos(timeoutMillis);
         if (endpoint instanceof CmsEndpoint) {
-            return executeCms(endpoint, timeoutMillis);
+            return executeCms(endpoint, deadlineNanos);
         }
-        return executeUrlConnection(endpoint, timeoutMillis);
+        return executeUrlConnection(endpoint, deadlineNanos);
     }
 
     private HttpTransportResponse executeUrlConnection(
             @NonNull IEndpoint endpoint,
-            int timeoutMillis) {
+            long deadlineNanos) {
         HttpURLConnection connection = null;
         try {
+            ensureDeadline(deadlineNanos);
             String fullUrl = endpoint.getBaseUrl() + endpoint.getUrl();
             Object payload = endpoint.getPayload();
             if (isGet(endpoint) && payload != null && !(endpoint instanceof CloudCodeEndpoint)) {
@@ -92,24 +95,25 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
 
             Log.d(TAG, "Full URL: " + fullUrl);
             connection = (HttpURLConnection) new URL(fullUrl).openConnection();
-            connection.setConnectTimeout(timeoutMillis);
-            connection.setReadTimeout(timeoutMillis);
+            connection.setConnectTimeout(remainingTimeoutMillis(deadlineNanos));
+            connection.setReadTimeout(remainingTimeoutMillis(deadlineNanos));
             connection.setRequestMethod(endpoint.getMethod().name());
             configureHeaders(connection, endpoint, payload);
 
-            boolean allowsLegacyBody = endpoint instanceof CloudCodeEndpoint
-                    || endpoint.getMethod() != com.appambit.sdk.enums.HttpMethodEnum.DELETE;
-            if (!isGet(endpoint) && payload != null && allowsLegacyBody) {
+            if (hasRequestBody(endpoint, payload)) {
                 connection.setDoOutput(true);
                 writePayload(connection, endpoint, payload);
             }
 
+            ensureDeadline(deadlineNanos);
+            connection.setReadTimeout(remainingTimeoutMillis(deadlineNanos));
             int statusCode = connection.getResponseCode();
             Log.d(TAG, "HTTP-Response-Header: " + statusCode + ": " + connection.getResponseMessage());
+            connection.setReadTimeout(remainingTimeoutMillis(deadlineNanos));
             InputStream input = statusCode >= 400
                     ? connection.getErrorStream()
                     : connection.getInputStream();
-            byte[] body = input == null ? null : readAllBytes(input);
+            byte[] body = input == null ? null : readAllBytes(input, deadlineNanos);
             Log.d(TAG, "[HTTP-Response-Body] " + loggedResponseBody(endpoint, body));
             return new HttpTransportResponse(statusCode, body, flattenHeaders(connection.getHeaderFields()), null);
         } catch (Exception error) {
@@ -138,11 +142,14 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
             @NonNull HttpURLConnection connection,
             @NonNull IEndpoint endpoint,
             Object payload) {
-        boolean multipart = isMultipart(payload);
+        boolean hasBody = hasRequestBody(endpoint, payload);
+        boolean multipart = hasBody && isMultipart(payload);
         connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("Content-Type", multipart
-                ? "multipart/form-data; boundary=" + boundaryFor(connection)
-                : "application/json");
+        if (hasBody) {
+            connection.setRequestProperty("Content-Type", multipart
+                    ? "multipart/form-data; boundary=" + boundaryFor(connection)
+                    : "application/json");
+        }
 
         if (endpoint.getCustomHeader() != null) {
             for (Map.Entry<String, String> header : endpoint.getCustomHeader().entrySet()) {
@@ -186,9 +193,10 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
 
     private HttpTransportResponse executeCms(
             @NonNull IEndpoint endpoint,
-            int timeoutMillis) {
+            long deadlineNanos) {
         SSLSocket socket = null;
         try {
+            ensureDeadline(deadlineNanos);
             URL parsed = new URL(endpoint.getBaseUrl() + endpoint.getUrl());
             String host = parsed.getHost();
             int port = parsed.getPort() != -1 ? parsed.getPort() : 443;
@@ -196,10 +204,11 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
 
             @SuppressWarnings("deprecation")
             SSLCertificateSocketFactory sslFactory =
-                    (SSLCertificateSocketFactory) SSLCertificateSocketFactory.getDefault(timeoutMillis);
+                    (SSLCertificateSocketFactory) SSLCertificateSocketFactory.getDefault(
+                            remainingTimeoutMillis(deadlineNanos));
             socket = (SSLSocket) sslFactory.createSocket(host, port);
             sslFactory.setHostname(socket, host);
-            socket.setSoTimeout(timeoutMillis);
+            socket.setSoTimeout(remainingTimeoutMillis(deadlineNanos));
             socket.startHandshake();
 
             String request = "GET " + requestPath + " HTTP/1.1\r\n"
@@ -210,7 +219,8 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
             socket.getOutputStream().write(request.getBytes(StandardCharsets.UTF_8));
             socket.getOutputStream().flush();
 
-            byte[] raw = readAllBytes(socket.getInputStream());
+            socket.setSoTimeout(remainingTimeoutMillis(deadlineNanos));
+            byte[] raw = readAllBytes(socket.getInputStream(), deadlineNanos);
             int bodyStart = headerBodyBoundary(raw);
             if (bodyStart < 0) return failure(new IOException("Malformed HTTP response"));
 
@@ -255,6 +265,10 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
         return endpoint.getMethod() == com.appambit.sdk.enums.HttpMethodEnum.GET;
     }
 
+    private static boolean hasRequestBody(@NonNull IEndpoint endpoint, Object payload) {
+        return !isGet(endpoint) && payload != null;
+    }
+
     private static boolean isMultipart(Object payload) {
         return payload instanceof com.appambit.sdk.models.logs.Log
                 || payload instanceof LogBatch || payload instanceof LogEntity;
@@ -268,11 +282,33 @@ public final class HttpUrlConnectionTransport implements HttpTransport {
         return new HttpTransportResponse(null, null, null, error);
     }
 
-    private static byte[] readAllBytes(InputStream input) throws IOException {
+    private static long deadlineNanos(int timeoutMillis) {
+        return System.nanoTime() + timeoutMillis * 1_000_000L;
+    }
+
+    private static int remainingTimeoutMillis(long deadlineNanos) throws SocketTimeoutException {
+        long remainingNanos = deadlineNanos - System.nanoTime();
+        if (remainingNanos <= 0) throw new SocketTimeoutException("HTTP request timed out");
+        long remainingMillis = (remainingNanos + 999_999L) / 1_000_000L;
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(1L, remainingMillis));
+    }
+
+    private static void ensureDeadline(long deadlineNanos) throws SocketTimeoutException {
+        if (deadlineNanos - System.nanoTime() <= 0) {
+            throw new SocketTimeoutException("HTTP request timed out");
+        }
+    }
+
+    private static byte[] readAllBytes(InputStream input, long deadlineNanos) throws IOException {
         try (InputStream stream = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[4096];
             int count;
-            while ((count = stream.read(buffer)) != -1) output.write(buffer, 0, count);
+            while (true) {
+                ensureDeadline(deadlineNanos);
+                count = stream.read(buffer);
+                if (count == -1) break;
+                output.write(buffer, 0, count);
+            }
             return output.toByteArray();
         }
     }

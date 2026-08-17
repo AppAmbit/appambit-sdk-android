@@ -15,7 +15,10 @@ import com.appambit.sdk.services.interfaces.HttpTransportResponse;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.CloudCodeJson;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
@@ -26,8 +29,7 @@ public final class CloudCodeService {
     static {
         String[] names = {
                 "authorization", "cookie", "host", "content-length", "content-type", "accept",
-                "x-app-key", "x-request-id", "x-forwarded-for", "x-forwarded-host",
-                "x-forwarded-proto", "x-amzn-trace-id"
+                "x-app-key", "x-request-id"
         };
         for (String name : names) RESERVED_HEADERS.add(name);
     }
@@ -65,7 +67,8 @@ public final class CloudCodeService {
                 return new CloudCodeResponse(
                         CloudCodeJson.decodeDynamic(bodyAsString(successful)),
                         successful.getStatusCode(),
-                        requestId(successful));
+                        requestId(successful),
+                        successful.getHeaders());
             } catch (Exception error) {
                 throw CloudCodeError.decoding(error.getMessage(), error);
             }
@@ -102,13 +105,18 @@ public final class CloudCodeService {
             HttpTransportResponse successful = requireSuccess(response);
             String responseBody = bodyAsString(successful);
             if (successful.getStatusCode() == 204 || responseBody == null || responseBody.trim().isEmpty()) {
-                return new CloudCodeResult<>(null, successful.getStatusCode(), requestId(successful));
+                return new CloudCodeResult<>(
+                        null,
+                        successful.getStatusCode(),
+                        requestId(successful),
+                        successful.getHeaders());
             }
             try {
                 return new CloudCodeResult<>(
                         CloudCodeJson.decode(responseBody, responseType),
                         successful.getStatusCode(),
-                        requestId(successful));
+                        requestId(successful),
+                        successful.getHeaders());
             } catch (Exception error) {
                 throw CloudCodeError.decoding(error.getMessage(), error);
             }
@@ -135,8 +143,10 @@ public final class CloudCodeService {
                     future.fail(CloudCodeError.transport(error.getMessage(), error));
                 }
             });
-        } catch (Throwable transportError) {
-            future.fail(CloudCodeError.transport(transportError.getMessage(), transportError));
+        } catch (Throwable transportFailure) {
+            future.fail(transportFailure instanceof CloudCodeError
+                    ? (CloudCodeError) transportFailure
+                    : transportError(transportFailure));
         }
         return new CloudCodeRequest<>(future, cancellation);
     }
@@ -190,14 +200,26 @@ public final class CloudCodeService {
             } catch (Exception ignored) {
                 // Preserve the raw body when the server did not return JSON.
             }
-            throw CloudCodeError.http(response.getStatusCode(), parsedBody, rawBody, requestId(response));
+            if (!(parsedBody instanceof Map) && !(parsedBody instanceof java.util.List)) {
+                parsedBody = null;
+            }
+            String preservedRawBody = parsedBody == null ? rawBody : null;
+            throw CloudCodeError.http(
+                    response.getStatusCode(), parsedBody, preservedRawBody, requestId(response));
         }
         return response;
     }
 
     private static CloudCodeError transportError(Throwable error) {
+        if (error instanceof MalformedURLException) return CloudCodeError.invalidUrl(error);
         if (error instanceof SocketTimeoutException) return CloudCodeError.timedOut(error);
-        if (error instanceof IOException) return CloudCodeError.networkUnavailable(error);
+        if (error instanceof UnknownHostException || error instanceof ConnectException) {
+            return CloudCodeError.networkUnavailable(error);
+        }
+        if (error instanceof IOException
+                && "No internet connection".equals(error.getMessage())) {
+            return CloudCodeError.networkUnavailable(error);
+        }
         return CloudCodeError.transport(error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage(), error);
     }
 

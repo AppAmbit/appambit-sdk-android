@@ -9,6 +9,8 @@ import com.appambit.sdk.services.CloudCodeService;
 import com.appambit.sdk.services.interfaces.AppInfoService;
 import com.appambit.sdk.services.StorageService;
 import com.appambit.sdk.services.interfaces.Storable;
+import com.appambit.sdk.utils.SdkThreadFactory;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,6 +20,7 @@ public class ServiceLocator {
 
     private static ApiService apiService;
     private static ExecutorService executorService;
+    private static ExecutorService cloudCodeExecutorService;
     private static AppInfoService appInfoService;
     private static DbService dbService;
     private static CloudCodeService cloudCodeService;
@@ -39,9 +42,12 @@ public class ServiceLocator {
     }
 
     private void initializeServices() {
-        executorService = Executors.newSingleThreadExecutor();
+        executorService = Executors.newSingleThreadExecutor(new SdkThreadFactory("AppAmbit-SDK"));
+        cloudCodeExecutorService = Executors.newSingleThreadExecutor(
+                new SdkThreadFactory("AppAmbit-CloudCode"));
         storable = new StorageService(applicationContext);
-        HttpApiService httpApiService = new HttpApiService(applicationContext, executorService);
+        HttpApiService httpApiService = new HttpApiService(
+                applicationContext, executorService, cloudCodeExecutorService);
         apiService = httpApiService;
         appInfoService = new ApplicationInfoService(applicationContext);
         dbService = new DbService(apiService, executorService);
@@ -54,6 +60,10 @@ public class ServiceLocator {
 
     public static ExecutorService getExecutorService() {
         return executorService;
+    }
+
+    public static ExecutorService getCloudCodeExecutorService() {
+        return cloudCodeExecutorService;
     }
 
     public static ApiService getApiService() { return apiService; }

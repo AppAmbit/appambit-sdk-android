@@ -23,7 +23,10 @@ import com.appambit.sdk.models.app.ConsumerToken
 import com.appambit.sdk.models.analytics.Event
 import com.appambit.sdk.services.interfaces.HttpTransport
 import com.appambit.sdk.services.interfaces.HttpTransportResponse
+import com.appambit.sdk.utils.AppAmbitTaskFuture
 import com.appambit.sdk.utils.InternetConnection
+import com.appambit.sdk.utils.JsonKey
+import com.appambit.sdk.utils.SdkThreadFactory
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -37,21 +40,33 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertThrows
+import java.io.IOException
+import java.net.ConnectException
+import java.net.MalformedURLException
 import java.nio.charset.StandardCharsets
 import java.net.ServerSocket
+import java.net.SocketTimeoutException
 import java.net.Socket
-import java.util.concurrent.ExecutorService
+import java.net.UnknownHostException
+import javax.net.ssl.SSLHandshakeException
 import java.util.concurrent.Executors
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.Date
 
 class CloudCodeTest {
+    open class NestedBase {
+        @JvmField
+        @JsonKey("base_name")
+        var baseName: String = ""
+    }
+
     class NestedChild {
         @JvmField var name: String = ""
     }
 
-    class NestedParent {
+    class NestedParent : NestedBase() {
         @JvmField var child: NestedChild? = null
         @JvmField var children: List<NestedChild> = emptyList()
     }
@@ -69,6 +84,7 @@ class CloudCodeTest {
 
         mockkStatic(Looper::class)
         every { Looper.getMainLooper() } returns mockk(relaxed = true)
+        every { Looper.myLooper() } returns null
         mockkConstructor(Handler::class)
         every { anyConstructed<Handler>().post(any()) } answers {
             firstArg<Runnable>().run()
@@ -95,6 +111,19 @@ class CloudCodeTest {
         assertEquals("/fn/hello%20world%3F?message=hello%20world&source=android", endpoint.url)
         assertEquals("POST", endpoint.method.name)
         assertEquals("test", endpoint.customHeader["X-Trace"])
+    }
+
+    @Test
+    fun `endpoint percent encodes plus and email query values`() {
+        val endpoint = CloudCodeEndpoint(
+            "search",
+            HttpMethodEnum.GET,
+            mapOf("email" to "user+test@example.com"),
+            null,
+            null
+        )
+
+        assertEquals("/fn/search?email=user%2Btest%40example.com", endpoint.url)
     }
 
     @Test
@@ -212,7 +241,7 @@ class CloudCodeTest {
     }
 
     @Test
-    fun `legacy event 401 refreshes once and retries with the new token`() {
+    fun `mutating event 401 is terminal and does not retry`() {
         val server = HttpProbeServer(
             mapOf(
                 "/events" to mutableListOf(
@@ -242,12 +271,10 @@ class CloudCodeTest {
 
             val result = service.executeRequest(eventEndpoint, com.appambit.sdk.models.responses.EventResponse::class.java)
 
-            assertEquals(com.appambit.sdk.enums.ApiErrorType.None, result.errorType)
-            assertEquals(2, server.requestCount("/events"))
-            assertEquals(1, server.requestCount("/consumer/token"))
-            val eventRequests = server.requests.filter { it.path == "/events" }
-            assertEquals("Bearer old-token", eventRequests[0].headers["authorization"])
-            assertEquals("Bearer new-token", eventRequests[1].headers["authorization"])
+            assertEquals(com.appambit.sdk.enums.ApiErrorType.Unauthorized, result.errorType)
+            assertEquals(1, server.requestCount("/events"))
+            assertEquals(0, server.requestCount("/consumer/token"))
+            assertEquals("Bearer old-token", server.requests.first { it.path == "/events" }.headers["authorization"])
         } finally {
             executor.shutdownNow()
             server.close()
@@ -386,6 +413,42 @@ class CloudCodeTest {
     }
 
     @Test
+    fun `Cloud Code raw requests use their dedicated executor`() {
+        val server = HttpProbeServer(
+            mapOf("/fn/hello" to mutableListOf(HttpProbeServer.Response(200, "{}")))
+        )
+        val sdkExecutor = Executors.newSingleThreadExecutor()
+        val cloudCodeExecutor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "cloud-code-test")
+        }
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val service = HttpApiService(context, sdkExecutor, cloudCodeExecutor)
+            service.setToken("cloud-token")
+            val endpoint = CloudCodeEndpoint("hello", HttpMethodEnum.GET, null, null, null)
+            endpoint.setBaseUrl(server.baseUrl)
+            val completed = CountDownLatch(1)
+            var callbackThread: String? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                callbackThread = Thread.currentThread().name
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals("cloud-code-test", callbackThread)
+        } finally {
+            sdkExecutor.shutdownNow()
+            cloudCodeExecutor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
     fun `cloud code refresh ignores an in-flight token renewal invalidated before completion`() {
         val tokenStarted = CountDownLatch(1)
         val releaseTokenResponse = CountDownLatch(1)
@@ -491,6 +554,14 @@ class CloudCodeTest {
         assertEquals(CloudCodeError.Code.INVALID_FUNCTION, (invalidSlug as CloudCodeError).code)
         assertEquals(0, transport.requestCount)
 
+        listOf("hello world", "hello\u0001world").forEach { slug ->
+            var error: Throwable? = null
+            service.call(slug, HttpMethodEnum.GET, null, null, null)
+                .onError { error = it }
+            assertEquals(CloudCodeError.Code.INVALID_FUNCTION, (error as CloudCodeError).code)
+        }
+        assertEquals(0, transport.requestCount)
+
         var invalidHeader: Throwable? = null
         service.call("hello", HttpMethodEnum.POST, null, null, mapOf("authorization" to "spoofed"))
             .onError { invalidHeader = it }
@@ -514,8 +585,19 @@ class CloudCodeTest {
         assertNotNull(received)
         assertEquals(201, received!!.statusCode)
         assertEquals("header-id", received!!.requestId)
+        assertEquals("header-id", received!!.headers["X-Request-Id"])
         assertEquals(true, (received!!.data as Map<*, *>) ["ok"])
         assertEquals(3, (received!!.data as Map<*, *>) ["count"])
+    }
+
+    @Test
+    fun `Cloud Code uses the sixty second operation timeout`() {
+        val transport = FakeTransport()
+        transport.response = response(200, "{}")
+
+        CloudCodeService(transport).call("hello", HttpMethodEnum.GET, null, null, null)
+
+        assertEquals(60_000, transport.lastTimeoutMillis)
     }
 
     @Test
@@ -546,6 +628,16 @@ class CloudCodeTest {
         service.call("null", HttpMethodEnum.GET, null, null, null)
             .then { nullResult = it.data }
         assertNull(nullResult)
+
+        transport.response = response(200, null, mapOf("X-Request-Id" to "empty-body-id"))
+        var emptyResponse: CloudCodeResponse? = null
+        service.call("empty", HttpMethodEnum.GET, null, null, null)
+            .then { emptyResponse = it }
+        assertNotNull(emptyResponse)
+        assertNull(emptyResponse!!.data)
+        assertEquals(200, emptyResponse!!.statusCode)
+        assertEquals("empty-body-id", emptyResponse!!.requestId)
+        assertEquals("empty-body-id", emptyResponse!!.headers["X-Request-Id"])
     }
 
     @Test
@@ -570,6 +662,26 @@ class CloudCodeTest {
     }
 
     @Test
+    fun `typed successful empty body preserves nullable data and headers`() {
+        val transport = FakeTransport()
+        transport.response = response(200, null, mapOf("X-Request-Id" to "empty-body-id"))
+        val service = CloudCodeService(transport)
+
+        var received: CloudCodeResult<String>? = null
+        var error: Throwable? = null
+        service.callTyped("empty", HttpMethodEnum.GET, null, null, null, String::class.java)
+            .then { received = it }
+            .onError { error = it }
+
+        assertNull(error)
+        assertNotNull(received)
+        assertNull(received!!.data)
+        assertEquals(200, received!!.statusCode)
+        assertEquals("empty-body-id", received!!.requestId)
+        assertEquals("empty-body-id", received!!.headers["X-Request-Id"])
+    }
+
+    @Test
     fun `HTTP errors preserve status body and request id`() {
         val transport = FakeTransport()
         transport.response = response(429, "{\"error\":\"quota_exceeded\",\"request_id\":\"error-id\"}")
@@ -584,6 +696,40 @@ class CloudCodeTest {
         assertEquals(429, cloudError.statusCode)
         assertEquals("error-id", cloudError.requestId)
         assertEquals("quota_exceeded", (cloudError.body as Map<*, *>) ["error"])
+        assertNull(cloudError.rawBody)
+    }
+
+    @Test
+    fun `HTTP error scalars and HTML remain raw while objects and arrays are structured`() {
+        val transport = FakeTransport()
+        val service = CloudCodeService(transport)
+
+        fun errorFor(body: String): CloudCodeError {
+            transport.response = response(502, body)
+            var received: Throwable? = null
+            service.call("failure", HttpMethodEnum.GET, null, null, null)
+                .onError { received = it }
+            return received as CloudCodeError
+        }
+
+        val html = errorFor("<html>gateway failure</html>")
+        assertNull(html.body)
+        assertEquals("<html>gateway failure</html>", html.rawBody)
+
+        val string = errorFor("\"gateway failure\"")
+        assertNull(string.body)
+        assertEquals("\"gateway failure\"", string.rawBody)
+
+        val number = errorFor("42")
+        assertNull(number.body)
+        assertEquals("42", number.rawBody)
+
+        val jsonNull = errorFor("null")
+        assertNull(jsonNull.body)
+        assertEquals("null", jsonNull.rawBody)
+
+        val array = errorFor("[{\"code\":\"one\"}]")
+        assertTrue(array.body is List<*>)
     }
 
     @Test
@@ -602,6 +748,7 @@ class CloudCodeTest {
         assertNotNull(received)
         assertNull(received!!.data)
         assertEquals("empty-id", received!!.requestId)
+        assertEquals("empty-id", received!!.headers["X-Request-Id"])
     }
 
     @Test
@@ -648,6 +795,43 @@ class CloudCodeTest {
         assertTrue(request.isDone)
         assertTrue(error is CloudCodeError)
         assertEquals(CloudCodeError.Code.TRANSPORT, (error as CloudCodeError).code)
+    }
+
+    @Test
+    fun `transport exceptions retain their specific Cloud Code categories`() {
+        fun errorFor(transportError: Throwable): CloudCodeError {
+            val transport = FakeTransport()
+            transport.throwOnExecute = transportError
+            var error: Throwable? = null
+            CloudCodeService(transport).call("hello", HttpMethodEnum.GET, null, null, null)
+                .onError { error = it }
+            return error as CloudCodeError
+        }
+
+        assertEquals(
+            CloudCodeError.Code.INVALID_URL,
+            errorFor(MalformedURLException("bad URL")).code
+        )
+        assertEquals(
+            CloudCodeError.Code.NETWORK_UNAVAILABLE,
+            errorFor(UnknownHostException("host")).code
+        )
+        assertEquals(
+            CloudCodeError.Code.NETWORK_UNAVAILABLE,
+            errorFor(ConnectException("connect")).code
+        )
+        assertEquals(
+            CloudCodeError.Code.TIMED_OUT,
+            errorFor(SocketTimeoutException("timeout")).code
+        )
+        assertEquals(
+            CloudCodeError.Code.TRANSPORT,
+            errorFor(SSLHandshakeException("handshake")).code
+        )
+        assertEquals(
+            CloudCodeError.Code.TRANSPORT,
+            errorFor(IOException("reset")).code
+        )
     }
 
     @Test
@@ -745,11 +929,50 @@ class CloudCodeTest {
     }
 
     @Test
+    fun `getBlocking rejects the Android main thread`() {
+        val request = CloudCodeService(FakeTransport()).call(
+            "pending", HttpMethodEnum.GET, null, null, null
+        )
+        every { Looper.myLooper() } returns Looper.getMainLooper()
+
+        assertThrows(IllegalStateException::class.java) {
+            request.getBlocking(1, TimeUnit.MILLISECONDS)
+        }
+    }
+
+    @Test
+    fun `getBlocking rejects SDK-owned executor threads`() {
+        val request = CloudCodeService(FakeTransport()).call(
+            "pending", HttpMethodEnum.GET, null, null, null
+        )
+        val executor = Executors.newSingleThreadExecutor(SdkThreadFactory("test-sdk"))
+        try {
+            val completed = executor.submit<Boolean> {
+                assertThrows(IllegalStateException::class.java) {
+                    request.getBlocking(1, TimeUnit.MILLISECONDS)
+                }
+                true
+            }
+            assertTrue(completed.get(5, TimeUnit.SECONDS))
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `getBlocking remains available to an external worker`() {
+        val future = AppAmbitTaskFuture<Int>()
+        future.complete(7)
+
+        assertEquals(7, future.getBlocking(1, TimeUnit.SECONDS))
+    }
+
+    @Test
     fun `typed response decodes nested model and model list`() {
         val transport = FakeTransport()
         transport.response = response(
             200,
-            """{"child":{"name":"one"},"children":[{"name":"two"}]}"""
+            """{"base_name":"inherited","child":{"name":"one"},"children":[{"name":"two"}]}"""
         )
         val service = CloudCodeService(transport)
         var received: CloudCodeResult<NestedParent>? = null
@@ -758,6 +981,7 @@ class CloudCodeTest {
             .then { received = it }
 
         assertNotNull(received)
+        assertEquals("inherited", received!!.data!!.baseName)
         assertEquals("one", received!!.data!!.child!!.name)
         assertEquals("two", received!!.data!!.children[0].name)
     }
@@ -792,6 +1016,7 @@ class CloudCodeTest {
             assertEquals(null, received!!.error)
             assertTrue("requests=${server.requests}", server.requests.first().method == "GET")
             assertEquals("", server.requests.first().body)
+            assertNull(server.requests.first().headers["content-type"])
         } finally {
             executor.shutdownNow()
             server.close()
@@ -824,6 +1049,7 @@ class CloudCodeTest {
             assertEquals("DELETE", server.requests.first().method)
             assertEquals("{\"id\":7}", server.requests.first().body)
             assertEquals("delete", server.requests.first().headers["x-probe"])
+            assertEquals("application/json", server.requests.first().headers["content-type"])
         } finally {
             executor.shutdownNow()
             server.close()
@@ -871,6 +1097,44 @@ class CloudCodeTest {
             assertEquals(200, received!!.statusCode)
             assertEquals(2, server.requestCount("/fn/retry"))
             assertTrue("requests=${server.requests}", server.requestCount("/consumer/token") == 1)
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `http transport does not retry mutating Cloud Code requests after 401`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/fn/mutate" to mutableListOf(
+                    HttpProbeServer.Response(401, "{\"error\":\"expired\"}"),
+                    HttpProbeServer.Response(200, "{\"ok\":true}")
+                )
+            )
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = CloudCodeEndpoint("mutate", HttpMethodEnum.POST, null, mapOf("id" to 1), null)
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("old-token")
+            val completed = CountDownLatch(1)
+            var received: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                received = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(401, received!!.statusCode)
+            assertEquals(1, server.requestCount("/fn/mutate"))
         } finally {
             executor.shutdownNow()
             server.close()
@@ -936,6 +1200,7 @@ class CloudCodeTest {
     private class FakeTransport : HttpTransport {
         var response: HttpTransportResponse? = null
         var requestCount: Int = 0
+        var lastTimeoutMillis: Int? = null
         var throwOnExecute: Throwable? = null
         var lastEndpoint: com.appambit.sdk.services.interfaces.IEndpoint? = null
         private var pending: HttpTransport.Callback? = null
@@ -946,6 +1211,7 @@ class CloudCodeTest {
             callback: HttpTransport.Callback
         ) {
             requestCount++
+            lastTimeoutMillis = timeoutMillis
             lastEndpoint = endpoint
             throwOnExecute?.let { throw it }
             if (response == null) pending = callback else callback.onComplete(response!!)

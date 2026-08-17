@@ -75,7 +75,7 @@ dependencies {
 
 ## Quickstart
 
-Initialize the SDK with your **API key**.
+Initialize the SDK with your AppAmbit **app key UUID**.
 
 ### Kotlin
 
@@ -85,7 +85,7 @@ import com.appambit.sdk.AppAmbit
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppAmbit.start(this, "<YOUR-APIKEY>")
+        AppAmbit.start(this, "<YOUR-APP-KEY-UUID>")
     }
 }
 ```
@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        AppAmbit.start(getApplicationContext(), "<YOUR-APIKEY>");
+        AppAmbit.start(getApplicationContext(), "<YOUR-APP-KEY-UUID>");
     }
 }
 ```
@@ -238,14 +238,32 @@ CloudCode.call(
     .onError(error -> Log.e("CloudCode", "Request failed", error));
 ```
 
-The typed overload accepts a Java model class:
+The typed overload accepts a model class with a public no-argument constructor.
 
 ```java
+public class Greeting {
+    public String greeting = "";
+}
+
 CloudCode.call("hello", HttpMethodEnum.GET, null, null, null, Greeting.class)
-    .then(result -> System.out.println(result.getData().greeting));
+    .then(result -> Log.d("CloudCode", result.getData().greeting));
 ```
 
-Typed models use the SDK's reflection mapper and must provide a public no-argument constructor. The SDK forwards the consumer token automatically, rejects reserved headers, preserves HTTP status and `X-Request-Id`, and performs one token renewal retry for `401` responses. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
+Kotlin models can map a different JSON field name with `@JsonKey`:
+
+```kotlin
+class Greeting {
+    @field:JsonKey("display_name")
+    var displayName: String = ""
+}
+
+CloudCode.call("profile", HttpMethodEnum.GET, null, null, null, Greeting::class.java)
+    .then { result -> println(result.data?.displayName) }
+```
+
+Typed models use the SDK's reflection mapper. Field names map directly to JSON names, and `@JsonKey` makes a different mapping explicit. The SDK forwards the consumer token automatically, rejects reserved headers, preserves HTTP status and `X-Request-Id`, and performs one token renewal retry for idempotent `GET` requests only. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
+
+`getBlocking()` is intended for tests or externally controlled worker threads. It throws on the Android main thread and on SDK-owned executors; use `then()` and `onError()` in application code.
 
 ---
 

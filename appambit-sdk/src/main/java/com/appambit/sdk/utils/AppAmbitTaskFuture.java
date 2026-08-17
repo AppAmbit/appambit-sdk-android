@@ -83,6 +83,7 @@ public class AppAmbitTaskFuture<T> {
     }
 
     public T getBlocking() throws InterruptedException {
+        assertBlockingAllowed();
         mCountDownLatch.await();
         if (error != null)
             throw new RuntimeException(error);
@@ -90,6 +91,7 @@ public class AppAmbitTaskFuture<T> {
     }
 
     public T getBlocking(long timeout, TimeUnit unit) throws InterruptedException {
+        assertBlockingAllowed();
         boolean finished = mCountDownLatch.await(timeout, unit);
         if (!finished)
             throw new RuntimeException("Timeout waiting for future");
@@ -104,5 +106,17 @@ public class AppAmbitTaskFuture<T> {
 
     public boolean isFailed() {
         return isDone() && error != null;
+    }
+
+    private static void assertBlockingAllowed() {
+        Looper mainLooper = Looper.getMainLooper();
+        if (mainLooper != null && Looper.myLooper() == mainLooper) {
+            throw new IllegalStateException(
+                    "getBlocking() cannot run on the Android main thread; use then()/onError() instead.");
+        }
+        if (SdkThreadFactory.isSdkThread()) {
+            throw new IllegalStateException(
+                    "getBlocking() cannot run on an AppAmbit SDK executor; use callbacks instead.");
+        }
     }
 }

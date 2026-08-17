@@ -98,14 +98,17 @@ public final class CloudCodeJson {
 
     private static Object convertObject(Map<?, ?> source, Class<?> type) throws Exception {
         Object instance = type.getDeclaredConstructor().newInstance();
-        for (Field field : type.getDeclaredFields()) {
-            if (Modifier.isStatic(field.getModifiers())) continue;
-            String key = field.isAnnotationPresent(JsonKey.class)
-                    ? field.getAnnotation(JsonKey.class).value()
-                    : field.getName();
-            if (!source.containsKey(key) || source.get(key) == null) continue;
-            field.setAccessible(true);
-            field.set(instance, convertValue(source.get(key), field.getGenericType()));
+        for (Class<?> current = type; current != null && current != Object.class;
+             current = current.getSuperclass()) {
+            for (Field field : current.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers())) continue;
+                String key = field.isAnnotationPresent(JsonKey.class)
+                        ? field.getAnnotation(JsonKey.class).value()
+                        : field.getName();
+                if (!source.containsKey(key) || source.get(key) == null) continue;
+                field.setAccessible(true);
+                field.set(instance, convertValue(source.get(key), field.getGenericType()));
+            }
         }
         return instance;
     }

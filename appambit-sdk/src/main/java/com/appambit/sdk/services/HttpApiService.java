@@ -22,19 +22,21 @@ import com.appambit.sdk.utils.AppAmbitTaskFuture;
 import com.appambit.sdk.utils.JsonDeserializer;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class HttpApiService implements ApiService, HttpTransport, HttpTransportCredentials {
     private static final String TAG = HttpApiService.class.getSimpleName();
-    private static final int LEGACY_TIMEOUT_MILLIS = 10_000;
-    private static final int CMS_TIMEOUT_MILLIS = 30_000;
+    private static final int SDK_REQUEST_TIMEOUT_MILLIS = 20_000;
 
     private volatile String token;
 
     private final ExecutorService executor;
     private final HttpTransport transport;
+    private final HttpTransport rawTransport;
     private final ReentrantLock tokenLock = new ReentrantLock();
     private long tokenGeneration;
     private volatile RenewalOperation currentRenewal;
@@ -42,9 +44,27 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
     private static final class RenewalOperation {
         private final long generation;
         private final AppAmbitTaskFuture<ApiErrorType> future = new AppAmbitTaskFuture<>();
+        private final CountDownLatch completed = new CountDownLatch(1);
+        private volatile ApiErrorType result;
 
         private RenewalOperation(long generation) {
             this.generation = generation;
+        }
+
+        private void complete(ApiErrorType value) {
+            result = value;
+            future.complete(value);
+            completed.countDown();
+        }
+
+        private void fail(Throwable error) {
+            future.fail(error);
+            completed.countDown();
+        }
+
+        private ApiErrorType await() throws InterruptedException {
+            completed.await();
+            return result == null ? ApiErrorType.Unknown : result;
         }
     }
 
@@ -59,8 +79,18 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
     }
 
     public HttpApiService(@NonNull Context context, ExecutorService executor) {
+        this(context, executor, executor);
+    }
+
+    public HttpApiService(
+            @NonNull Context context,
+            ExecutorService executor,
+            ExecutorService rawExecutor) {
         this.executor = executor;
         this.transport = new HttpUrlConnectionTransport(context, executor, this);
+        this.rawTransport = rawExecutor == executor
+                ? this.transport
+                : new HttpUrlConnectionTransport(context, rawExecutor, this);
     }
 
     @Override
@@ -79,7 +109,7 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
             }
         }
 
-        int timeout = endpoint instanceof CmsEndpoint ? CMS_TIMEOUT_MILLIS : LEGACY_TIMEOUT_MILLIS;
+        int timeout = SDK_REQUEST_TIMEOUT_MILLIS;
         HttpTransportResponse raw = transport.executeBlocking(endpoint, timeout);
         if (raw == null) {
             return ApiResult.fail(ApiErrorType.Unknown, "Empty HTTP response");
@@ -99,11 +129,14 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
             if (endpoint instanceof RegisterEndpoint
                     || endpoint instanceof TokenEndpoint
                     || endpoint instanceof CmsEndpoint
-                    || !allowTokenRenewal) {
+                    || !allowTokenRenewal
+                    || !isRetryableAfterUnauthorized(endpoint)) {
                 return ApiResult.fail(ApiErrorType.Unauthorized,
                         endpoint instanceof CmsEndpoint
                                 ? "CMS request unauthorized"
-                                : "Authentication endpoint returned 401");
+                                : endpoint instanceof RegisterEndpoint || endpoint instanceof TokenEndpoint
+                                ? "Authentication endpoint returned 401"
+                                : "Request returned 401");
             }
 
             Log.w(TAG, "401 Unauthorized. Need to renew token.");
@@ -150,6 +183,10 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
                 && !endpoint.isSkipAuthorization();
     }
 
+    private static boolean isRetryableAfterUnauthorized(IEndpoint endpoint) {
+        return endpoint.getMethod() == com.appambit.sdk.enums.HttpMethodEnum.GET;
+    }
+
     private static void checkStatusCodeFrom(int statusCode)
             throws UnauthorizedException, HttpRequestException {
         if (statusCode > 199 && statusCode < 300) return;
@@ -172,7 +209,9 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
         RenewalOperation operation = selection.operation;
         if (!selection.owner) {
             try {
-                return operation.future.getBlocking();
+                // executeRequest has a synchronous return type; this narrow wait coordinates
+                // concurrent refresh callers without using the public blocking helper.
+                return operation.await();
             } catch (Exception error) {
                 return ApiErrorType.Unknown;
             }
@@ -180,10 +219,10 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
 
         try {
             ApiErrorType result = renewToken(operation.generation);
-            operation.future.complete(result);
+            operation.complete(result);
             return result;
         } catch (Throwable error) {
-            operation.future.fail(error);
+            operation.fail(error);
             return ApiErrorType.Unknown;
         } finally {
             clearRenewal(operation);
@@ -230,9 +269,9 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
         try {
             executor.execute(() -> {
                 try {
-                    operation.future.complete(renewToken(operation.generation));
+                    operation.complete(renewToken(operation.generation));
                 } catch (Throwable error) {
-                    operation.future.fail(error);
+                    operation.fail(error);
                 } finally {
                     clearRenewal(operation);
                 }
@@ -318,24 +357,34 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
             @NonNull IEndpoint endpoint,
             int timeoutMillis,
             @NonNull HttpTransport.Callback callback) {
+        long deadlineNanos = System.nanoTime() + timeoutMillis * 1_000_000L;
         if (requiresConsumerToken(endpoint) && isTokenMissing()) {
             Log.d(TAG, "Raw request requires token refresh before sending: " + endpoint.getUrl());
-            requestTokenThenExecute(endpoint, timeoutMillis, callback);
+            requestTokenThenExecute(endpoint, deadlineNanos, callback);
             return;
         }
 
-        executeRawWithExistingToken(endpoint, timeoutMillis, callback, true);
+        executeRawWithExistingToken(endpoint, deadlineNanos, callback, true);
     }
 
     private void executeRawWithExistingToken(
             @NonNull IEndpoint endpoint,
-            int timeoutMillis,
+            long deadlineNanos,
             @NonNull HttpTransport.Callback callback,
             boolean allowTokenRenewal) {
-        transport.executeRaw(endpoint, timeoutMillis, response -> {
+        int timeoutMillis;
+        try {
+            timeoutMillis = remainingTimeoutMillis(deadlineNanos);
+        } catch (SocketTimeoutException timeout) {
+            callback.onComplete(new HttpTransportResponse(null, null, null, timeout));
+            return;
+        }
+
+        rawTransport.executeRaw(endpoint, timeoutMillis, response -> {
             if (!allowTokenRenewal
                     || response.getStatusCode() == null
-                    || response.getStatusCode() != 401) {
+                    || response.getStatusCode() != 401
+                    || !isRetryableAfterUnauthorized(endpoint)) {
                 callback.onComplete(response);
                 return;
             }
@@ -345,7 +394,7 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
             renewal.then(result -> {
                 if (result == ApiErrorType.None) {
                     Log.d(TAG, "Retrying raw request after token refresh: " + endpoint.getUrl());
-                    executeRawWithExistingToken(endpoint, timeoutMillis, callback, false);
+                    executeRawWithExistingToken(endpoint, deadlineNanos, callback, false);
                 } else {
                     callback.onComplete(response);
                 }
@@ -356,14 +405,14 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
 
     private void requestTokenThenExecute(
             @NonNull IEndpoint endpoint,
-            int timeoutMillis,
+            long deadlineNanos,
             @NonNull HttpTransport.Callback callback) {
         Log.d(TAG, "Waiting for token refresh before raw request: " + endpoint.getUrl());
         AppAmbitTaskFuture<ApiErrorType> renewal = GetNewToken();
         renewal.then(result -> {
             Log.d(TAG, "Raw request token refresh completed: " + result);
             if (result == ApiErrorType.None) {
-                executeRawWithExistingToken(endpoint, timeoutMillis, callback, true);
+                executeRawWithExistingToken(endpoint, deadlineNanos, callback, true);
             } else {
                 callback.onComplete(new HttpTransportResponse(
                         null, null, null,
@@ -372,5 +421,12 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
         });
         renewal.onError(error -> callback.onComplete(new HttpTransportResponse(
                 null, null, null, error)));
+    }
+
+    private static int remainingTimeoutMillis(long deadlineNanos) throws SocketTimeoutException {
+        long remainingNanos = deadlineNanos - System.nanoTime();
+        if (remainingNanos <= 0) throw new SocketTimeoutException("HTTP request timed out");
+        long remainingMillis = (remainingNanos + 999_999L) / 1_000_000L;
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(1L, remainingMillis));
     }
 }
