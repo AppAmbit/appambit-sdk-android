@@ -87,10 +87,10 @@ public class HttpApiService implements ApiService, HttpTransport, HttpTransportC
             ExecutorService executor,
             ExecutorService rawExecutor) {
         this.executor = executor;
-        this.transport = new HttpUrlConnectionTransport(context, executor, this);
+        this.transport = new OkHttpTransport(context, executor, this);
         this.rawTransport = rawExecutor == executor
                 ? this.transport
-                : new HttpUrlConnectionTransport(context, rawExecutor, this);
+                : new OkHttpTransport(context, rawExecutor, this);
     }
 
     @Override

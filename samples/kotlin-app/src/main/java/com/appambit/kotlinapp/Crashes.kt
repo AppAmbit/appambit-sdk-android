@@ -236,8 +236,7 @@ fun Crashes() {
             }
 
             Button(
-                enabled = false,
-                onClick = { onGenerate30DailyErrors() },
+                onClick = { onGenerate30DailyErrors(context) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -246,8 +245,7 @@ fun Crashes() {
             }
 
             Button(
-                enabled = false,
-                onClick = { onGenerate30DailyCrashes() },
+                onClick = { onGenerate30DailyCrashes(context) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -305,7 +303,7 @@ fun btnDidCrashInLastSession(context: Context) {
 
 fun onUserIdSet(context : Context, userId: String) {
     Analytics.setUserId(userId)
-    dialogUtils(context, "Info", "User email changed")
+    dialogUtils(context, "Info", "User ID changed")
 }
 
 fun onUserEmailSet(context : Context, userEmail: String) {
@@ -331,12 +329,18 @@ fun onExceptionLogError(context : Context) {
     dialogUtils(context, "Info", "Test Exception LogError sent")
 }
 
-fun onGenerate30DailyErrors() {
-
+fun onGenerate30DailyErrors(context: Context) {
+    repeat(30) { index ->
+        Crashes.logError("Generated daily error ${index + 1}")
+    }
+    dialogUtils(context, "Info", "30 daily errors generated")
 }
 
-fun onGenerate30DailyCrashes() {
-
+fun onGenerate30DailyCrashes(context: Context) {
+    repeat(30) { index ->
+        Crashes.logError(Exception("Generated daily crash report ${index + 1}"))
+    }
+    dialogUtils(context, "Info", "30 crash reports generated")
 }
 
 fun onThrowNewCrash() {

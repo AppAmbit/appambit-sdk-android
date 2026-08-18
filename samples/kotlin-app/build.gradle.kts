@@ -43,6 +43,7 @@ android {
 dependencies {
     implementation(project(":appambit-sdk"))
     implementation(project(":appambit-sdk-push-notifications"))
+    implementation(libs.okhttp)
     implementation(platform(libs.firebaseBom))
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)

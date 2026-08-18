@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.content.Context
+import com.appambit.sdk.AppAmbit
 import com.appambit.sdk.enums.HttpMethodEnum
 import com.appambit.sdk.enums.ApiErrorType
 import com.appambit.sdk.models.cloudcode.CloudCodeError
@@ -54,6 +55,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.Date
+import org.json.JSONObject
 
 class CloudCodeTest {
     open class NestedBase {
@@ -137,6 +139,29 @@ class CloudCodeTest {
             "/posts?filter%5Btitle%5D=a%2Bb&space%20key=hello%20world",
             endpoint.url
         )
+    }
+
+    @Test
+    fun `cloud code forwards PATCH through the request contract`() {
+        val transport = FakeTransport()
+        transport.response = response(200, "{}")
+        val service = CloudCodeService(transport)
+
+        service.call(
+            "patch",
+            HttpMethodEnum.PATCH,
+            mapOf("scope" to "profile"),
+            mapOf<String, Any>("id" to 7, "name" to "Ada"),
+            mapOf("X-Probe" to "patch")
+        )
+
+        assertEquals(HttpMethodEnum.PATCH, transport.lastEndpoint!!.method)
+        assertEquals("/fn/patch?scope=profile", transport.lastEndpoint!!.url)
+        assertEquals(
+            mapOf("id" to 7, "name" to "Ada"),
+            transport.lastEndpoint!!.payload
+        )
+        assertEquals("patch", transport.lastEndpoint!!.customHeader["X-Probe"])
     }
 
     @Test
@@ -1025,6 +1050,191 @@ class CloudCodeTest {
     }
 
     @Test
+    fun `http transport sends PUT body and standard headers`() {
+        val server = HttpProbeServer(
+            mapOf("/fn/update" to mutableListOf(HttpProbeServer.Response(200, "{}")))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = CloudCodeEndpoint(
+                "update",
+                HttpMethodEnum.PUT,
+                null,
+                mapOf<String, Any>("id" to 7, "name" to "Ada"),
+                mapOf("X-Probe" to "put")
+            )
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("transport-token")
+            val completed = CountDownLatch(1)
+            var received: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                received = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertNull(received!!.error)
+            assertEquals("PUT", server.requests.first().method)
+            val requestBody = JSONObject(server.requests.first().body)
+            assertEquals(7, requestBody.getInt("id"))
+            assertEquals("Ada", requestBody.getString("name"))
+            assertEquals("application/json", server.requests.first().headers["content-type"])
+            assertEquals("application/json", server.requests.first().headers["accept"])
+            assertEquals("Bearer transport-token", server.requests.first().headers["authorization"])
+            assertEquals("put", server.requests.first().headers["x-probe"])
+            assertNull(server.requests.first().headers["x-http-method-override"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `http transport sends PATCH body without method override`() {
+        val server = HttpProbeServer(
+            mapOf("/fn/patch" to mutableListOf(HttpProbeServer.Response(200, "{}")))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = CloudCodeEndpoint(
+                "patch",
+                HttpMethodEnum.PATCH,
+                null,
+                mapOf<String, Any>("id" to 7, "name" to "Ada"),
+                mapOf("X-Probe" to "patch")
+            )
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("transport-token")
+            val completed = CountDownLatch(1)
+            var received: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                received = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertNull(received!!.error)
+            assertEquals("PATCH", server.requests.first().method)
+            val requestBody = JSONObject(server.requests.first().body)
+            assertEquals(7, requestBody.getInt("id"))
+            assertEquals("Ada", requestBody.getString("name"))
+            assertEquals("application/json", server.requests.first().headers["content-type"])
+            assertEquals("application/json", server.requests.first().headers["accept"])
+            assertEquals("Bearer transport-token", server.requests.first().headers["authorization"])
+            assertEquals("patch", server.requests.first().headers["x-probe"])
+            assertNull(server.requests.first().headers["x-http-method-override"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `CMS request uses the shared transport and preserves app key`() {
+        val server = HttpProbeServer(
+            mapOf("/posts" to mutableListOf(HttpProbeServer.Response(200, "{\"ok\":true}")))
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+        mockkStatic(AppAmbit::class)
+        every { AppAmbit.getAppKey() } returns "cms-app-key"
+
+        try {
+            val endpoint = object : CmsEndpoint("posts", mapOf("locale" to "en")) {
+                override fun getBaseUrl(): String = server.baseUrl
+            }
+            val result = HttpApiService(context, executor)
+                .executeRequest(endpoint, String::class.java)
+
+            assertEquals(ApiErrorType.None, result.errorType)
+            assertEquals("{\"ok\":true}", result.data)
+            assertEquals(1, server.requests.size)
+            assertEquals("GET", server.requests.first().method)
+            assertEquals("application/json", server.requests.first().headers["accept"])
+            assertEquals("cms-app-key", server.requests.first().headers["x-app-key"])
+            assertNull(server.requests.first().headers["authorization"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `http transport preserves error body and response headers`() {
+        val server = HttpProbeServer(
+            mapOf(
+                "/fn/failure" to mutableListOf(
+                    HttpProbeServer.Response(
+                        503,
+                        "{\"error\":\"unavailable\"}",
+                        headers = mapOf("X-Request-Id" to "probe-id")
+                    )
+                )
+            )
+        )
+        val executor = Executors.newSingleThreadExecutor()
+        val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
+        mockkStatic(InternetConnection::class)
+        every { InternetConnection.hasInternetConnection(any()) } returns true
+
+        try {
+            val endpoint = CloudCodeEndpoint("failure", HttpMethodEnum.GET, null, null, null)
+            endpoint.setBaseUrl(server.baseUrl)
+            val service = HttpApiService(context, executor)
+            service.setToken("transport-token")
+            val completed = CountDownLatch(1)
+            var received: HttpTransportResponse? = null
+
+            service.executeRaw(endpoint, 2_000) {
+                received = it
+                completed.countDown()
+            }
+
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertNull(received!!.error)
+            assertEquals(503, received!!.statusCode)
+            assertEquals(
+                "{\"error\":\"unavailable\"}",
+                String(received!!.body!!, StandardCharsets.UTF_8)
+            )
+            assertEquals("probe-id", received!!.headers["X-Request-Id"])
+        } finally {
+            executor.shutdownNow()
+            server.close()
+        }
+    }
+
+    @Test
+    fun `blocking transport adapter returns a timeout without invoking a callback`() {
+        val transport = FakeTransport()
+        val endpoint = CloudCodeEndpoint("pending", HttpMethodEnum.GET, null, null, null)
+
+        val response = transport.executeBlocking(endpoint, 20)
+
+        assertTrue(response.error is SocketTimeoutException)
+        assertNull(response.statusCode)
+        assertNull(response.body)
+    }
+
+    @Test
     fun `http transport sends DELETE body and custom headers`() {
         val server = HttpProbeServer(
             mapOf("/fn/delete" to mutableListOf(HttpProbeServer.Response(200, "{}")))
@@ -1234,15 +1444,22 @@ class CloudCodeTest {
 
     }
 
-    private class HttpProbeServer(
+    internal class HttpProbeServer(
         private val responses: Map<String, MutableList<Response>>
     ) : AutoCloseable {
         data class Response(
             val status: Int,
             val body: String,
-            val beforeResponse: (() -> Unit)? = null
+            val beforeResponse: (() -> Unit)? = null,
+            val headers: Map<String, String> = emptyMap()
         )
-        data class Request(val method: String, val path: String, val body: String, val headers: Map<String, String>)
+        data class Request(
+            val method: String,
+            val path: String,
+            val body: String,
+            val headers: Map<String, String>,
+            val target: String
+        )
 
         private val socket = ServerSocket(0)
         private val requestsInternal = mutableListOf<Request>()
@@ -1266,6 +1483,7 @@ class CloudCodeTest {
                 val input = connection.getInputStream().bufferedReader(Charsets.ISO_8859_1)
                 val requestLine = input.readLine() ?: return
                 val parts = requestLine.split(" ")
+                if (parts.size < 2) return
                 val headers = mutableMapOf<String, String>()
                 while (true) {
                     val line = input.readLine() ?: break
@@ -1281,7 +1499,13 @@ class CloudCodeTest {
                     if (count <= 0) break
                     read += count
                 }
-                val request = Request(parts[0], parts[1].substringBefore('?'), String(body, 0, read), headers)
+                val request = Request(
+                    parts[0],
+                    parts[1].substringBefore('?'),
+                    String(body, 0, read),
+                    headers,
+                    parts[1]
+                )
                 synchronized(requestsInternal) { requestsInternal.add(request) }
                 val response = synchronized(responses) {
                     responses[request.path]?.removeFirstOrNull() ?: Response(404, "{}")
@@ -1289,7 +1513,11 @@ class CloudCodeTest {
                 response.beforeResponse?.invoke()
                 val responseBytes = response.body.toByteArray(StandardCharsets.UTF_8)
                 val output = connection.getOutputStream()
-                output.write("HTTP/1.1 ${response.status} Test\r\nContent-Type: application/json\r\nContent-Length: ${responseBytes.size}\r\nConnection: close\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                output.write("HTTP/1.1 ${response.status} Test\r\nContent-Type: application/json\r\nContent-Length: ${responseBytes.size}\r\nConnection: close\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                response.headers.forEach { (name, value) ->
+                    output.write("$name: $value\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                }
+                output.write("\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                 output.write(responseBytes)
                 output.flush()
             }

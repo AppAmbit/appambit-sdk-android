@@ -238,6 +238,8 @@ CloudCode.call(
     .onError(error -> Log.e("CloudCode", "Request failed", error));
 ```
 
+For the dynamic response API, a successful empty body, a `204 No Content` response, and an explicit JSON `null` are represented as `null` in `CloudCodeResponse.data`. iOS exposes the equivalent value as `NSNull()`. Typed responses preserve their status and request metadata; an empty successful body produces `null` typed data.
+
 The typed overload accepts a model class with a public no-argument constructor.
 
 ```java

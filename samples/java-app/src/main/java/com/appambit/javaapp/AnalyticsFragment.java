@@ -53,7 +53,7 @@ public class AnalyticsFragment extends Fragment {
         });
 
         btnGenerate30DaysTestSessions = view.findViewById(R.id.btnGenerate30DaysTestSessions);
-        btnGenerate30DaysTestSessions.setOnClickListener(v -> onGenerate30DaysTestSessions());
+        btnGenerate30DaysTestSessions.setOnClickListener(v -> onGenerate30DaysTestSessions(requireContext()));
 
         btnEventWProperty = view.findViewById(R.id.btnEventWProperty);
         btnEventWProperty.setOnClickListener(v ->  buttonOnClicked(requireContext()));
@@ -64,11 +64,11 @@ public class AnalyticsFragment extends Fragment {
         btnMax20PropertiesEvent = view.findViewById(R.id.btnMax20PropertiesEvent);
         btnMax20PropertiesEvent.setOnClickListener(v ->  buttonOnClickedTestMaxPropertiesEvent(requireContext()));
         btn3DailyEvents = view.findViewById(R.id.btn3DailyEvents);
-        btn3DailyEvents.setOnClickListener(v ->  onSend30DailyEvents());
+        btn3DailyEvents.setOnClickListener(v ->  onSend30DailyEvents(requireContext()));
         btn220BatchEvents = view.findViewById(R.id.btn220BatchEvents);
-        btn220BatchEvents.setOnClickListener(v ->  onGenerateBatchEvents());
+        btn220BatchEvents.setOnClickListener(v ->  onGenerateBatchEvents(requireContext()));
         btnClearToken = view.findViewById(R.id.btnClearToken);
-        btnClearToken.setOnClickListener(v-> onClearToken());
+        btnClearToken.setOnClickListener(v-> onClearToken(requireContext()));
         btnTokenRenew = view.findViewById(R.id.btnTokenRenew);
         btnTokenRenew.setOnClickListener(v -> onTokenRefreshTest(requireContext()));
         btnSecondActivity = view.findViewById(R.id.btnSecondActivity);
@@ -76,8 +76,16 @@ public class AnalyticsFragment extends Fragment {
        return view;
     }
 
-    public static void onGenerate30DaysTestSessions() {
-
+    public static void onGenerate30DaysTestSessions(Context context) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            for (int i = 0; i < 30; i++) {
+                Analytics.startSession();
+                Analytics.endSession();
+            }
+            executor.shutdown();
+            AlertsUtils.showAlert(context, "Info", "30 sessions generated");
+        });
     }
 
     private static void buttonOnClicked(Context context) {
@@ -142,16 +150,28 @@ public class AnalyticsFragment extends Fragment {
 
     }
 
-    private static void onSend30DailyEvents() {
-
+    private static void onSend30DailyEvents(Context context) {
+        for (int i = 1; i <= 30; i++) {
+            Map<String, String> properties = new HashMap<>();
+            properties.put("day", String.valueOf(i));
+            Analytics.trackEvent("DailyEvent", properties);
+        }
+        AlertsUtils.showAlert(context, "Info", "30 events generated");
     }
 
-    private static void onGenerateBatchEvents() {
-
+    private static void onGenerateBatchEvents(Context context) {
+        Map<String, String> properties = new HashMap<>();
+        properties.put("batch", "220");
+        for (int i = 1; i <= 220; i++) {
+            properties.put("index", String.valueOf(i));
+            Analytics.trackEvent("BatchEvent", properties);
+        }
+        AlertsUtils.showAlert(context, "Info", "220 events generated");
     }
 
-    private  static void onClearToken() {
+    private static void onClearToken(Context context) {
         Analytics.clearToken();
+        AlertsUtils.showAlert(context, "Info", "Token invalidated");
     }
 
     public void onTokenRefreshTest(Context context) {
@@ -168,8 +188,6 @@ public class AnalyticsFragment extends Fragment {
         }
 
         waitAll(logTasks);
-
-        Analytics.clearToken();
 
         List<Future<?>> eventTasks = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
