@@ -688,6 +688,25 @@ class CloudCodeTest {
     }
 
     @Test
+    fun `typed response reports when no model field matches`() {
+        class Greeting {
+            @JvmField var greeting: String = ""
+        }
+
+        val transport = FakeTransport()
+        transport.response = response(200, "{\"unexpected\":true}")
+        var error: Throwable? = null
+
+        CloudCodeService(transport)
+            .callTyped("typed", HttpMethodEnum.GET, null, null, null, Greeting::class.java)
+            .onError { error = it }
+
+        assertTrue(error is CloudCodeError)
+        assertEquals(CloudCodeError.Code.DECODING, (error as CloudCodeError).code)
+        assertTrue(error!!.message!!.contains("No response fields matched"))
+    }
+
+    @Test
     fun `typed successful empty body preserves nullable data and headers`() {
         val transport = FakeTransport()
         transport.response = response(200, null, mapOf("X-Request-Id" to "empty-body-id"))

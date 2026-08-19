@@ -98,6 +98,7 @@ public final class CloudCodeJson {
 
     private static Object convertObject(Map<?, ?> source, Class<?> type) throws Exception {
         Object instance = type.getDeclaredConstructor().newInstance();
+        int matchedFields = 0;
         for (Class<?> current = type; current != null && current != Object.class;
              current = current.getSuperclass()) {
             for (Field field : current.getDeclaredFields()) {
@@ -105,10 +106,17 @@ public final class CloudCodeJson {
                 String key = field.isAnnotationPresent(JsonKey.class)
                         ? field.getAnnotation(JsonKey.class).value()
                         : field.getName();
-                if (!source.containsKey(key) || source.get(key) == null) continue;
+                if (!source.containsKey(key)) continue;
+                matchedFields++;
+                if (source.get(key) == null) continue;
                 field.setAccessible(true);
                 field.set(instance, convertValue(source.get(key), field.getGenericType()));
             }
+        }
+        if (!source.isEmpty() && matchedFields == 0) {
+            throw new JSONException(
+                    "No response fields matched " + type.getName()
+                            + ". Use @JsonKey or keep the model fields for R8.");
         }
         return instance;
     }

@@ -243,7 +243,10 @@ For the dynamic response API, a successful empty body, a `204 No Content` respon
 The typed overload accepts a model class with a public no-argument constructor.
 
 ```java
+import com.appambit.sdk.utils.JsonKey;
+
 public class Greeting {
+    @JsonKey("greeting")
     public String greeting = "";
 }
 
@@ -263,7 +266,22 @@ CloudCode.call("profile", HttpMethodEnum.GET, null, null, null, Greeting::class.
     .then { result -> println(result.data?.displayName) }
 ```
 
-Typed models use the SDK's reflection mapper. Field names map directly to JSON names, and `@JsonKey` makes a different mapping explicit. The SDK forwards the consumer token automatically, rejects reserved headers, and preserves HTTP status and `X-Request-Id`. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
+Typed models use the SDK's reflection mapper. Field names map directly to JSON names, and `@JsonKey` makes a different mapping explicit. When R8/minification is enabled, annotate every consumer model field with `@JsonKey` or keep the model fields and public no-argument constructor in the app's rules:
+
+```proguard
+-keep class com.example.app.cloudcode.** {
+    <fields>;
+    public <init>();
+}
+```
+
+Without one of these options, R8 may rename or remove fields that are read through reflection, so a typed response can silently decode without matching fields. The SDK forwards the consumer token automatically, rejects reserved headers, and preserves HTTP status and `X-Request-Id`. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
+
+This R8 requirement applies to every typed model mapped by reflection:
+
+- Cloud Code and CMS JSON models use `@JsonKey`.
+- Database models use `@DbColumn`.
+- Dynamic Cloud Code responses returned as maps and request bodies passed as maps are not affected.
 
 `getBlocking()` is intended for tests or externally controlled worker threads. It throws on the Android main thread and on SDK-owned executors; use `then()` and `onError()` in application code.
 
