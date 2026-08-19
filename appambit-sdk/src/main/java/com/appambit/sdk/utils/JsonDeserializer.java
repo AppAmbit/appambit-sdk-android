@@ -30,11 +30,15 @@ public class JsonDeserializer {
     public static <T> T deserializeFromJSONStringContent(JSONObject json, Class<T> cls) {
         try {
             T instance = cls.getDeclaredConstructor().newInstance();
+            int matchedFields = 0;
             for (Field field : cls.getDeclaredFields()) {
                 field.setAccessible(true);
                 String key = field.isAnnotationPresent(JsonKey.class)
                         ? Objects.requireNonNull(field.getAnnotation(JsonKey.class)).value()
                         : field.getName();
+                if (json.has(key)) {
+                    matchedFields++;
+                }
                 if (json.has(key) && !json.isNull(key)) {
                     Object value = json.get(key);
                     Class<?> fieldType = field.getType();
@@ -102,6 +106,11 @@ public class JsonDeserializer {
                         Log.d(TAG, "Could not parse JSON. Field '" + key + "' type=" + fieldType.getSimpleName() + " value=" + value.getClass().getSimpleName() + " not serialized");
                     }
                 }
+            }
+            if (json.length() > 0 && matchedFields == 0) {
+                throw new RuntimeException(
+                        "No response fields matched " + cls.getName()
+                                + ". Use @JsonKey or keep the model fields for R8.");
             }
             return instance;
         } catch (Exception e) {

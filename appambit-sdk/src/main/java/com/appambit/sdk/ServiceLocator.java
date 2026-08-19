@@ -5,9 +5,12 @@ import com.appambit.sdk.services.interfaces.ApiService;
 import com.appambit.sdk.services.ApplicationInfoService;
 import com.appambit.sdk.services.DbService;
 import com.appambit.sdk.services.HttpApiService;
+import com.appambit.sdk.services.CloudCodeService;
 import com.appambit.sdk.services.interfaces.AppInfoService;
 import com.appambit.sdk.services.StorageService;
 import com.appambit.sdk.services.interfaces.Storable;
+import com.appambit.sdk.utils.SdkThreadFactory;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,8 +20,10 @@ public class ServiceLocator {
 
     private static ApiService apiService;
     private static ExecutorService executorService;
+    private static ExecutorService cloudCodeExecutorService;
     private static AppInfoService appInfoService;
     private static DbService dbService;
+    private static CloudCodeService cloudCodeService;
     private final Context applicationContext;
 
     private ServiceLocator(Context context) {
@@ -37,11 +42,16 @@ public class ServiceLocator {
     }
 
     private void initializeServices() {
-        executorService = Executors.newSingleThreadExecutor();
+        executorService = Executors.newSingleThreadExecutor(new SdkThreadFactory("AppAmbit-SDK"));
+        cloudCodeExecutorService = Executors.newSingleThreadExecutor(
+                new SdkThreadFactory("AppAmbit-CloudCode"));
         storable = new StorageService(applicationContext);
-        apiService = new HttpApiService(applicationContext, executorService);
+        HttpApiService httpApiService = new HttpApiService(
+                applicationContext, executorService, cloudCodeExecutorService);
+        apiService = httpApiService;
         appInfoService = new ApplicationInfoService(applicationContext);
         dbService = new DbService(apiService, executorService);
+        cloudCodeService = new CloudCodeService(httpApiService);
     }
 
     public static Storable getStorageService() {
@@ -52,11 +62,17 @@ public class ServiceLocator {
         return executorService;
     }
 
+    public static ExecutorService getCloudCodeExecutorService() {
+        return cloudCodeExecutorService;
+    }
+
     public static ApiService getApiService() { return apiService; }
 
     public static AppInfoService getAppInfoService() { return appInfoService; }
 
     public static DbService getDbService() { return dbService; }
+
+    public static CloudCodeService getCloudCodeService() { return cloudCodeService; }
 
     public static Context getContext() {
         if (INSTANCE == null) {

@@ -19,7 +19,11 @@ import com.appambit.sdk.services.interfaces.ICmsQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.URL
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+private val imageHttpClient = OkHttpClient()
+private const val CMS_CONTENT_TYPE = "android_blog_posts"
 
 @Composable
 fun Cms() {
@@ -42,7 +46,7 @@ fun Cms() {
 
     // Initial load
     LaunchedEffect(Unit) {
-        loadPosts(Cms.content("blog_posts", CmsExampleModel::class.java))
+        loadPosts(Cms.content(CMS_CONTENT_TYPE, CmsExampleModel::class.java))
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -93,8 +97,8 @@ fun FilterButtons(onQuery: (ICmsQuery<CmsExampleModel>) -> Unit) {
         "Rating ≥ 2.1",
         "Reading Time < 15m",
         "Reading Time ≤ 15m",
-        "Sort Title ↑",
-        "Sort Title ↓",
+        "Sort Published At ↑",
+        "Sort Published At ↓",
         "Sort Likes ↑",
         "Sort Likes ↓",
         "Page 1 (2 per page)",
@@ -134,7 +138,7 @@ fun FilterButtons(onQuery: (ICmsQuery<CmsExampleModel>) -> Unit) {
         )
         
         Button(onClick = {
-            var query = Cms.content("blog_posts", CmsExampleModel::class.java)
+            var query = Cms.content(CMS_CONTENT_TYPE, CmsExampleModel::class.java)
 
             if (searchText.isNotBlank()) {
                 query = query.search(searchText.trim())
@@ -153,8 +157,8 @@ fun FilterButtons(onQuery: (ICmsQuery<CmsExampleModel>) -> Unit) {
                 10 -> query.greaterThanOrEqual("rating", 2.1)
                 11 -> query.lessThan("reading_time", 15)
                 12 -> query.lessThanOrEqual("reading_time", 15)
-                13 -> query.orderByAscending("title")
-                14 -> query.orderByDescending("title")
+                13 -> query.orderByAscending("published_at")
+                14 -> query.orderByDescending("published_at")
                 15 -> query.orderByAscending("likes")
                 16 -> query.orderByDescending("likes")
                 17 -> query.getPage(1).getPerPage(2)
@@ -228,14 +232,22 @@ fun NetworkImage(url: String) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     
     LaunchedEffect(url) {
-        withContext(Dispatchers.IO) {
+        val loadedBitmap = withContext(Dispatchers.IO) {
             try {
-                val inputStream = URL(url).openStream()
-                bitmap = BitmapFactory.decodeStream(inputStream)
+                val request = Request.Builder().url(url).get().build()
+                imageHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        null
+                    } else {
+                        response.body?.byteStream()?.use(BitmapFactory::decodeStream)
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
+                null
             }
         }
+        bitmap = loadedBitmap
     }
     
     bitmap?.let {

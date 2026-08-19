@@ -34,10 +34,6 @@ android {
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
         }
     }
     compileOptions {
@@ -50,6 +46,7 @@ dependencies {
 
     implementation(project(":appambit-sdk"))
     implementation(project(":appambit-sdk-push-notifications"))
+    implementation(libs.okhttp)
     implementation(platform(libs.firebaseBom))
     implementation(libs.appcompat)
     implementation(libs.material)

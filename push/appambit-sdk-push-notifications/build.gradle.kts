@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.material)
     implementation(platform(libs.firebaseBom))
     api(libs.firebaseMessaging)
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

@@ -13,4 +13,5 @@ public class AppConstants {
     public static final String LIVE_SESSION_STREAMING = "live_session_streaming";
     public static final String baseUrlSdk = "https://appambit.com/api";
     public static final String baseUrlCms = "https://cms.appambit.com/api/v1";
+    public static final int CLOUD_CODE_TIMEOUT_MILLIS = 60000;
 }
