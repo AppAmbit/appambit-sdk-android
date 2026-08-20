@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
         // Comment the line for automatic session management
         // Analytics.enableManualSession();
         RemoteConfig.enable();
-        AppAmbit.start(getApplicationContext(), "294f7dd6-987e-493b-b13c-dfdfd0cdcd3e");
+        AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
 
         // Initialize Push SDK on app start
         PushNotifications.start(getApplicationContext());
