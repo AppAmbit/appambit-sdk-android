@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
 
         //Analytics.enableManualSession()
         RemoteConfig.enable()
-        AppAmbit.start(this, "<YOUR-APPKEY>")
+        AppAmbit.start(this, "294f7dd6-987e-493b-b13c-dfdfd0cdcd3e")
 
         // Initialize Push SDK on app start
         PushNotifications.start(applicationContext)

@@ -1,6 +1,6 @@
 package com.appambit.javaapp;
 
-import com.appambit.sdk.enums.HttpMethodEnum;
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -55,11 +55,11 @@ final class CloudCodeDemoCatalog {
 
     static final class RequestConfig {
         final String slug;
-        final HttpMethodEnum method;
+        final CloudCodeHttpMethod method;
         final Map<String, String> query;
         final Map<String, Object> body;
 
-        RequestConfig(String slug, HttpMethodEnum method, Map<String, String> query, Map<String, Object> body) {
+        RequestConfig(String slug, CloudCodeHttpMethod method, Map<String, String> query, Map<String, Object> body) {
             this.slug = slug;
             this.method = method;
             this.query = query;

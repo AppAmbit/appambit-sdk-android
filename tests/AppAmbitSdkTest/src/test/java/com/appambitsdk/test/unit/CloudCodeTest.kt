@@ -5,7 +5,8 @@ import android.os.Looper
 import android.util.Log
 import android.content.Context
 import com.appambit.sdk.AppAmbit
-import com.appambit.sdk.enums.HttpMethodEnum
+import com.appambit.sdk.enums.CloudCodeHttpMethod as HttpMethodEnum
+import com.appambit.sdk.enums.HttpMethodEnum as TransportHttpMethod
 import com.appambit.sdk.enums.ApiErrorType
 import com.appambit.sdk.models.cloudcode.CloudCodeError
 import com.appambit.sdk.models.cloudcode.CloudCodeResponse
@@ -155,7 +156,7 @@ class CloudCodeTest {
             mapOf("X-Probe" to "patch")
         )
 
-        assertEquals(HttpMethodEnum.PATCH, transport.lastEndpoint!!.method)
+        assertEquals(TransportHttpMethod.PATCH, transport.lastEndpoint!!.method)
         assertEquals("/fn/patch?scope=profile", transport.lastEndpoint!!.url)
         assertEquals(
             mapOf("id" to 7, "name" to "Ada"),

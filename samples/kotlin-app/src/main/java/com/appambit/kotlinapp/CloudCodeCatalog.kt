@@ -1,6 +1,6 @@
 package com.appambit.kotlinapp
 
-import com.appambit.sdk.enums.HttpMethodEnum
+import com.appambit.sdk.enums.CloudCodeHttpMethod
 
 internal enum class CloudCodeAction {
     SETUP_DATABASE, CREATE_TASK, LIST_TASKS, COMPLETE_TASK, DELETE_TASK,
@@ -21,7 +21,7 @@ internal data class CloudCodeDemo(
 
 internal data class RequestConfiguration(
     val slug: String,
-    val method: HttpMethodEnum,
+    val method: CloudCodeHttpMethod,
     val query: Map<String, String>? = null,
     val body: Map<String, Any>? = null
 )

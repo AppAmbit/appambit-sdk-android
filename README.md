@@ -35,7 +35,6 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 * Crash capture with stack traces and threads
 * Offline support with batching, retry, and queue
 * Cloud SQLite database access with raw SQL, batch/transaction support, and a fluent query builder
-* Cloud Code HTTP function calls with typed and dynamic JSON responses
 * Create mutliple app profiles for staging and production
 * Small footprint, Kotlin-first API (Java supported)
 
@@ -75,7 +74,7 @@ dependencies {
 
 ## Quickstart
 
-Initialize the SDK with your AppAmbit **app key UUID**.
+Initialize the SDK with your **API key**.
 
 ### Kotlin
 
@@ -85,7 +84,7 @@ import com.appambit.sdk.AppAmbit
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppAmbit.start(this, "<YOUR-APP-KEY-UUID>")
+        AppAmbit.start(this, "<YOUR-APIKEY>")
     }
 }
 ```
@@ -99,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        AppAmbit.start(getApplicationContext(), "<YOUR-APP-KEY-UUID>");
+        AppAmbit.start(getApplicationContext(), "<YOUR-APIKEY>");
     }
 }
 ```
@@ -211,9 +210,11 @@ AppAmbitDb.from("users", User.class)
 ### Kotlin
 
 ```kotlin
+import com.appambit.sdk.enums.CloudCodeHttpMethod
+
 val request = CloudCode.call(
     "hello",
-    HttpMethodEnum.POST,
+    CloudCodeHttpMethod.POST,
     mapOf("source" to "android"),
     mapOf("name" to "Ada"),
     null
@@ -228,9 +229,11 @@ request.then { response ->
 ### Java
 
 ```java
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
+
 CloudCode.call(
         "hello",
-        HttpMethodEnum.POST,
+        CloudCodeHttpMethod.POST,
         null,
         Collections.singletonMap("name", "Ada"),
         null)
@@ -243,6 +246,7 @@ For the dynamic response API, a successful empty body, a `204 No Content` respon
 The typed overload accepts a model class with a public no-argument constructor.
 
 ```java
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
 import com.appambit.sdk.utils.JsonKey;
 
 public class Greeting {
@@ -250,19 +254,22 @@ public class Greeting {
     public String greeting = "";
 }
 
-CloudCode.call("hello", HttpMethodEnum.GET, null, null, null, Greeting.class)
+CloudCode.call("hello", CloudCodeHttpMethod.GET, null, null, null, Greeting.class)
     .then(result -> Log.d("CloudCode", result.getData().greeting));
 ```
 
 Kotlin models can map a different JSON field name with `@JsonKey`:
 
 ```kotlin
+import com.appambit.sdk.enums.CloudCodeHttpMethod
+import com.appambit.sdk.utils.JsonKey
+
 class Greeting {
     @field:JsonKey("display_name")
     var displayName: String = ""
 }
 
-CloudCode.call("profile", HttpMethodEnum.GET, null, null, null, Greeting::class.java)
+CloudCode.call("profile", CloudCodeHttpMethod.GET, null, null, null, Greeting::class.java)
     .then { result -> println(result.data?.displayName) }
 ```
 
