@@ -2,6 +2,8 @@ package com.appambit.sdk;
 
 import androidx.annotation.Nullable;
 import com.appambit.sdk.enums.CloudCodeHttpMethod;
+import com.appambit.sdk.models.cloudcode.CloudCodeCancellationToken;
+import com.appambit.sdk.models.cloudcode.CloudCodeError;
 import com.appambit.sdk.models.cloudcode.CloudCodeRequest;
 import com.appambit.sdk.models.cloudcode.CloudCodeResponse;
 import com.appambit.sdk.models.cloudcode.CloudCodeResult;
@@ -53,13 +55,13 @@ public final class CloudCode {
 
     private static CloudCodeRequest<CloudCodeResponse> notInitializedUntyped() {
         AppAmbitTaskFuture<CloudCodeResponse> future = new AppAmbitTaskFuture<>();
-        future.fail(com.appambit.sdk.models.cloudcode.CloudCodeError.notInitialized());
-        return new CloudCodeRequest<>(future, new com.appambit.sdk.models.cloudcode.CloudCodeCancellationToken());
+        future.fail(CloudCodeError.notInitialized());
+        return new CloudCodeRequest<>(future, new CloudCodeCancellationToken());
     }
 
     private static <T> CloudCodeRequest<CloudCodeResult<T>> notInitializedTyped() {
         AppAmbitTaskFuture<CloudCodeResult<T>> future = new AppAmbitTaskFuture<>();
-        future.fail(com.appambit.sdk.models.cloudcode.CloudCodeError.notInitialized());
-        return new CloudCodeRequest<>(future, new com.appambit.sdk.models.cloudcode.CloudCodeCancellationToken());
+        future.fail(CloudCodeError.notInitialized());
+        return new CloudCodeRequest<>(future, new CloudCodeCancellationToken());
     }
 }
