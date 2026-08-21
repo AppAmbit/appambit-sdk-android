@@ -1,7 +1,9 @@
 package com.appambit.sdk;
 
 import androidx.annotation.Nullable;
-import com.appambit.sdk.enums.HttpMethodEnum;
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
+import com.appambit.sdk.models.cloudcode.CloudCodeCancellationToken;
+import com.appambit.sdk.models.cloudcode.CloudCodeError;
 import com.appambit.sdk.models.cloudcode.CloudCodeRequest;
 import com.appambit.sdk.models.cloudcode.CloudCodeResponse;
 import com.appambit.sdk.models.cloudcode.CloudCodeResult;
@@ -19,18 +21,18 @@ public final class CloudCode {
     }
 
     public static CloudCodeRequest<CloudCodeResponse> call(String function) {
-        return call(function, HttpMethodEnum.POST, null, null, null);
+        return call(function, CloudCodeHttpMethod.POST, null, null, null);
     }
 
     public static CloudCodeRequest<CloudCodeResponse> call(
             String function,
             @Nullable Map<String, Object> body) {
-        return call(function, HttpMethodEnum.POST, null, body, null);
+        return call(function, CloudCodeHttpMethod.POST, null, body, null);
     }
 
     public static CloudCodeRequest<CloudCodeResponse> call(
             String function,
-            HttpMethodEnum method,
+            CloudCodeHttpMethod method,
             @Nullable Map<String, String> query,
             @Nullable Map<String, Object> body,
             @Nullable Map<String, String> headers) {
@@ -41,7 +43,7 @@ public final class CloudCode {
 
     public static <T> CloudCodeRequest<CloudCodeResult<T>> call(
             String function,
-            HttpMethodEnum method,
+            CloudCodeHttpMethod method,
             @Nullable Map<String, String> query,
             @Nullable Map<String, Object> body,
             @Nullable Map<String, String> headers,
@@ -53,13 +55,13 @@ public final class CloudCode {
 
     private static CloudCodeRequest<CloudCodeResponse> notInitializedUntyped() {
         AppAmbitTaskFuture<CloudCodeResponse> future = new AppAmbitTaskFuture<>();
-        future.fail(com.appambit.sdk.models.cloudcode.CloudCodeError.notInitialized());
-        return new CloudCodeRequest<>(future, new com.appambit.sdk.models.cloudcode.CloudCodeCancellationToken());
+        future.fail(CloudCodeError.notInitialized());
+        return new CloudCodeRequest<>(future, new CloudCodeCancellationToken());
     }
 
     private static <T> CloudCodeRequest<CloudCodeResult<T>> notInitializedTyped() {
         AppAmbitTaskFuture<CloudCodeResult<T>> future = new AppAmbitTaskFuture<>();
-        future.fail(com.appambit.sdk.models.cloudcode.CloudCodeError.notInitialized());
-        return new CloudCodeRequest<>(future, new com.appambit.sdk.models.cloudcode.CloudCodeCancellationToken());
+        future.fail(CloudCodeError.notInitialized());
+        return new CloudCodeRequest<>(future, new CloudCodeCancellationToken());
     }
 }

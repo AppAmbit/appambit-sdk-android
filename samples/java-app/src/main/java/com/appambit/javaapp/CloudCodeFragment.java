@@ -26,7 +26,7 @@ import androidx.fragment.app.Fragment;
 import com.appambit.javaapp.models.CloudCodeDashboardSummary;
 import com.appambit.sdk.CloudCode;
 import com.appambit.sdk.PushNotifications;
-import com.appambit.sdk.enums.HttpMethodEnum;
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
 import com.appambit.sdk.models.cloudcode.CloudCodeError;
 import com.appambit.sdk.models.cloudcode.CloudCodeRequest;
 import com.appambit.sdk.models.cloudcode.CloudCodeResponse;
@@ -253,24 +253,24 @@ public class CloudCodeFragment extends Fragment {
     private CloudCodeDemoCatalog.RequestConfig configuration(CloudCodeDemoCatalog.Action action, String slug) {
         Map<String, String> query = null;
         Map<String, Object> body = null;
-        HttpMethodEnum method = HttpMethodEnum.POST;
+        CloudCodeHttpMethod method = CloudCodeHttpMethod.POST;
         switch (action) {
-            case SETUP_DATABASE: method = HttpMethodEnum.POST; break;
+            case SETUP_DATABASE: method = CloudCodeHttpMethod.POST; break;
             case CREATE_TASK: body = mapOf("title", taskTitle.getText().toString()); break;
-            case LIST_TASKS: method = HttpMethodEnum.GET; query = mapOfString("limit", "20"); break;
-            case COMPLETE_TASK: method = HttpMethodEnum.PATCH; body = mapOf("task_id", parseTaskId()); break;
-            case DELETE_TASK: method = HttpMethodEnum.DELETE; body = mapOf("task_id", parseTaskId()); break;
+            case LIST_TASKS: method = CloudCodeHttpMethod.GET; query = mapOfString("limit", "20"); break;
+            case COMPLETE_TASK: method = CloudCodeHttpMethod.PATCH; body = mapOf("task_id", parseTaskId()); break;
+            case DELETE_TASK: method = CloudCodeHttpMethod.DELETE; body = mapOf("task_id", parseTaskId()); break;
             case CREATE_ORDER: body = new LinkedHashMap<>(); body.put("idempotency_key", java.util.UUID.randomUUID().toString()); body.put("amount", 100); break;
-            case SUMMARY: method = HttpMethodEnum.GET; break;
+            case SUMMARY: method = CloudCodeHttpMethod.GET; break;
             case PUBLISH_POST: body = new LinkedHashMap<>(); body.put("title", publishTitle.getText().toString()); body.put("body", publishBody.getText().toString()); break;
-            case READ_POSTS: method = HttpMethodEnum.GET; query = postUuid.getText().toString().trim().isEmpty() ? null : mapOfString("uuid", postUuid.getText().toString().trim()); break;
+            case READ_POSTS: method = CloudCodeHttpMethod.GET; query = postUuid.getText().toString().trim().isEmpty() ? null : mapOfString("uuid", postUuid.getText().toString().trim()); break;
             case INSPECTOR: query = mapOfString("source", "java"); body = new LinkedHashMap<>(); body.put("message", "hello"); body.put("count", 2); break;
             case JSON_VALUES: break;
-            case NULL_CONTRACT: method = HttpMethodEnum.GET; break;
+            case NULL_CONTRACT: method = CloudCodeHttpMethod.GET; break;
             case RESPONSE_SHAPES: break;
             case CONTROLLED_ERROR: body = mapOf("invalid", true); break;
-            case TIMEOUT: method = HttpMethodEnum.GET; break;
-            case RUNTIME_CONTEXT: method = HttpMethodEnum.GET; break;
+            case TIMEOUT: method = CloudCodeHttpMethod.GET; break;
+            case RUNTIME_CONTEXT: method = CloudCodeHttpMethod.GET; break;
             case PUSH: body = new LinkedHashMap<>(); body.put("title", "Cloud Code Android demo"); body.put("body", "Push from Java sample"); break;
         }
         return new CloudCodeDemoCatalog.RequestConfig(slug, method, query, body);
@@ -284,7 +284,7 @@ public class CloudCodeFragment extends Fragment {
         updateDatabaseButtonState();
         databaseStatus.setText("Checking...");
         cmsStatus.setText("Checking...");
-        CloudCode.call("cloud-demo-dashboard-summary-android", HttpMethodEnum.GET, null, null, headers(), CloudCodeDashboardSummary.class)
+        CloudCode.call("cloud-demo-dashboard-summary-android", CloudCodeHttpMethod.GET, null, null, headers(), CloudCodeDashboardSummary.class)
                 .then(result -> {
                     verifyingBackend = false;
                     CloudCodeDashboardSummary summary = result.getData();

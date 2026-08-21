@@ -3,7 +3,7 @@ package com.appambit.sdk.services;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.appambit.sdk.AppConstants;
-import com.appambit.sdk.enums.HttpMethodEnum;
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
 import com.appambit.sdk.models.cloudcode.CloudCodeCancellationToken;
 import com.appambit.sdk.models.cloudcode.CloudCodeError;
 import com.appambit.sdk.models.cloudcode.CloudCodeRequest;
@@ -42,7 +42,7 @@ public final class CloudCodeService {
 
     public CloudCodeRequest<CloudCodeResponse> call(
             String function,
-            HttpMethodEnum method,
+            CloudCodeHttpMethod method,
             @Nullable Map<String, String> query,
             @Nullable Map<String, Object> body,
             @Nullable Map<String, String> headers) {
@@ -77,7 +77,7 @@ public final class CloudCodeService {
 
     public <T> CloudCodeRequest<CloudCodeResult<T>> callTyped(
             String function,
-            HttpMethodEnum method,
+            CloudCodeHttpMethod method,
             @Nullable Map<String, String> query,
             @Nullable Map<String, Object> body,
             @Nullable Map<String, String> headers,
@@ -154,7 +154,7 @@ public final class CloudCodeService {
     @Nullable
     private static CloudCodeError validate(
             String function,
-            @Nullable HttpMethodEnum method,
+            @Nullable CloudCodeHttpMethod method,
             @Nullable Map<String, String> query,
             @Nullable Map<String, Object> body,
             @Nullable Map<String, String> headers,

@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.appambit.sdk.CloudCode
 import com.appambit.sdk.PushNotifications
-import com.appambit.sdk.enums.HttpMethodEnum
+import com.appambit.sdk.enums.CloudCodeHttpMethod
 import com.appambit.sdk.models.cloudcode.CloudCodeError
 import com.appambit.sdk.models.cloudcode.CloudCodeRequest
 import com.appambit.sdk.models.cloudcode.CloudCodeResponse
@@ -100,7 +100,7 @@ fun CloudCode() {
         cmsStatus = "Checking..."
         CloudCode.call(
             "cloud-demo-dashboard-summary-android",
-            HttpMethodEnum.GET,
+            CloudCodeHttpMethod.GET,
             null,
             null,
             headers(),
@@ -142,23 +142,23 @@ fun CloudCode() {
     fun requestConfiguration(demo: CloudCodeDemo): RequestConfiguration {
         val action = demo.action
         return when (action) {
-            CloudCodeAction.SETUP_DATABASE -> RequestConfiguration(demo.slug, HttpMethodEnum.POST)
-            CloudCodeAction.CREATE_TASK -> RequestConfiguration(demo.slug, HttpMethodEnum.POST, body = mapOf("title" to taskTitle))
-            CloudCodeAction.LIST_TASKS -> RequestConfiguration(demo.slug, HttpMethodEnum.GET, query = mapOf("limit" to "20"))
-            CloudCodeAction.COMPLETE_TASK -> RequestConfiguration(demo.slug, HttpMethodEnum.PATCH, body = mapOf("task_id" to (taskId.toIntOrNull() ?: 0)))
-            CloudCodeAction.DELETE_TASK -> RequestConfiguration(demo.slug, HttpMethodEnum.DELETE, body = mapOf("task_id" to (taskId.toIntOrNull() ?: 0)))
-            CloudCodeAction.CREATE_ORDER -> RequestConfiguration(demo.slug, HttpMethodEnum.POST, body = mapOf("idempotency_key" to UUID.randomUUID().toString(), "amount" to 100))
-            CloudCodeAction.SUMMARY -> RequestConfiguration(demo.slug, HttpMethodEnum.GET)
-            CloudCodeAction.PUBLISH_POST -> RequestConfiguration(demo.slug, HttpMethodEnum.POST, body = mapOf("title" to publishTitle, "body" to publishBody))
-            CloudCodeAction.READ_POSTS -> RequestConfiguration(demo.slug, HttpMethodEnum.GET, query = postUuid.trim().takeIf { it.isNotEmpty() }?.let { mapOf("uuid" to it) })
-            CloudCodeAction.INSPECTOR -> RequestConfiguration(demo.slug, HttpMethodEnum.POST, mapOf("source" to "kotlin"), mapOf("message" to "hello", "count" to 2))
-            CloudCodeAction.JSON_VALUES -> RequestConfiguration(demo.slug, HttpMethodEnum.POST)
-            CloudCodeAction.NULL_CONTRACT -> RequestConfiguration(demo.slug, HttpMethodEnum.GET)
-            CloudCodeAction.RESPONSE_SHAPES -> RequestConfiguration(demo.slug, HttpMethodEnum.POST)
-            CloudCodeAction.CONTROLLED_ERROR -> RequestConfiguration(demo.slug, HttpMethodEnum.POST, body = mapOf("invalid" to true))
-            CloudCodeAction.TIMEOUT -> RequestConfiguration(demo.slug, HttpMethodEnum.GET)
-            CloudCodeAction.RUNTIME_CONTEXT -> RequestConfiguration(demo.slug, HttpMethodEnum.GET)
-            CloudCodeAction.PUSH -> RequestConfiguration(demo.slug, HttpMethodEnum.POST, body = mapOf("title" to "Cloud Code Android demo", "body" to "Push from Kotlin sample"))
+            CloudCodeAction.SETUP_DATABASE -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST)
+            CloudCodeAction.CREATE_TASK -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST, body = mapOf("title" to taskTitle))
+            CloudCodeAction.LIST_TASKS -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.GET, query = mapOf("limit" to "20"))
+            CloudCodeAction.COMPLETE_TASK -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.PATCH, body = mapOf("task_id" to (taskId.toIntOrNull() ?: 0)))
+            CloudCodeAction.DELETE_TASK -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.DELETE, body = mapOf("task_id" to (taskId.toIntOrNull() ?: 0)))
+            CloudCodeAction.CREATE_ORDER -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST, body = mapOf("idempotency_key" to UUID.randomUUID().toString(), "amount" to 100))
+            CloudCodeAction.SUMMARY -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.GET)
+            CloudCodeAction.PUBLISH_POST -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST, body = mapOf("title" to publishTitle, "body" to publishBody))
+            CloudCodeAction.READ_POSTS -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.GET, query = postUuid.trim().takeIf { it.isNotEmpty() }?.let { mapOf("uuid" to it) })
+            CloudCodeAction.INSPECTOR -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST, mapOf("source" to "kotlin"), mapOf("message" to "hello", "count" to 2))
+            CloudCodeAction.JSON_VALUES -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST)
+            CloudCodeAction.NULL_CONTRACT -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.GET)
+            CloudCodeAction.RESPONSE_SHAPES -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST)
+            CloudCodeAction.CONTROLLED_ERROR -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST, body = mapOf("invalid" to true))
+            CloudCodeAction.TIMEOUT -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.GET)
+            CloudCodeAction.RUNTIME_CONTEXT -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.GET)
+            CloudCodeAction.PUSH -> RequestConfiguration(demo.slug, CloudCodeHttpMethod.POST, body = mapOf("title" to "Cloud Code Android demo", "body" to "Push from Kotlin sample"))
         }
     }
 
