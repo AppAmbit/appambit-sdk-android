@@ -35,6 +35,7 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 * Crash capture with stack traces and threads
 * Offline support with batching, retry, and queue
 * Cloud SQLite database access with raw SQL, batch/transaction support, and a fluent query builder
+* Cloud Code HTTP function calls with typed and dynamic JSON responses
 * Create mutliple app profiles for staging and production
 * Small footprint, Kotlin-first API (Java supported)
 
