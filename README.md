@@ -35,6 +35,7 @@ Lightweight SDK for analytics, events, logging, crashes, and offline support. Si
 * Crash capture with stack traces and threads
 * Offline support with batching, retry, and queue
 * Cloud SQLite database access with raw SQL, batch/transaction support, and a fluent query builder
+* Cloud Code HTTP function calls with typed and dynamic JSON responses
 * Create mutliple app profiles for staging and production
 * Small footprint, Kotlin-first API (Java supported)
 
@@ -58,7 +59,7 @@ Add the AppAmbit Android SDK to your app’s `build.gradle`.
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:1.1.0")
+    implementation("com.appambit:appambit:1.2.0")
 }
 ```
 
@@ -66,7 +67,7 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:1.1.0'
+    implementation 'com.appambit:appambit:1.2.0'
 }
 ```
 
@@ -74,7 +75,7 @@ dependencies {
 
 ## Quickstart
 
-Initialize the SDK with your **API key**.
+Initialize the SDK with your **app key**.
 
 ### Kotlin
 
@@ -84,7 +85,7 @@ import com.appambit.sdk.AppAmbit
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppAmbit.start(this, "<YOUR-APIKEY>")
+        AppAmbit.start(this, "<YOUR-APPKEY>")
     }
 }
 ```
@@ -98,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        AppAmbit.start(getApplicationContext(), "<YOUR-APIKEY>");
+        AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
     }
 }
 ```
@@ -205,6 +206,100 @@ AppAmbitDb.from("users", User.class)
 
 * **Database**: query and update your AppAmbit cloud database.
 
+* **Cloud Code**: call an HTTP-triggered AppAmbit function. Cloud Code calls are request/response operations and are not queued for offline upload.
+
+### Kotlin
+
+```kotlin
+import com.appambit.sdk.CloudCode
+import com.appambit.sdk.enums.CloudCodeHttpMethod
+
+val request = CloudCode.call(
+    "hello",
+    CloudCodeHttpMethod.POST,
+    mapOf("source" to "android"),
+    mapOf("name" to "Ada"),
+    null
+)
+request.then { response ->
+    println("HTTP ${response.statusCode}: ${response.data}")
+}.onError { error ->
+    println(error.message)
+}
+```
+
+### Java
+
+```java
+import android.util.Log;
+import com.appambit.sdk.CloudCode;
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
+import java.util.Collections;
+
+CloudCode.call(
+        "hello",
+        CloudCodeHttpMethod.POST,
+        null,
+        Collections.singletonMap("name", "Ada"),
+        null)
+    .then(response -> Log.d("CloudCode", String.valueOf(response.getData())))
+    .onError(error -> Log.e("CloudCode", "Request failed", error));
+```
+
+For the dynamic response API, a successful empty body, a `204 No Content` response, and an explicit JSON `null` are represented as `null` in `CloudCodeResponse.data`. iOS exposes the equivalent value as `NSNull()`. Typed responses preserve their status and request metadata; an empty successful body produces `null` typed data.
+
+The typed overload accepts a model class with a public no-argument constructor.
+
+```java
+import android.util.Log;
+import com.appambit.sdk.CloudCode;
+import com.appambit.sdk.enums.CloudCodeHttpMethod;
+import com.appambit.sdk.utils.JsonKey;
+
+public class Greeting {
+    @JsonKey("greeting")
+    public String greeting = "";
+}
+
+CloudCode.call("hello", CloudCodeHttpMethod.GET, null, null, null, Greeting.class)
+    .then(result -> Log.d("CloudCode", result.getData().greeting));
+```
+
+Kotlin models can map a different JSON field name with `@JsonKey`:
+
+```kotlin
+import com.appambit.sdk.CloudCode
+import com.appambit.sdk.enums.CloudCodeHttpMethod
+import com.appambit.sdk.utils.JsonKey
+
+class Greeting {
+    @field:JsonKey("display_name")
+    var displayName: String = ""
+}
+
+CloudCode.call("profile", CloudCodeHttpMethod.GET, null, null, null, Greeting::class.java)
+    .then { result -> println(result.data?.displayName) }
+```
+
+Typed models use the SDK's reflection mapper. Field names map directly to JSON names, and `@JsonKey` makes a different mapping explicit. When R8/minification is enabled, annotate every consumer model field with `@JsonKey` or keep the model fields and public no-argument constructor in the app's rules:
+
+```proguard
+-keep class com.example.app.cloudcode.** {
+    <fields>;
+    public <init>();
+}
+```
+
+Without one of these options, R8 may rename or remove fields that are read through reflection, so a typed response can silently decode without matching fields. The SDK forwards the consumer token automatically, rejects reserved headers, and preserves HTTP status and `X-Request-Id`. Configure Database, CMS, secrets, and Push inside the backend function, not in the mobile app.
+
+This R8 requirement applies to every typed model mapped by reflection:
+
+- Cloud Code and CMS JSON models use `@JsonKey`.
+- Database models use `@DbColumn`.
+- Dynamic Cloud Code responses returned as maps and request bodies passed as maps are not affected.
+
+`getBlocking()` is intended for tests or externally controlled worker threads. It throws on the Android main thread and on SDK-owned executors; use `then()` and `onError()` in application code.
+
 ---
 
 ## Release Distribution
@@ -225,7 +320,7 @@ For details, see the docs: **[docs.appambit.com](https://docs.appambit.com)**
 
 ## Troubleshooting
 
-* **No data in dashboard** → check API key, endpoint, and network access
+* **No data in dashboard** → check app key, endpoint, and network access
 * **Gradle dependency not resolving** → run `./gradlew clean build` and verify Maven Central availability
 * **Crash not appearing** → crashes are sent on next launch
 
@@ -272,4 +367,3 @@ Open source under the terms described in the [LICENSE](./LICENSE) file.
 * **Dashboard**: [appambit.com](https://appambit.com)
 * **Discord**: [discord.gg](https://discord.gg/nJyetYue2s)
 * **Examples**: Sample Android test app included in repo.
-

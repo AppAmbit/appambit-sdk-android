@@ -71,9 +71,8 @@ fun Analytics() {
             }
 
             Button(
-                enabled = false,
                 onClick = {
-                    onGenerateLast30DailySessions()
+                    onGenerateLast30DailySessions(context)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -149,9 +148,8 @@ fun Analytics() {
             }
 
             Button(
-                enabled = false,
                 onClick = {
-                    onSend30DailyEvents()
+                    onSend30DailyEvents(context)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -202,8 +200,16 @@ fun onEndSession() {
     }
 }
 
-fun onGenerateLast30DailySessions() {
-
+fun onGenerateLast30DailySessions(context: Context) {
+    CoroutineScope(Dispatchers.IO).launch {
+        repeat(30) {
+            Analytics.startSession()
+            Analytics.endSession()
+        }
+        withContext(Dispatchers.Main) {
+            dialogUtils(context, "Info", "30 sessions generated")
+        }
+    }
 }
 
 fun onInvalidateToken() {
@@ -226,8 +232,6 @@ fun onTokenRefresh(context: Context) {
             }
         }
         logJobs.awaitAll()
-
-        Analytics.clearToken()
 
         val eventJobs = List(5) {
             async {
@@ -309,8 +313,11 @@ fun onSend20MaxPropertiesEvent(context: Context) {
     Toast.makeText(context, "1 event generated", Toast.LENGTH_SHORT).show()
 }
 
-fun onSend30DailyEvents() {
-
+fun onSend30DailyEvents(context: Context) {
+    repeat(30) { index ->
+        Analytics.trackEvent("DailyEvent", mapOf("day" to (index + 1).toString()))
+    }
+    dialogUtils(context, "Info", "30 events generated")
 }
 
 fun onSend220BatchEvents(context: Context) {

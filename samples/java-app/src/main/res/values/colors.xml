@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="bg_cards">#EEEEEE</color>
+    <color name="bg_cards">#F5F5F5</color>
+    <color name="tab_text">#6B7280</color>
+    <color name="tab_text_selected">#3F51B5</color>
+    <color name="tab_ripple">#333F51B5</color>
 </resources>

@@ -19,12 +19,15 @@ import com.appambit.sdk.annotations.DbColumn
 import com.appambit.sdk.models.db.DbStatement
 
 class TaskModel {
+    @field:DbColumn("id")
     var id: Int = 0
+    @field:DbColumn("title")
     var title: String = ""
 
     @field:DbColumn("is_completed")
     var isCompleted: Int = 0
 
+    @field:DbColumn("priority")
     var priority: String = ""
 
     @field:DbColumn("due_date")

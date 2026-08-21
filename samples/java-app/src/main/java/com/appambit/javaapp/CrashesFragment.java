@@ -165,6 +165,22 @@ public class CrashesFragment extends Fragment {
             }
         });
 
+        btnGenerateLast30DailyErrors = view.findViewById(R.id.btnGenerateLast30DailyErrors);
+        btnGenerateLast30DailyErrors.setOnClickListener(v -> mExecutor.execute(() -> {
+            for (int i = 1; i <= 30; i++) {
+                Crashes.logError("Generated daily error " + i);
+            }
+            AlertsUtils.showAlert(context, "Info", "30 daily errors generated");
+        }));
+
+        btnGenerateLast30DailyCrashes = view.findViewById(R.id.btnGenerateLast30DailyCrashes);
+        btnGenerateLast30DailyCrashes.setOnClickListener(v -> mExecutor.execute(() -> {
+            for (int i = 1; i <= 30; i++) {
+                Crashes.logError(new Exception("Generated daily crash report " + i));
+            }
+            AlertsUtils.showAlert(context, "Info", "30 crash reports generated");
+        }));
+
         etUserId = view.findViewById(R.id.etUserId);
         etUserId.setText(UUID.randomUUID().toString());
         btnSetUserId = view.findViewById(R.id.btnSetUserId);
@@ -189,8 +205,5 @@ public class CrashesFragment extends Fragment {
         btnGenerateTestCrash = view.findViewById(R.id.btnGenerateTestCrash);
         btnGenerateTestCrash.setOnClickListener(v -> Crashes.generateTestCrash());
 
-        // Buttons without implementation
-        btnGenerateLast30DailyErrors = view.findViewById(R.id.btnGenerateLast30DailyErrors);
-        btnGenerateLast30DailyCrashes = view.findViewById(R.id.btnGenerateLast30DailyCrashes);
     }
 }

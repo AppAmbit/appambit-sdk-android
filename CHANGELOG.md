@@ -1,5 +1,14 @@
 ___
 
+## Version 1.2.0
+
+- Added Cloud Code HTTP invocation for Kotlin and Java.
+- Added typed and untyped JSON responses, request IDs, cancellation, reserved-header validation, and a 60-second Cloud Code timeout.
+- Changed the public Cloud Code HTTP method API from `HttpMethodEnum` to `CloudCodeHttpMethod`; update Cloud Code imports before upgrading.
+- Added Cloud Code sample tabs and backend demonstration functions for Database, CMS, Push, event triggers, manual triggers, errors, and timeout behavior.
+
+___
+
 ## Version 1.1.0
 
 ### AppAmbit

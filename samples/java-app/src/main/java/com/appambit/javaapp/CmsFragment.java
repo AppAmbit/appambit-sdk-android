@@ -24,18 +24,22 @@ import com.appambit.javaapp.models.CmsExampleModel;
 import com.appambit.sdk.Cms;
 import com.appambit.sdk.services.interfaces.ICmsQuery;
 
-import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 public class CmsFragment extends Fragment {
+    private static final String CMS_CONTENT_TYPE = "android_blog_posts";
 
     private CmsAdapter adapter;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final OkHttpClient imageHttpClient = new OkHttpClient();
 
     @Nullable
     @Override
@@ -52,7 +56,7 @@ public class CmsFragment extends Fragment {
         recyclerView.setAdapter(adapter);
 
         setupFilters(view);
-        loadPosts(Cms.content("blog_posts", CmsExampleModel.class));
+         loadPosts(Cms.content(CMS_CONTENT_TYPE, CmsExampleModel.class));
     }
 
     private void setupFilters(View view) {
@@ -74,8 +78,8 @@ public class CmsFragment extends Fragment {
             "Rating ≥ 2.1",
             "Reading Time < 15m",
             "Reading Time ≤ 15m",
-            "Sort Title ↑",
-            "Sort Title ↓",
+            "Sort Published At ↑",
+            "Sort Published At ↓",
             "Sort Likes ↑",
             "Sort Likes ↓",
             "Page 1 (2 per page)",
@@ -116,7 +120,7 @@ public class CmsFragment extends Fragment {
 
         btnExecute.setOnClickListener(v -> {
             String text = editSearch.getText().toString().trim();
-            ICmsQuery<CmsExampleModel> query = Cms.content("blog_posts", CmsExampleModel.class);
+             ICmsQuery<CmsExampleModel> query = Cms.content(CMS_CONTENT_TYPE, CmsExampleModel.class);
 
             if (!text.isEmpty()) {
                 query = query.search(text);
@@ -136,8 +140,8 @@ public class CmsFragment extends Fragment {
                 case 10: query = query.greaterThanOrEqual("rating", 2.1); break;
                 case 11: query = query.lessThan("reading_time", 15); break;
                 case 12: query = query.lessThanOrEqual("reading_time", 15); break;
-                case 13: query = query.orderByAscending("title"); break;
-                case 14: query = query.orderByDescending("title"); break;
+                case 13: query = query.orderByAscending("published_at"); break;
+                case 14: query = query.orderByDescending("published_at"); break;
                 case 15: query = query.orderByAscending("likes"); break;
                 case 16: query = query.orderByDescending("likes"); break;
                 case 17: query = query.getPage(1).getPerPage(2); break;
@@ -225,8 +229,15 @@ public class CmsFragment extends Fragment {
         private void loadImage(String url, ImageView imageView) {
             executor.execute(() -> {
                 try {
-                    InputStream in = new URL(url).openStream();
-                    Bitmap bmp = BitmapFactory.decodeStream(in);
+                    Request request = new Request.Builder().url(url).get().build();
+                    Bitmap bmp;
+                    try (Response response = imageHttpClient.newCall(request).execute()) {
+                        if (!response.isSuccessful() || response.body() == null) {
+                            handler.post(() -> imageView.setVisibility(View.GONE));
+                            return;
+                        }
+                        bmp = BitmapFactory.decodeStream(response.body().byteStream());
+                    }
                     if (bmp != null) {
                         handler.post(() -> {
                             imageView.setImageBitmap(bmp);

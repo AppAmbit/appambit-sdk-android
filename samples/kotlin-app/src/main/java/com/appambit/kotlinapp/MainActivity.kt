@@ -7,13 +7,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -58,16 +60,21 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun BottomBar() {
         val navController = rememberNavController()
-        val items = listOf("Crashes", "Analytics", "RemoteConfig", "Cms", "Database")
+        val items = listOf("Crashes", "Analytics", "RemoteConfig", "Cms", "Database", "Cloud Code")
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
 
         Scaffold(
             bottomBar = {
-                NavigationBar {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentDestination = navBackStackEntry?.destination
-
+                ScrollableTabRow(
+                    selectedTabIndex = items.indexOfFirst { label ->
+                        currentDestination?.hierarchy?.any { it.route == label } == true
+                    }.coerceAtLeast(0),
+                    edgePadding = 8.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     items.forEach { label ->
-                        NavigationBarItem(
+                        Tab(
                             selected = currentDestination?.hierarchy?.any { it.route == label } == true,
                             onClick = {
                                 navController.navigate(label) {
@@ -78,8 +85,7 @@ class MainActivity : ComponentActivity() {
                                     restoreState = true
                                 }
                             },
-                            icon = {},
-                            label = { Text(label) }
+                            text = { Text(label) }
                         )
                     }
                 }
@@ -104,6 +110,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable("Database") {
                     Database()
+                }
+                composable("Cloud Code") {
+                    CloudCode()
                 }
             }
         }

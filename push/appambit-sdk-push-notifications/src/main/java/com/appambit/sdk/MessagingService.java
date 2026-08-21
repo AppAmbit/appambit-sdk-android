@@ -32,15 +32,17 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class MessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "AppAmbitPushSDK";
+    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
     public static final String META_DATA_EXTENSION_KEY = "com.appambit.sdk.NotificationServiceExtension";
 
     static final String ACTION_NOTIFICATION_OPENED    = "com.appambit.sdk.NOTIFICATION_OPENED";
@@ -410,11 +412,11 @@ public class MessagingService extends FirebaseMessagingService {
 
     private Bitmap getBitmapFromUrl(@NonNull String src) {
         try {
-            HttpURLConnection connection = (HttpURLConnection) new URL(src).openConnection();
-            connection.setDoInput(true);
-            connection.connect();
-            InputStream input = connection.getInputStream();
-            return BitmapFactory.decodeStream(input);
+            Request request = new Request.Builder().url(src).get().build();
+            try (Response response = HTTP_CLIENT.newCall(request).execute()) {
+                if (!response.isSuccessful() || response.body() == null) return null;
+                return BitmapFactory.decodeStream(response.body().byteStream());
+            }
         } catch (IOException e) {
             Log.e(TAG, "Failed to download image from: " + src, e);
             return null;
