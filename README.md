@@ -75,7 +75,7 @@ dependencies {
 
 ## Quickstart
 
-Initialize the SDK with your **API key**.
+Initialize the SDK with your **app key**.
 
 ### Kotlin
 
@@ -85,7 +85,7 @@ import com.appambit.sdk.AppAmbit
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppAmbit.start(this, "<YOUR-APIKEY>")
+        AppAmbit.start(this, "<YOUR-APPKEY>")
     }
 }
 ```
@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        AppAmbit.start(getApplicationContext(), "<YOUR-APIKEY>");
+        AppAmbit.start(getApplicationContext(), "<YOUR-APPKEY>");
     }
 }
 ```
@@ -211,6 +211,7 @@ AppAmbitDb.from("users", User.class)
 ### Kotlin
 
 ```kotlin
+import com.appambit.sdk.CloudCode
 import com.appambit.sdk.enums.CloudCodeHttpMethod
 
 val request = CloudCode.call(
@@ -230,7 +231,10 @@ request.then { response ->
 ### Java
 
 ```java
+import android.util.Log;
+import com.appambit.sdk.CloudCode;
 import com.appambit.sdk.enums.CloudCodeHttpMethod;
+import java.util.Collections;
 
 CloudCode.call(
         "hello",
@@ -247,6 +251,8 @@ For the dynamic response API, a successful empty body, a `204 No Content` respon
 The typed overload accepts a model class with a public no-argument constructor.
 
 ```java
+import android.util.Log;
+import com.appambit.sdk.CloudCode;
 import com.appambit.sdk.enums.CloudCodeHttpMethod;
 import com.appambit.sdk.utils.JsonKey;
 
@@ -262,6 +268,7 @@ CloudCode.call("hello", CloudCodeHttpMethod.GET, null, null, null, Greeting.clas
 Kotlin models can map a different JSON field name with `@JsonKey`:
 
 ```kotlin
+import com.appambit.sdk.CloudCode
 import com.appambit.sdk.enums.CloudCodeHttpMethod
 import com.appambit.sdk.utils.JsonKey
 
@@ -313,7 +320,7 @@ For details, see the docs: **[docs.appambit.com](https://docs.appambit.com)**
 
 ## Troubleshooting
 
-* **No data in dashboard** → check API key, endpoint, and network access
+* **No data in dashboard** → check app key, endpoint, and network access
 * **Gradle dependency not resolving** → run `./gradlew clean build` and verify Maven Central availability
 * **Crash not appearing** → crashes are sent on next launch
 
