@@ -180,7 +180,7 @@ public class ConsumerService {
 
         ServiceLocator.getExecutorService().execute(() -> {
             try {
-                ApiResult<Void> result = mApiService.executeRequest(endpoint, Void.class);
+                ApiResult<String> result = mApiService.executeRequest(endpoint, String.class);
                 if (result != null && result.errorType == ApiErrorType.None) {
                     Log.d(TAG, "Consumer update request sent.");
                 } else {

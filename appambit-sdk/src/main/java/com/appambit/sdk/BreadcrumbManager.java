@@ -66,6 +66,10 @@ public class BreadcrumbManager {
     }
 
     public static void saveToFile(String name) {
+        if (mExecutorService == null) {
+            Log.d(TAG, "saveToFile skipped: BreadcrumbManager is not initialized yet");
+            return;
+        }
         mExecutorService.execute(() -> {
             try {
                 Log.d(TAG, "Got to save breadcrumbs: " + name);
@@ -162,8 +166,7 @@ public class BreadcrumbManager {
     }
 
     public static void sendBatchBreadcrumbs() {
-        Log.d(TAG, "[DEBUG] sendBatchBreadcrumbs CALLED, streamCrashSessionsOnly=" + streamCrashSessionsOnly,
-                new Throwable("BATCH SEND CALLER"));
+        Log.d(TAG, "[DEBUG] sendBatchBreadcrumbs CALLED, streamCrashSessionsOnly=" + streamCrashSessionsOnly);
         if (mApiService == null || mExecutorService == null || mStorageService == null)
             return;
         synchronized (SEND_LOCK) {
@@ -218,8 +221,10 @@ public class BreadcrumbManager {
         AppAmbitTaskFuture<Void> result = new AppAmbitTaskFuture<>();
         mExecutorService.execute(() -> {
             try {
-                ApiResult<Object> apiResponse = mApiService.executeRequest(new BreadcrumbEndpoint(entity),
-                        Object.class);
+                // The response body is not used, only the error type. String.class returns it
+                // verbatim instead of running it through the reflective field mapper.
+                ApiResult<String> apiResponse = mApiService.executeRequest(new BreadcrumbEndpoint(entity),
+                        String.class);
                 if (apiResponse != null && apiResponse.errorType == ApiErrorType.None) {
                     result.complete(null);
                 } else {
