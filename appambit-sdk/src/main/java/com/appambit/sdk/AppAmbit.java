@@ -88,8 +88,12 @@ public final class AppAmbit {
         mAppKey = appKey;
         if (!isInitialized) {
             CrashHandler.initialize(context);
-            registerLifecycleObserver(context);
+            // The lifecycle callbacks must be registered only once every service is wired.
+            // Registering first leaves a window (and, if onStartApp throws and the host app
+            // swallows it, a permanent state) where a lifecycle event reaches facades that
+            // were never initialized.
             onStartApp(context);
+            registerLifecycleObserver(context);
             isInitialized = true;
             Log.d(TAG, "onCreate (App Level)");
         }

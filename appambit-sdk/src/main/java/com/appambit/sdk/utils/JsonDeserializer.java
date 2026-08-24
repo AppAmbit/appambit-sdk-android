@@ -138,7 +138,18 @@ public class JsonDeserializer {
             if (cls == String.class) {
                 return (T) jsonString;
             }
-            String trimmedJson = jsonString.trim();
+            // Callers that ignore the payload ask for Object/Void. Those classes declare no
+            // fields, so the reflective mapper can never match one and would report a
+            // successful request as a decoding failure.
+            if (cls == Object.class || cls == Void.class) {
+                return null;
+            }
+            String trimmedJson = jsonString == null ? "" : jsonString.trim();
+
+            // 204 and other empty bodies are a valid outcome, not a parse error.
+            if (trimmedJson.isEmpty()) {
+                return null;
+            }
 
             if (trimmedJson.startsWith("[")) {
                 JSONArray jsonArray = new JSONArray(jsonString);

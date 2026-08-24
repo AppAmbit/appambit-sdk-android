@@ -23,8 +23,12 @@ public class ApplicationInfoService implements AppInfoService {
 
         PackageInfo mPackageInfoHelper = PackageInfoHelper.getPackageInfo(context);
 
-        assert mPackageInfoHelper != null;
-        this.appVersion = mPackageInfoHelper.versionName;
+        // getPackageInfo returns null when the PackageManager is unavailable (app being
+        // updated in place, DeadSystemException, some OEM ROMs). An `assert` is a no-op on
+        // Android, so dereferencing it here used to abort SDK initialization.
+        this.appVersion = (mPackageInfoHelper != null && mPackageInfoHelper.versionName != null)
+                ? mPackageInfoHelper.versionName
+                : "";
         this.build = String.valueOf(Build.VERSION.SDK_INT);
         this.platform = "Android";
         this.os = Build.VERSION.RELEASE;
