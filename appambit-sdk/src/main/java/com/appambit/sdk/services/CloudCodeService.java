@@ -159,10 +159,14 @@ public final class CloudCodeService {
             @Nullable Map<String, Object> body,
             @Nullable Map<String, String> headers,
             @Nullable Class<?> responseType) {
-        if (function == null || function.isEmpty() || function.contains("/")
-                || function.chars().anyMatch(Character::isWhitespace)
-                || function.chars().anyMatch(Character::isISOControl)) {
+        if (function == null || function.isEmpty() || function.contains("/")) {
             return CloudCodeError.invalidFunction(function);
+        }
+        for (int index = 0; index < function.length(); index++) {
+            char character = function.charAt(index);
+            if (Character.isWhitespace(character) || Character.isISOControl(character)) {
+                return CloudCodeError.invalidFunction(function);
+            }
         }
         if (method == null) return CloudCodeError.invalidMethod();
         if (query != null) {
