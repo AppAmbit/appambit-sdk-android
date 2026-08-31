@@ -46,7 +46,7 @@ This SDK is an extension of the core AppAmbit Android SDK, providing a simple an
 
 ## Requirements
 
-- **AppAmbit Core SDK**: Requires the core `appambit-sdk` to be installed and initialized first.
+- **AppAmbit Core SDK**: `com.appambit:appambit` must be declared alongside this module and initialized first.
 - **Firebase Project**: A configured Firebase project and a `google-services.json` file in your application module.
 - Android API level 21 (Lollipop) or newer.
 
@@ -54,17 +54,14 @@ This SDK is an extension of the core AppAmbit Android SDK, providing a simple an
 
 ## Install
 
-Add the following dependencies to your app's `build.gradle` file.
+### 1. Add the dependencies
 
 **Kotlin DSL**
 
 ```kotlin
 dependencies {
     implementation("com.appambit:appambit:1.2.0")
-    implementation("com.appambit:appambit-push-notifications:1.2.0")
-
-    // The Firebase BOM is required to align Firebase library versions.
-    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.appambit:appambit.push.notifications:1.2.0")
 }
 ```
 
@@ -73,14 +70,55 @@ dependencies {
 ```gradle
 dependencies {
     implementation 'com.appambit:appambit:1.2.0'
-    implementation 'com.appambit:appambit-push-notifications:1.2.0'
-
-    // The Firebase BOM is required to align Firebase library versions.
-    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.appambit:appambit.push.notifications:1.2.0'
 }
 ```
 
-Ensure you have the Google Services plugin configured in your project-level `build.gradle`.
+Firebase Cloud Messaging ships with this module, so `FirebaseMessaging` is on your compile classpath and its version is managed for you.
+
+
+### 2. Apply the Google Services plugin
+
+In your **project-level** `build.gradle`:
+
+**Kotlin DSL**
+
+```kotlin
+plugins {
+    id("com.google.gms.google-services") version "4.4.2" apply false
+}
+```
+
+**Groovy**
+
+```gradle
+plugins {
+    id 'com.google.gms.google-services' version '4.4.2' apply false
+}
+```
+
+In your **app module** `build.gradle`:
+
+**Kotlin DSL**
+
+```kotlin
+plugins {
+    id("com.google.gms.google-services")
+}
+```
+
+**Groovy**
+
+```gradle
+plugins {
+    id 'com.google.gms.google-services'
+}
+```
+
+### 3. Add `google-services.json`
+
+Download it from your Firebase project console and drop it into your application
+module (next to its `build.gradle`).
 
 ---
 
@@ -141,6 +179,9 @@ PushNotifications.setBackgroundListener(notification -> {
 ```
 
 **Step 3 — Request the notification permission** (required on Android 13+):
+
+Call this from an `Activity`, it takes a `ComponentActivity` (which `AppCompatActivity`
+extends), not an application `Context`, because it has to launch the system dialog.
 
 **Kotlin**
 ```kotlin
