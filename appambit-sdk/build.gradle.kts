@@ -28,6 +28,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    // Exposes the `release` software component so maven-publish can derive the POM
+    // (and Gradle Module Metadata) from the real dependency graph. Without this the
+    // publication has to attach the AAR as a raw file and ships no dependencies.
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 dependencies {

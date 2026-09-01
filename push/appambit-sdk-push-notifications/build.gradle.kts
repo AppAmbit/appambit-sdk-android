@@ -25,10 +25,20 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 dependencies {
-    implementation(project(":appambit-sdk"))
+    // compileOnly on purpose: the core SDK is a REQUIREMENT of this module, not a
+    // transitive gift. It stays off the published POM / module metadata so consumers
+    // must declare `com.appambit:appambit` themselves and therefore control its
+    // version. PushNotifications.java is the only class here that touches core types.
+    compileOnly(project(":appambit-sdk"))
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(platform(libs.firebaseBom))

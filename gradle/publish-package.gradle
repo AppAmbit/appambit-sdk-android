@@ -27,11 +27,16 @@ ext {
 
 }
 
+def ossSigningKey = System.getenv("OSS_SIGNING_KEY")
+def ossSigningPassword = System.getenv("OSS_SIGNING_PASSWORD")
+
 signing {
-    useInMemoryPgpKeys(
-        System.getenv("OSS_SIGNING_KEY"),
-        System.getenv("OSS_SIGNING_PASSWORD")
-    )
+    // Skip signing when no key is present (publishToMavenLocal / local verification).
+    // CI still signs because it exports OSS_SIGNING_KEY.
+    required { ossSigningKey != null && !ossSigningKey.isEmpty() }
+    if (ossSigningKey != null && !ossSigningKey.isEmpty()) {
+        useInMemoryPgpKeys(ossSigningKey, ossSigningPassword)
+    }
     sign publishing.publications
 }
 
@@ -40,23 +45,20 @@ task emptyJavadocsJar(type: Jar) {
     from("$buildDir/empty")
 }
 
-task androidSourcesJar(type: Jar) {
-    archiveClassifier.set('sources')
-    from android.sourceSets.main.java.srcDirs
-    from android.sourceSets.main.kotlin.srcDirs
-}
-
 afterEvaluate {
     publishing {
         publications {
             release(MavenPublication) {
+                // Publishing the AGP `release` component (instead of attaching the AAR as a
+                // raw file) is what makes maven-publish emit a <dependencies> block in the
+                // POM and a Gradle Module Metadata file. Consumers then get okhttp,
+                // appcompat and material transitively instead of having to add them by hand.
+                from components.release
+
                 groupId GROUP_ID
                 artifactId ARTIFACT_ID
                 version VERSION_NAME
 
-                artifact("$buildDir/outputs/aar/${project.name}-release.aar")
-
-                artifact androidSourcesJar
                 artifact emptyJavadocsJar
 
                 pom {
