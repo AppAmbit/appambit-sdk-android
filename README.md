@@ -126,7 +126,7 @@ The SDK is published to Maven Central, so make sure `mavenCentral()` is in your 
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:1.2.0")
+    implementation("com.appambit:appambit:1.2.1")
 }
 ```
 
@@ -134,7 +134,7 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:1.2.0'
+    implementation 'com.appambit:appambit:1.2.1'
 }
 ```
 
@@ -158,8 +158,8 @@ Push notifications are delivered over Firebase Cloud Messaging and ship as a sep
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:1.2.0")
-    implementation("com.appambit:appambit.push.notifications:1.2.0")
+    implementation("com.appambit:appambit:1.2.1")
+    implementation("com.appambit:appambit.push.notifications:1.2.1")
 }
 ```
 

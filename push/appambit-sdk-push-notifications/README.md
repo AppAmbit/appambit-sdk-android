@@ -60,8 +60,8 @@ This SDK is an extension of the core AppAmbit Android SDK, providing a simple an
 
 ```kotlin
 dependencies {
-    implementation("com.appambit:appambit:1.2.0")
-    implementation("com.appambit:appambit.push.notifications:1.2.0")
+    implementation("com.appambit:appambit:1.2.1")
+    implementation("com.appambit:appambit.push.notifications:1.2.1")
 }
 ```
 
@@ -69,8 +69,8 @@ dependencies {
 
 ```gradle
 dependencies {
-    implementation 'com.appambit:appambit:1.2.0'
-    implementation 'com.appambit:appambit.push.notifications:1.2.0'
+    implementation 'com.appambit:appambit:1.2.1'
+    implementation 'com.appambit:appambit.push.notifications:1.2.1'
 }
 ```
 
