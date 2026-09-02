@@ -1,11 +1,26 @@
 ___
 
+## Version 1.2.1
+
+### AppAmbit
+
+* **[Fix]** Fixed the published Maven metadata: the POM and Gradle Module Metadata now declare the SDK's real dependency graph, so OkHttp, AppCompat and Material resolve transitively instead of having to be declared by hand in the consuming app.
+* **[Docs]** Rewrote the README around a quick start, a per-feature guide, and the push setup options.
+
+### AppAmbit Push Notifications
+
+* **[Fix]** Fixed the same metadata gap in `com.appambit:appambit.push.notifications`: Firebase Messaging now resolves transitively. `com.appambit:appambit` stays a dependency the app declares and versions itself.
+
+___
+
 ## Version 1.2.0
 
-- Added Cloud Code HTTP invocation for Kotlin and Java.
-- Added typed and untyped JSON responses, request IDs, cancellation, reserved-header validation, and a 60-second Cloud Code timeout.
-- Changed the public Cloud Code HTTP method API from `HttpMethodEnum` to `CloudCodeHttpMethod`; update Cloud Code imports before upgrading.
-- Added Cloud Code sample tabs and backend demonstration functions for Database, CMS, Push, event triggers, manual triggers, errors, and timeout behavior.
+### AppAmbit
+
+- **[Feature]** Added Cloud Code HTTP invocation for Kotlin and Java.
+- **[Feature]** Added typed and untyped JSON responses, request IDs, cancellation, reserved-header validation, and a 60-second Cloud Code timeout.
+- **[Breaking]** Changed the public Cloud Code HTTP method API from `HttpMethodEnum` to `CloudCodeHttpMethod`; update Cloud Code imports before upgrading.
+- **[Docs]** Added Cloud Code sample tabs and backend demonstration functions for Database, CMS, Push, event triggers, manual triggers, errors, and timeout behavior.
 
 ___
 
