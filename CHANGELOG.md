@@ -5,7 +5,7 @@ ___
 ### AppAmbit
 
 * **[Fix]** Fixed the published Maven metadata: the POM and Gradle Module Metadata now declare the SDK's real dependency graph, so OkHttp, AppCompat and Material resolve transitively instead of having to be declared by hand in the consuming app.
-* **[Docs]** Rewrote the README around a quick start, a per-feature guide, and the push setup options.
+* **[Docs]** Updated the README with a quick start, requirements, a Gradle install and push setup reference, usage guides for events, logs, breadcrumbs, remote config, CMS, Database, and Cloud Code, plus release distribution pipelines, sample apps, starter apps, MCP setup, and the REST API.
 
 ### AppAmbit Push Notifications
 
