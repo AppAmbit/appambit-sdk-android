@@ -1,5 +1,14 @@
 ___
 
+## Version 1.2.2
+
+### AppAmbit
+
+* **[Fix]** `AppAmbitDb` statements with a `null` parameter (`execute`, `batch`, `batchInTransaction`, `insert`, `update`) no longer fail with "Unexpected error"; `null` is now sent as SQL `NULL`.
+* **[Fix]** From Java, `execute(sql, null)` and `DbStatement.of(sql, null)` now send one `NULL` parameter instead of none or crashing.
+
+___
+
 ## Version 1.2.1
 
 ### AppAmbit
