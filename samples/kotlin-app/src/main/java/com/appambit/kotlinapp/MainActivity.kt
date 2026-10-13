@@ -8,7 +8,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -66,27 +69,34 @@ class MainActivity : ComponentActivity() {
 
         Scaffold(
             bottomBar = {
-                ScrollableTabRow(
-                    selectedTabIndex = items.indexOfFirst { label ->
-                        currentDestination?.hierarchy?.any { it.route == label } == true
-                    }.coerceAtLeast(0),
-                    edgePadding = 8.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items.forEach { label ->
-                        Tab(
-                            selected = currentDestination?.hierarchy?.any { it.route == label } == true,
-                            onClick = {
-                                navController.navigate(label) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
+                // With edge-to-edge, ScrollableTabRow (unlike NavigationBar) does not inset itself
+                // from the system navigation bar. The Surface paints behind the system buttons and
+                // the tabs sit above them.
+                Surface(color = MaterialTheme.colorScheme.surface) {
+                    ScrollableTabRow(
+                        selectedTabIndex = items.indexOfFirst { label ->
+                            currentDestination?.hierarchy?.any { it.route == label } == true
+                        }.coerceAtLeast(0),
+                        edgePadding = 8.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                    ) {
+                        items.forEach { label ->
+                            Tab(
+                                selected = currentDestination?.hierarchy?.any { it.route == label } == true,
+                                onClick = {
+                                    navController.navigate(label) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            text = { Text(label) }
-                        )
+                                },
+                                text = { Text(label) }
+                            )
+                        }
                     }
                 }
             }
