@@ -363,6 +363,66 @@ fun Database() {
         future.onError { e -> err(e.message ?: "Error") }
     }
 
+    // Regression for the null-parameter bug fixed in 1.2.2: every write below sends at least
+    // one null parameter. Before the fix each of them failed on the device with
+    // "Unexpected error" and never reached the backend.
+    fun demoNullParams() {
+        reset(); isLoading = true
+        val fail: (Throwable) -> Unit = { e -> err("null params — ${e.message ?: "Unknown error"}") }
+
+        AppAmbitDb.execute(
+            "INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)",
+            "null-test execute", 0, null, null
+        ).apply {
+            then { r1 ->
+                if (r1.hasError()) { err("execute() — ${r1.error}"); return@then }
+                AppAmbitDb.batchInTransaction(
+                    DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "null-test batch", 0, null, "2026-06-10"),
+                    DbStatement.of("UPDATE tasks SET due_date = ? WHERE title = ?", null, "null-test batch")
+                ).apply {
+                    then {
+                        AppAmbitDb.from("tasks").insert(mapOf(
+                            "title" to "null-test insert", "is_completed" to 0, "priority" to null, "due_date" to null
+                        )).apply {
+                            then { r3 ->
+                                if (r3.hasError()) { err("insert() — ${r3.error}"); return@then }
+                                AppAmbitDb.execute(
+                                    "SELECT id, title, priority, due_date FROM tasks WHERE title LIKE ? ORDER BY id",
+                                    "null-test%"
+                                ).apply {
+                                    then { r4 ->
+                                        if (r4.hasError()) { err("SELECT — ${r4.error}"); return@then }
+                                        showRows(r4.columns, r4.rows)
+                                        val pIdx = r4.columns.indexOf("priority")
+                                        val dIdx = r4.columns.indexOf("due_date")
+                                        val allNull = r4.rows.isNotEmpty() &&
+                                            r4.rows.all { it[pIdx] == null && it[dIdx] == null }
+                                        if (allNull) ok("null params OK — ${r4.rows.size} row(s), priority and due_date stored as NULL")
+                                        else err("null params — some values were not stored as NULL")
+                                    }
+                                    onError(fail)
+                                }
+                            }
+                            onError(fail)
+                        }
+                    }
+                    onError(fail)
+                }
+            }
+            onError(fail)
+        }
+    }
+
+    fun demoNullParamsCleanup() {
+        reset(); isLoading = true
+        val future = AppAmbitDb.execute("DELETE FROM tasks WHERE title LIKE ?", "null-test%")
+        future.then { result ->
+            if (result.hasError()) err(result.error)
+            else ok("null-test rows deleted — rows_written=${result.rowsWritten}")
+        }
+        future.onError { e -> err(e.message ?: "Error") }
+    }
+
     val demos = listOf(
         DemoItem("Raw SQL → execute(sql)")                          { demoExecute() },
         DemoItem("Raw SQL → execute(sql, params)")                  { demoExecuteParams() },
@@ -385,6 +445,8 @@ fun Database() {
         DemoItem("Typed Model → from(tasks, TaskModel::class.java)") { demoTypedModel() },
         DemoItem("Preset → List tables")                            { demoPresetTables() },
         DemoItem("Preset → SELECT * WHERE priority='high'")         { demoPresetHighPriority() },
+        DemoItem("Regression → null params (execute/batch/insert)") { demoNullParams() },
+        DemoItem("Regression → delete null-test rows")              { demoNullParamsCleanup() },
     )
 
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {

@@ -71,7 +71,9 @@ public class JsonConvertUtils {
     private static JSONArray collectionToJson(Collection<?> collection) throws JSONException {
         JSONArray jsonArray = new JSONArray();
         for (Object item : collection) {
-            if (item instanceof Enum)
+            if (item == null)
+                jsonArray.put(JSONObject.NULL);
+            else if (item instanceof Enum)
                 jsonArray.put(((Enum<?>) item).name());
             else if (item instanceof Date)
                 jsonArray.put(toIsoUtc((Date) item));
@@ -89,13 +91,15 @@ public class JsonConvertUtils {
         int length = Array.getLength(array);
         for (int i = 0; i < length; i++) {
             Object item = Array.get(array, i);
-            if (item instanceof Enum)
+            if (item == null)
+                jsonArray.put(JSONObject.NULL);
+            else if (item instanceof Enum)
                 jsonArray.put(((Enum<?>) item).name());
             else if (item instanceof Date)
                 jsonArray.put(toIsoUtc((Date) item));
             else if (item instanceof UUID)
                 jsonArray.put(item.toString());
-            else if (item != null && isSimpleType(item.getClass()))
+            else if (isSimpleType(item.getClass()))
                 jsonArray.put(item);
             else
                 jsonArray.put(objectToJson(item));

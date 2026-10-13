@@ -23,6 +23,9 @@ public class DbStatement {
     }
 
     public static DbStatement of(String sql, Object... params) {
+        // Java passes of(sql, null) as a null array, not as one null parameter.
+        // of(sql) already covers "no parameters", so treat it as a single NULL.
+        if (params == null) params = new Object[]{ null };
         List<Object> list = new ArrayList<>(Arrays.asList(params));
         return new DbStatement(sql, list.isEmpty() ? null : list);
     }

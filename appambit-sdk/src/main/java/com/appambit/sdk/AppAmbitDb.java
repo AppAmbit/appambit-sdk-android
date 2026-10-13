@@ -38,7 +38,10 @@ public final class AppAmbitDb {
      * Use ? placeholders in the SQL string.
      */
     public static AppAmbitTaskFuture<DbResult> execute(@NonNull String sql, @Nullable Object... params) {
-        List<Object> paramList = (params != null && params.length > 0)
+        // Java passes execute(sql, null) as a null array, not as one null parameter.
+        // execute(sql) already covers "no parameters", so treat it as a single NULL.
+        if (params == null) params = new Object[]{ null };
+        List<Object> paramList = (params.length > 0)
                 ? Arrays.asList(params)
                 : null;
         return executeInternal(sql, paramList);
