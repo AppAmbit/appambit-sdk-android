@@ -7,6 +7,7 @@ import com.appambit.sdk.models.db.DbResult;
 import com.appambit.sdk.models.db.DbStatement;
 import com.appambit.sdk.services.DbService;
 import com.appambit.sdk.utils.AppAmbitTaskFuture;
+import com.appambit.sdk.utils.DbParamsUtils;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -38,13 +39,7 @@ public final class AppAmbitDb {
      * Use ? placeholders in the SQL string.
      */
     public static AppAmbitTaskFuture<DbResult> execute(@NonNull String sql, @Nullable Object... params) {
-        // Java passes execute(sql, null) as a null array, not as one null parameter.
-        // execute(sql) already covers "no parameters", so treat it as a single NULL.
-        if (params == null) params = new Object[]{ null };
-        List<Object> paramList = (params.length > 0)
-                ? Arrays.asList(params)
-                : null;
-        return executeInternal(sql, paramList);
+        return executeInternal(sql, DbParamsUtils.toParamList(params));
     }
 
     private static AppAmbitTaskFuture<DbResult> executeInternal(String sql, List<Object> params) {

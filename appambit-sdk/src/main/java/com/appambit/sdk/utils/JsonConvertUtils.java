@@ -45,87 +45,47 @@ public class JsonConvertUtils {
                 String key = getJsonKey(field);
                 Object value = field.get(object);
                 if (value == null) continue;
-                if (value instanceof Map)
-                    jsonObject.put(key, mapToJson((Map<?, ?>) value));
-                else if (value instanceof Collection)
-                    jsonObject.put(key, collectionToJson((Collection<?>) value));
-                else if (value.getClass().isArray())
-                    jsonObject.put(key, arrayToJson(value));
-                else if (value instanceof Enum)
-                    jsonObject.put(key, ((Enum<?>) value).name());
-                else if (value instanceof Date) {
-                    String format = getDateFormatFromField(field);
-                    jsonObject.put(key, formatDate((Date) value, format));
-                } else if (value instanceof UUID)
-                    jsonObject.put(key, value.toString());
-                else if (isSimpleType(value.getClass()))
-                    jsonObject.put(key, value);
+                // Dates on fields honor @CustomDateTimeFormat, so they can't use serializeValue's default.
+                if (value instanceof Date)
+                    jsonObject.put(key, formatDate((Date) value, getDateFormatFromField(field)));
                 else
-                    jsonObject.put(key, objectToJson(value));
+                    jsonObject.put(key, serializeValue(value));
             } catch (IllegalAccessException e) {
                 Log.e(TAG, "Serialization error: " + e.getMessage(), e);
             }
         }
         return jsonObject;
     }
+    // Single type dispatch shared by every serializer, so a new type or null rule
+    // only has to be added here. Null becomes JSON null to keep its position/key.
+    private static Object serializeValue(Object value) throws JSONException {
+        if (value == null) return JSONObject.NULL;
+        if (value instanceof Map) return mapToJson((Map<?, ?>) value);
+        if (value instanceof Collection) return collectionToJson((Collection<?>) value);
+        if (value.getClass().isArray()) return arrayToJson(value);
+        if (value instanceof Enum) return ((Enum<?>) value).name();
+        if (value instanceof Date) return toIsoUtc((Date) value);
+        if (value instanceof UUID) return value.toString();
+        if (isSimpleType(value.getClass())) return value;
+        return objectToJson(value);
+    }
     private static JSONArray collectionToJson(Collection<?> collection) throws JSONException {
         JSONArray jsonArray = new JSONArray();
-        for (Object item : collection) {
-            if (item == null)
-                jsonArray.put(JSONObject.NULL);
-            else if (item instanceof Enum)
-                jsonArray.put(((Enum<?>) item).name());
-            else if (item instanceof Date)
-                jsonArray.put(toIsoUtc((Date) item));
-            else if (item instanceof UUID)
-                jsonArray.put(item.toString());
-            else if (isSimpleType(item.getClass()))
-                jsonArray.put(item);
-            else
-                jsonArray.put(objectToJson(item));
-        }
+        for (Object item : collection)
+            jsonArray.put(serializeValue(item));
         return jsonArray;
     }
     public static JSONArray arrayToJson(Object array) throws JSONException {
         JSONArray jsonArray = new JSONArray();
         int length = Array.getLength(array);
-        for (int i = 0; i < length; i++) {
-            Object item = Array.get(array, i);
-            if (item == null)
-                jsonArray.put(JSONObject.NULL);
-            else if (item instanceof Enum)
-                jsonArray.put(((Enum<?>) item).name());
-            else if (item instanceof Date)
-                jsonArray.put(toIsoUtc((Date) item));
-            else if (item instanceof UUID)
-                jsonArray.put(item.toString());
-            else if (isSimpleType(item.getClass()))
-                jsonArray.put(item);
-            else
-                jsonArray.put(objectToJson(item));
-        }
+        for (int i = 0; i < length; i++)
+            jsonArray.put(serializeValue(Array.get(array, i)));
         return jsonArray;
     }
     private static JSONObject mapToJson(Map<?, ?> map) throws JSONException {
         JSONObject jsonObject = new JSONObject();
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            Object value = entry.getValue();
-            if (value == null) continue;
-            if (value instanceof Collection)
-                jsonObject.put(entry.getKey().toString(), collectionToJson((Collection<?>) value));
-            else if (value.getClass().isArray())
-                jsonObject.put(entry.getKey().toString(), arrayToJson(value));
-            else if (value instanceof Enum)
-                jsonObject.put(entry.getKey().toString(), ((Enum<?>) value).name());
-            else if (value instanceof Date)
-                jsonObject.put(entry.getKey().toString(), toIsoUtc((Date) value));
-            else if (value instanceof UUID)
-                jsonObject.put(entry.getKey().toString(), value.toString());
-            else if (isSimpleType(value.getClass()))
-                jsonObject.put(entry.getKey().toString(), value);
-            else
-                jsonObject.put(entry.getKey().toString(), objectToJson(value));
-        }
+        for (Map.Entry<?, ?> entry : map.entrySet())
+            jsonObject.put(entry.getKey().toString(), serializeValue(entry.getValue()));
         return jsonObject;
     }
     private static boolean isSimpleType(Class<?> clazz) {

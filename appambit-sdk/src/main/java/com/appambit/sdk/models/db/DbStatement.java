@@ -1,8 +1,7 @@
 package com.appambit.sdk.models.db;
 
+import com.appambit.sdk.utils.DbParamsUtils;
 import com.appambit.sdk.utils.JsonKey;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class DbStatement {
@@ -23,11 +22,7 @@ public class DbStatement {
     }
 
     public static DbStatement of(String sql, Object... params) {
-        // Java passes of(sql, null) as a null array, not as one null parameter.
-        // of(sql) already covers "no parameters", so treat it as a single NULL.
-        if (params == null) params = new Object[]{ null };
-        List<Object> list = new ArrayList<>(Arrays.asList(params));
-        return new DbStatement(sql, list.isEmpty() ? null : list);
+        return new DbStatement(sql, DbParamsUtils.toParamList(params));
     }
 
     public String getSql() { return sql; }

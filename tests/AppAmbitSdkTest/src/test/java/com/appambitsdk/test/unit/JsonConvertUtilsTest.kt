@@ -75,4 +75,23 @@ class JsonConvertUtilsTest {
         assertTrue(json.isNull(1))
         assertEquals(true, json.get(2))
     }
+
+    @Test
+    fun `map keeps a null value under its key`() {
+        val json = JSONObject(JsonConvertUtils.toJson(mapOf("a" to "x", "b" to null)))
+
+        assertEquals("x", json.get("a"))
+        assertTrue(json.has("b"))
+        assertTrue(json.isNull("b"))
+    }
+
+    @Test
+    fun `nested collections are serialized as arrays`() {
+        val json = JsonConvertUtils.arrayToJson(arrayOf<Any?>(listOf(1, null), mapOf("k" to null)))
+
+        val inner = json.getJSONArray(0)
+        assertEquals(1, inner.getInt(0))
+        assertTrue(inner.isNull(1))
+        assertTrue(json.getJSONObject(1).isNull("k"))
+    }
 }
