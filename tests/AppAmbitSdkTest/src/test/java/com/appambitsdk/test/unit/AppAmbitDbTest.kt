@@ -137,6 +137,32 @@ class AppAmbitDbTest {
         assertEquals(listOf(42), paramsSlot.captured)
     }
 
+    // From Java, execute(sql, null) arrives as a null Object[] rather than as one null
+    // parameter. Kotlin wraps the null for us, so call through reflection to reproduce Java.
+    @Test
+    fun `execute from Java with a single null sends one NULL parameter`() {
+        injectDbService(mockDbService)
+        val paramsSlot = slot<List<*>>()
+        every { mockDbService.query(any(), capture(paramsSlot)) } returns successFuture(
+            """{"results":[{"columns":[],"rows":[],"rows_read":0,"rows_written":1}]}"""
+        )
+
+        AppAmbitDb::class.java
+            .getMethod("execute", String::class.java, Array<Any>::class.java)
+            .invoke(null, "INSERT INTO t (a) VALUES (?)", null)
+
+        assertEquals(listOf(null), paramsSlot.captured)
+    }
+
+    @Test
+    fun `DbStatement of from Java with a single null keeps one NULL parameter`() {
+        val statement = DbStatement::class.java
+            .getMethod("of", String::class.java, Array<Any>::class.java)
+            .invoke(null, "INSERT INTO t (a) VALUES (?)", null) as DbStatement
+
+        assertEquals(listOf(null), statement.params)
+    }
+
     @Test
     fun `execute propagates service network error`() {
         injectDbService(mockDbService)
