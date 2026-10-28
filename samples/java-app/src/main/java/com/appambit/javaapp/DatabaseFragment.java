@@ -115,7 +115,9 @@ public class DatabaseFragment extends Fragment {
             new DemoItem("Fluent WRITE → delete()",                        this::demoDelete),
             new DemoItem("Typed Model → from(tasks, TaskModel.class)",     this::demoTypedModel),
             new DemoItem("Preset → List tables",                           this::demoPresetTables),
-            new DemoItem("Preset → SELECT * WHERE priority='high'",        this::demoPresetHighPriority)
+            new DemoItem("Preset → SELECT * WHERE priority='high'",        this::demoPresetHighPriority),
+            new DemoItem("Regression → null params (execute/batch/insert)", this::demoNullParams),
+            new DemoItem("Regression → delete null-test rows",             this::demoNullParamsCleanup)
         );
     }
 
@@ -529,6 +531,66 @@ public class DatabaseFragment extends Fragment {
                 showStatus("tasks WHERE priority='high' — " + result.getRowsRead() + " row(s)", false);
                 setupTable(result.getColumns(), result.toMaps());
             }
+        });
+        future.onError(e -> { setLoading(false); showStatus("Error: " + e.getMessage(), true); });
+    }
+
+    // Regression for the null-parameter bug fixed in 1.2.2: every write below sends at least
+    // one null parameter. Before the fix each of them failed on the device with
+    // "Unexpected error" and never reached the backend.
+    private void demoNullParams() {
+        var insertExecute = AppAmbitDb.execute(
+                "INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)",
+                "null-test execute", 0, null, null);
+        insertExecute.then(r1 -> {
+            if (r1.hasError()) { nullParamsFailed("execute() — " + r1.getError()); return; }
+            var batch = AppAmbitDb.batchInTransaction(
+                    DbStatement.of("INSERT INTO tasks (title, is_completed, priority, due_date) VALUES (?, ?, ?, ?)", "null-test batch", 0, null, "2026-06-10"),
+                    DbStatement.of("UPDATE tasks SET due_date = ? WHERE title = ?", null, "null-test batch"));
+            batch.then(r2 -> {
+                // Map.of rejects null values, so build the row with a LinkedHashMap.
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("title", "null-test insert"); data.put("is_completed", 0);
+                data.put("priority", null); data.put("due_date", null);
+                var insertFluent = AppAmbitDb.from("tasks").insert(data);
+                insertFluent.then(r3 -> {
+                    if (r3.hasError()) { nullParamsFailed("insert() — " + r3.getError()); return; }
+                    var select = AppAmbitDb.execute(
+                            "SELECT id, title, priority, due_date FROM tasks WHERE title LIKE ? ORDER BY id",
+                            "null-test%");
+                    select.then(r4 -> {
+                        setLoading(false);
+                        if (r4.hasError()) { showStatus("SELECT — " + r4.getError(), true); return; }
+                        List<Map<String, Object>> rows = r4.toMaps();
+                        setupTable(r4.getColumns(), rows);
+                        boolean allNull = !rows.isEmpty();
+                        for (Map<String, Object> row : rows) {
+                            if (row.get("priority") != null || row.get("due_date") != null) allNull = false;
+                        }
+                        if (allNull) showStatus("null params OK — " + rows.size()
+                                + " row(s), priority and due_date stored as NULL", false);
+                        else showStatus("null params — some values were not stored as NULL", true);
+                    });
+                    select.onError(e -> nullParamsFailed(e.getMessage()));
+                });
+                insertFluent.onError(e -> nullParamsFailed(e.getMessage()));
+            });
+            batch.onError(e -> nullParamsFailed(e.getMessage()));
+        });
+        insertExecute.onError(e -> nullParamsFailed(e.getMessage()));
+    }
+
+    private void nullParamsFailed(String message) {
+        setLoading(false);
+        showStatus("null params — " + (message != null ? message : "Unknown error"), true);
+    }
+
+    private void demoNullParamsCleanup() {
+        var future = AppAmbitDb.execute("DELETE FROM tasks WHERE title LIKE ?", "null-test%");
+        future.then(result -> {
+            setLoading(false);
+            if (result.hasError()) showStatus("Error: " + result.getError(), true);
+            else showStatus("null-test rows deleted — rows_written=" + result.getRowsWritten(), false);
         });
         future.onError(e -> { setLoading(false); showStatus("Error: " + e.getMessage(), true); });
     }
